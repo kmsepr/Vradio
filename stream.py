@@ -1,6 +1,7 @@
 import subprocess
 import time
-from flask import Flask, Response
+from flask import Flask, Response, send_from_directory
+import os
 
 app = Flask(__name__)
 
@@ -104,8 +105,19 @@ def stream(station_name):
     if not url:
         return "⚠️ Station not found", 404
     return Response(generate_stream(url), mimetype="audio/mpeg")
-@app.route("/")
 
+# 🚀 Serve the XML file
+@app.route("/RVR/vr.xml")
+def serve_xml():
+    # The XML file should be placed in the directory where the Flask app is running or specify a directory path
+    xml_file_path = os.path.join(os.getcwd(), 'RVR', 'vr.xml')  # Adjust the path if necessary
+    if os.path.exists(xml_file_path):
+        return send_from_directory(os.path.dirname(xml_file_path), 'vr.xml', mimetype='application/xml')
+    else:
+        return "⚠️ File not found", 404
+
+# Home page to list available radio stations
+@app.route("/")
 def index():
     return "<br>".join(f"<a href='/{name}'>{name}</a>" for name in RADIO_STATIONS)
 
