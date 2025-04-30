@@ -115,6 +115,16 @@ def serve_xml():
     else:
         return "⚠️ File not found", 404
 
+# 📄 Serve the radiobee.txt file
+@app.route("/radiobee.txt")
+def serve_radiobee():
+    txt_path = os.path.join(os.getcwd(), "radiobee.txt")
+    if os.path.exists(txt_path):
+        return send_from_directory(os.getcwd(), "radiobee.txt", mimetype="text/plain")
+    else:
+        return "⚠️ File not found", 404
+
+
 # Home page to list available radio stations
 @app.route("/")
 def index():
