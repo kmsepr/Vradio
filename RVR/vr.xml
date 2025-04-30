@@ -28,9 +28,9 @@
 <c t="Raja radio" u="http://surviving-audy-sadiqkm-fb03800f.koyeb.app/raja_radio"/>
 <c t="Darwins 97 seven rock (24 kbps)" u="http://211.26.121.186:88/broadwavelow.mp3"/>
 </g>
-<g t="India">
-<c t="Lanskari Tamil (32 kbps)" u="http://media5.lankasri.fm:8000"/>
-<c t="Non stop Hindi" u="http://s5.voscast.com:8216/stream"/>
+<g t="Islamic">
+<c t="Muthnabi radio" u="http://surviving-audy-sadiqkm-fb03800f.koyeb.app/muthnabi_radio"/>
+<c t="Quran radio nablus" u="http://surviving-audy-sadiqkm-fb03800f.koyeb.app/quran_radio_nablus"/>
 <c t="Lata mangeshkar (64 kbps)" u="http://stream.zeno.fm/87xam8pf7tzuv?zs=fvTPlM3xTW1lk-Z9095aA"/>
 <c t="Radio sai global harmony - Telegu stream (32 kbps)" u="http://stream.radiosai.org:8020"/>
 <c t="Sai Bhajans (32 kbps)" u="http://stream.radiosai.net:8002"/>
@@ -39,11 +39,11 @@
 <c t="Sai discoorse stream (32 kbps)" u="http://stream.radiosai.net:8008"/>
 <c t="sai Bhajans stream (32 kbps)" u="http://stream.radiosai.net:8000"/>
 </g>
-<g t="Indonesia">
-<c t="Assunnah 92.3 FM Cirebon (32 kbps)" u="http://live.radiosunnah.net"/>
+<g t="English">
+<c t="Bloomberg tv" u="http://surviving-audy-sadiqkm-fb03800f.koyeb.app/bloomberg_tv"/>
 </g>
-<g t="Mocha Radios list (Wi-Fi 125 y 320 kbps)">
-<c t="ABC Autralia News" u="http://live-radio01.mediahubaustralia.com/PBW/mp3/"/>
+<g t="Malayalam">
+<c t="Asianet news" u="http://surviving-audy-sadiqkm-fb03800f.koyeb.app/asianet_news"/>
 <c t="538 Ibiza" u="http://playerservices.streamtheworld.com/api/livestream-redirect/TLPSTR19.mp3"/>
 <c t="Cobra live Radio" u="http://tachyon.shoutca.st:8332/stream"/>
 <c t="DR P3 - denmark" u="http://live-icy.gss.dr.dk:8000/A/A05H.mp3"/>
