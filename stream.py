@@ -134,4 +134,4 @@ def index():
     return "<h1>🎧 Available Radio Streams</h1>" + "<br>".join(links)
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000)
+    app.run(host="0.0.0.0", port=80)
