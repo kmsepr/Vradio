@@ -68,7 +68,7 @@ RADIO_STATIONS = {
     "vom_radio": "https://radio.psm.mv/draair",
 }
 
-# 🔄 Streaming function with error handling
+# 🔄 FFmpeg stream generator
 def generate_stream(url):
     process = None
     while True:
@@ -98,7 +98,7 @@ def generate_stream(url):
         print("🔄 FFmpeg stopped, restarting stream...")
         time.sleep(5)
 
-# 🌍 API to stream a station
+# 🌍 Route for station streaming
 @app.route("/<station_name>")
 def stream(station_name):
     url = RADIO_STATIONS.get(station_name)
@@ -106,16 +106,16 @@ def stream(station_name):
         return "⚠️ Station not found", 404
     return Response(generate_stream(url), mimetype="audio/mpeg")
 
-# 🚀 Serve the XML file
+# 🚀 Serve XML file
 @app.route("/RVR/vr.xml")
 def serve_xml():
-    xml_file_path = os.path.join(os.getcwd(), 'vr.xml')  # File is in the main directory now
+    xml_file_path = os.path.join(os.getcwd(), 'vr.xml')
     if os.path.exists(xml_file_path):
         return send_from_directory(os.getcwd(), 'vr.xml', mimetype='application/xml')
     else:
         return "⚠️ File not found", 404
 
-# 📄 Serve the radiobee.txt file
+# 📄 Serve TXT file
 @app.route("/radiobee.txt")
 def serve_radiobee():
     txt_path = os.path.join(os.getcwd(), "radiobee.txt")
@@ -124,12 +124,11 @@ def serve_radiobee():
     else:
         return "⚠️ File not found", 404
 
-
-# Home page to list available radio stations
+# 🏠 Homepage with links
 @app.route("/")
 def index():
-    return "<br>".join(f"<a href='/{name}'>{name}</a>" for name in RADIO_STATIONS)
+    links = [f"<a href='/{name}' target='_blank'>{name}</a>" for name in RADIO_STATIONS]
+    return "<h1>🎧 Available Radio Streams</h1>" + "<br>".join(links)
 
-# 🚀 Launch the app
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000, debug=True)
+    app.run(host="0.0.0.0", port=8000)
