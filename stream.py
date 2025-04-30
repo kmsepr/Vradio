@@ -109,20 +109,22 @@ def stream(station_name):
 # 🚀 Serve XML file
 @app.route("/RVR/vr.xml")
 def serve_xml():
-    xml_file_path = os.path.join(os.getcwd(), 'vr.xml')
+    xml_file_path = os.path.join(os.getcwd(), "RVR", "vr.xml")
     if os.path.exists(xml_file_path):
-        return send_from_directory(os.getcwd(), 'vr.xml', mimetype='application/xml')
+        return send_from_directory(os.path.join(os.getcwd(), "RVR"), "vr.xml", mimetype="application/xml")
     else:
         return "⚠️ File not found", 404
+
 
 # 📄 Serve TXT file
 @app.route("/radiobee.txt")
 def serve_radiobee():
-    txt_path = os.path.join(os.getcwd(), "radiobee.txt")
+    txt_path = os.path.join(os.getcwd(), "Radiobee", "radiobee.txt")
     if os.path.exists(txt_path):
-        return send_from_directory(os.getcwd(), "radiobee.txt", mimetype="text/plain")
+        return send_from_directory(os.path.join(os.getcwd(), "Radiobee"), "radiobee.txt", mimetype="text/plain")
     else:
         return "⚠️ File not found", 404
+
 
 # 🏠 Homepage with links
 @app.route("/")
