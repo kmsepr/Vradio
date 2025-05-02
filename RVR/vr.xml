@@ -1,9 +1,9 @@
 <vr version="1.6.1" ttl="1:000000">
 <update i="Please upgrade to a newer version of VirtualRadio. Press OK to download and install." u="https://surviving-audy-sadiqkm-fb03800f.koyeb.app/vr.xml"/>
 <banner url="http://vradioorg.appspot.com/control/lp?w=${WIDTH}" imgurl="http://ninj.com/vradio/aircel/img/by_width.php?width=${WIDTH}"/>
-<g t="Various Radios Wifi/Plan date">
-<c t="ClassicFM (48 kbps)" u="http://media-ice.musicradio.com/ClassicFMMP3"/>
-<c t="big radio UK (32 kbps)" u="http://209.236.126.18:8004/"/>
+<g t="YouTube live">
+<c t="Mediaone" u="http://capitalist-anthe-pscj-4a28f285.koyeb.app/media_one"/>
+<c t="Shajahan rahmani" u="http://capitalist-anthe-pscj-4a28f285.koyeb.app/shajahan_rahmani"/>
 <c t="Estacion vinilo (24 kbps)" u="http://173.255.205.241:1127/"/>
 <c t="Radio Caroline (24 kbps)" u="http://sc4.radiocaroline.net:8020/"/>
 <c t="Radio Caroline (60 kbps)" u="http://sc2.radiocaroline.net:8000/stream"/>
