@@ -78,9 +78,9 @@
 <c t="Radio Argentina AM 570" u="http://server.laradio.online:25224/live.mp3"/>
 <c t="Vorterix Radio (56 kbps)" u="http://ice2.edge-apps.net/radio1_high-20057.audio"/>
 </g>
-<g t="Urban and House (Wi-Fi 128 kbps)">
-<c t="One love HipHop Radio" u="http://listen.radionomy.com/one-love-hip-hop-radio"/>
-<c t="Generations 88.2" u="http://broadcast.infomaniak.ch/generationfm-high.mp3"/>
+<g t"TV">
+<c t="Mazhavil manorama" u="http://zippy-gretta-pscjunction-b779efe8.koyeb.app/mazhavil_manorama"/>
+<c t="Kairali we" u="http://zippy-gretta-pscjunction-b779efe8.koyeb.app/kairali_we"/>
 <c t="Radio Gaga" u="http://rc.radiogaga.ro:8000/live"/>
 <c t="Radio Pro romania" u="http://live.radioprob.ro:8888"/>
 <c t="Ibiza global radio" u="http://s6.viastreaming.net:7010"/>
