@@ -4,7 +4,7 @@
 <g t="YouTube live">
 <c t="Mediaone" u="http://capitalist-anthe-pscj-4a28f285.koyeb.app/media_one"/>
 <c t="Shajahan rahmani" u="http://capitalist-anthe-pscj-4a28f285.koyeb.app/shajahan_rahmani"/>
-<c t="Entri degree" u=""http://capitalist-anthe-pscj-4a28f285.koyeb.app/entri_degree"/>
+<c t="Entri degree" u="http://capitalist-anthe-pscj-4a28f285.koyeb.app/entri_degree"/>
 <c t="Radio Caroline (24 kbps)" u="http://sc4.radiocaroline.net:8020/"/>
 <c t="Radio Caroline (60 kbps)" u="http://sc2.radiocaroline.net:8000/stream"/>
 <c t="Radio Caroline flashback (24 kbps)" u="http://sc2.radiocaroline.net:10568/"/>
@@ -16,6 +16,16 @@
 <c t="Magyar Katolikus Radio (32 kbps)" u="http://katolikusradio.hu:9000/live_low.mp3"/>
 <c t="Radio Lumen (32 kbps)" u="http://audio.lumen.sk:8000/live32.mp3"/>
 </g>
+
+</g>
+<g t"TV">
+<c t="Mazhavil manorama" u="http://zippy-gretta-pscjunction-b779efe8.koyeb.app/mazhavil_manorama"/>
+<c t="Kairali we" u="http://zippy-gretta-pscjunction-b779efe8.koyeb.app/kairali_we"/>
+<c t="Safari tv" u="http://zippy-gretta-pscjunction-b779efe8.koyeb.app/safari_tv" 
+
+<c t="Victers tv" u="http://zippy-gretta-pscjunction-b779efe8.koyeb.app/victers_tv"/>
+</g>
+
 <g t="Arabic radios">
 <c t="Eram FM (32 kbps)" u="http://icecast2.edisimo.com:8000/eramfm.mp3"/>
 <c t="Afaq (64 kbps)" u="http://edge.mixlr.com/channel/rumps"/>
@@ -77,14 +87,7 @@
 <c t="FM amadeus" u="http://18.220.84.192:8484/"/>
 <c t="Radio Argentina AM 570" u="http://server.laradio.online:25224/live.mp3"/>
 <c t="Vorterix Radio (56 kbps)" u="http://ice2.edge-apps.net/radio1_high-20057.audio"/>
-</g>
-<g t"TV">
-<c t="Mazhavil manorama" u="http://zippy-gretta-pscjunction-b779efe8.koyeb.app/mazhavil_manorama"/>
-<c t="Kairali we" u="http://zippy-gretta-pscjunction-b779efe8.koyeb.app/kairali_we"/>
-<c t="Safari tv" u="http://zippy-gretta-pscjunction-b779efe8.koyeb.app/safari_tv" 
 
-<c t="Victers tv" u="http://zippy-gretta-pscjunction-b779efe8.koyeb.app/victers_tv"/>
-</g>
 <g t="Russian Radios">
 <c t="Radio Stalingrand (48kbps)" u="http://62.109.3.230/stalingrad.mp3?6207"/>
 <c t="Radio Radonezh moscow (64kbps)" u="http://icecast.radonezh.cdnvideo.ru:8000/rad128?3258"/>
