@@ -60,11 +60,11 @@
 <c t="Sea FM - Finland" u="http://s3.myradiostream.com/4976/"/>
 <c t="Radio Asian Fever (60 kbps)" u="http://icecast.commedia.org.uk:8000/asianfever.mp3"/>
 </g>
-<g t="Radios Argentinas">
-<c t="Estacion vinilo (24 kbps)" u="http://173.255.205.241:1127/"/>
-<c t="Radio Mitre AM 790" u="http://playerservices.streamtheworld.com/api/livestream-redirect/AM790_56.mp3"/>
-<c t="FM Encuentro 103.9 (32 kbps)" u="http://server.laradio.online:8951/live"/>
-<c t="LT29 Radio Venado tuerto (24 kbps)" u="http://01.solumedia.com.ar:7201/"/>
+<g t="All India Radios">
+<c t="AIR Kozhikode" u="http://surviving-audy-sadiqkm-fb03800f.koyeb.app/air_calicut"/>
+<c t="Manjeri FM" u="http://surviving-audy-sadiqkm-fb03800f.koyeb.app/manjeri_fm"/>
+<c t="Real FM" u="http://surviving-audy-sadiqkm-fb03800f.koyeb.app/real_fm"/>
+<c t="AIR Kavaratti" u="http://surviving-audy-sadiqkm-fb03800f.koyeb.app/air_kavaratti"/>
 <c t="Radio Aspen" u="http://playerservices.streamtheworld.com/api/livestream-redirect/ASPEN.mp3"/>
 <c t="Rock And Pop" u="http://playerservices.streamtheworld.com/api/livestream-redirect/ROCKANDPOP.mp3"/>
 <c t="Radio del plata (32 kbps)" u="http://181.119.157.98:8800/amdelplata.mp3"/>
@@ -78,7 +78,7 @@
 <c t="Radio Argentina AM 570" u="http://server.laradio.online:25224/live.mp3"/>
 <c t="Vorterix Radio (56 kbps)" u="http://ice2.edge-apps.net/radio1_high-20057.audio"/>
 </g>
-<g t="Urban and House (Wi-Fi 128 kbps)">
+<g t="Hindi">
 <c t="One love HipHop Radio" u="http://listen.radionomy.com/one-love-hip-hop-radio"/>
 <c t="Generations 88.2" u="http://broadcast.infomaniak.ch/generationfm-high.mp3"/>
 <c t="Radio Gaga" u="http://rc.radiogaga.ro:8000/live"/>
