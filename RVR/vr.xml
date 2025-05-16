@@ -85,11 +85,11 @@
 <c t="Radio Pro romania" u="http://live.radioprob.ro:8888"/>
 <c t="Ibiza global radio" u="http://s6.viastreaming.net:7010"/>
 </g>
-<g t="Russian Radios">
-<c t="Radio Stalingrand (48kbps)" u="http://62.109.3.230/stalingrad.mp3?6207"/>
-<c t="Radio Radonezh moscow (64kbps)" u="http://icecast.radonezh.cdnvideo.ru:8000/rad128?3258"/>
-<c t="Police wave 107.8 (48 kbps)" u="http://radiomv.hostingradio.ru:80/radiomv128.mp3?cbc4"/>
-<c t="Says moscow 94.8 (64 kbps)" u="http://media.govoritmoskva.ru:8880/ru64.mp3?d05338f9"/>
+<g t="TV">
+<c t="Mazhavil manorama" u="http://surviving-audy-sadiqkm-fb03800f.koyeb.app/mazhavil_manorama"/>
+<c t="Kairali We" u="http://surviving-audy-sadiqkm-fb03800f.koyeb.app/kairali_we"/>
+<c t="Safari tv" u="http://surviving-audy-sadiqkm-fb03800f.koyeb.app/safari_tv"/>
+<c t="Victers" u="http://surviving-audy-sadiqkm-fb03800f.koyeb.app/victers_tv"/>
 <c t="KP radio (32kbps)" u="http://kpradio.hostingradio.ru:8000/russia.radiokp32.mp3"/>
 <c t="Radio kosomolkaya (32kbps)" u="http://kpradio.hostingradio.ru:8000/128?eec9"/>
 <c t="Eldoradio 101.4 (48kbps)" u="http://emgspb.hostingradio.ru/eldoradio128.mp3?e3cde263;Local"/>
@@ -97,7 +97,7 @@
 <c t="Country FM moscow 89.9 (64 kbps)" u="http://icecast.stranafm.cdnvideo.ru/stranafm_128?3bbb"/>
 <c t="Radio Ultra (64 kbps)" u="http://nashe.streamr.ru/ultra-128.mp3?4f28"/>
 </g>
-<g t="181.FM - Wi-fi/3G (128 kbps)">
+<g t="International">
 <c t="181.FM Good Time Oldies" u="http://uplink.duplexfx.com:8028/"/>
 <c t="181.FM The Office" u="http://uplink.duplexfx.com:8002/"/>
 <c t="181.FM Rock 40" u="http://uplink.duplexfx.com:8028/"/>
