@@ -145,15 +145,26 @@ def index():
                 padding: 20px;
                 background: #111;
                 color: white;
+                margin: 0;
             }}
             h1 {{
                 text-align: center;
             }}
             .grid {{
                 display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                grid-template-columns: 1fr;
                 gap: 15px;
                 margin-top: 20px;
+            }}
+            @media (min-width: 600px) {{
+                .grid {{
+                    grid-template-columns: repeat(2, 1fr);
+                }}
+            }}
+            @media (min-width: 900px) {{
+                .grid {{
+                    grid-template-columns: repeat(3, 1fr);
+                }}
             }}
             .card {{
                 padding: 20px;
@@ -161,6 +172,7 @@ def index():
                 text-align: center;
                 font-weight: bold;
                 box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+                transition: transform 0.2s;
             }}
             .card a {{
                 color: white;
@@ -169,7 +181,6 @@ def index():
             }}
             .card:hover {{
                 transform: scale(1.05);
-                transition: transform 0.2s;
             }}
         </style>
     </head>
