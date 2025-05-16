@@ -130,8 +130,58 @@ def serve_radiobee():
 # 🏠 Homepage with links
 @app.route("/")
 def index():
-    links = [f"<a href='/{name}' target='_blank'>{name}</a>" for name in RADIO_STATIONS]
-    return "<h1>🎧 Available Radio Streams</h1>" + "<br>".join(links)
+    links_html = "".join(
+        f"<div class='card' style='background-color: rgb({(i*50)%256}, {(i*80)%256}, {(i*110)%256});'>"
+        f"<a href='/{name}' target='_blank'>{name}</a></div>"
+        for i, name in enumerate(RADIO_STATIONS)
+    )
+
+    html = f"""
+    <html>
+    <head>
+        <style>
+            body {{
+                font-family: sans-serif;
+                padding: 20px;
+                background: #111;
+                color: white;
+            }}
+            h1 {{
+                text-align: center;
+            }}
+            .grid {{
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                gap: 15px;
+                margin-top: 20px;
+            }}
+            .card {{
+                padding: 20px;
+                border-radius: 10px;
+                text-align: center;
+                font-weight: bold;
+                box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            }}
+            .card a {{
+                color: white;
+                text-decoration: none;
+                display: block;
+            }}
+            .card:hover {{
+                transform: scale(1.05);
+                transition: transform 0.2s;
+            }}
+        </style>
+    </head>
+    <body>
+        <h1>🎧 Available Radio Streams</h1>
+        <div class="grid">
+            {links_html}
+        </div>
+    </body>
+    </html>
+    """
+    return html
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=80)
