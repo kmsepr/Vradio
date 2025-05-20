@@ -130,31 +130,53 @@ def serve_radiobee():
 # 🏠 Homepage with links
 @app.route("/")
 def index():
+    # Generate more subtle pastel-ish colors for cards
+    def pastel_color(i):
+        r = (100 + (i * 40)) % 256
+        g = (150 + (i * 60)) % 256
+        b = (200 + (i * 80)) % 256
+        return f"{r}, {g}, {b}"
+
     links_html = "".join(
-        f"<div class='card' style='background-color: rgb({(i*50)%256}, {(i*80)%256}, {(i*110)%256});'>"
-        f"<a href='/{name}' target='_blank'>{name}</a></div>"
-        for i, name in enumerate(RADIO_STATIONS)
+        f"""
+        <div class='card' style='background-color: rgba({pastel_color(i)}, 0.85);'>
+            <a href='/{name}' target='_blank' rel='noopener noreferrer'>{name}</a>
+        </div>
+        """ for i, name in enumerate(RADIO_STATIONS)
     )
 
     html = f"""
-    <html>
+    <html lang="en">
     <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Available Radio Streams</title>
+        <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet" />
         <style>
             body {{
-                font-family: sans-serif;
-                padding: 20px;
-                background: #111;
-                color: white;
+                font-family: 'Roboto', sans-serif;
+                padding: 30px 20px;
+                background: linear-gradient(135deg, #1e1e2f, #27293d);
+                color: #eee;
                 margin: 0;
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
             }}
             h1 {{
                 text-align: center;
+                font-weight: 700;
+                font-size: 2.4rem;
+                margin-bottom: 1rem;
+                user-select: none;
             }}
             .grid {{
                 display: grid;
                 grid-template-columns: 1fr;
-                gap: 15px;
-                margin-top: 20px;
+                gap: 20px;
+                max-width: 960px;
+                margin: 0 auto;
+                flex-grow: 1;
             }}
             @media (min-width: 600px) {{
                 .grid {{
@@ -167,20 +189,38 @@ def index():
                 }}
             }}
             .card {{
-                padding: 20px;
-                border-radius: 10px;
+                padding: 25px;
+                border-radius: 12px;
                 text-align: center;
-                font-weight: bold;
-                box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-                transition: transform 0.2s;
+                font-weight: 700;
+                font-size: 1.2rem;
+                box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+                transition: transform 0.25s ease, box-shadow 0.25s ease;
+                cursor: pointer;
+                user-select: none;
             }}
             .card a {{
-                color: white;
+                color: #fff;
                 text-decoration: none;
                 display: block;
+                outline-offset: 4px;
+                outline-color: transparent;
+                transition: outline-color 0.3s ease;
             }}
-            .card:hover {{
+            .card:hover, .card:focus-within {{
                 transform: scale(1.05);
+                box-shadow: 0 10px 20px rgba(0,0,0,0.6);
+            }}
+            .card a:hover, .card a:focus {{
+                outline-color: #fff;
+                text-decoration: underline;
+            }}
+            footer {{
+                text-align: center;
+                font-size: 0.9rem;
+                color: #aaa;
+                padding: 15px 10px 0;
+                user-select: none;
             }}
         </style>
     </head>
@@ -189,6 +229,7 @@ def index():
         <div class="grid">
             {links_html}
         </div>
+        <footer>© 2025 Your Radio App</footer>
     </body>
     </html>
     """
