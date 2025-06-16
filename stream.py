@@ -130,7 +130,6 @@ def serve_radiobee():
 # 🏠 Homepage with links
 @app.route("/")
 def index():
-    # Generate more subtle pastel-ish colors for cards
     def pastel_color(i):
         r = (100 + (i * 40)) % 256
         g = (150 + (i * 60)) % 256
@@ -139,8 +138,9 @@ def index():
 
     links_html = "".join(
         f"""
-        <div class='card' style='background-color: rgba({pastel_color(i)}, 0.85);'>
+        <div class='card' data-name='{name}' style='background-color: rgba({pastel_color(i)}, 0.85);'>
             <a href='/{name}' target='_blank' rel='noopener noreferrer'>{name}</a>
+            <button class="fav-btn" onclick="toggleFavourite('{name}')">⭐</button>
         </div>
         """ for i, name in enumerate(RADIO_STATIONS)
     )
@@ -150,86 +150,114 @@ def index():
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Available Radio Streams</title>
+        <title>Radio Streams</title>
         <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet" />
         <style>
             body {{
                 font-family: 'Roboto', sans-serif;
-                padding: 30px 20px;
                 background: linear-gradient(135deg, #1e1e2f, #27293d);
                 color: #eee;
                 margin: 0;
-                min-height: 100vh;
-                display: flex;
-                flex-direction: column;
+                padding: 10px;
             }}
             h1 {{
                 text-align: center;
-                font-weight: 700;
-                font-size: 2.4rem;
-                margin-bottom: 1rem;
-                user-select: none;
+                font-size: 1.5rem;
+                margin-bottom: 10px;
+            }}
+            .tabs {{
+                text-align: center;
+                margin-bottom: 10px;
+            }}
+            .tabs button {{
+                background-color: #444;
+                color: #fff;
+                border: none;
+                padding: 8px 16px;
+                margin: 0 5px;
+                font-size: 1rem;
+                border-radius: 6px;
+                cursor: pointer;
+            }}
+            .tabs button.active {{
+                background-color: #007acc;
             }}
             .grid {{
                 display: grid;
                 grid-template-columns: 1fr;
-                gap: 20px;
-                max-width: 960px;
-                margin: 0 auto;
-                flex-grow: 1;
-            }}
-            @media (min-width: 600px) {{
-                .grid {{
-                    grid-template-columns: repeat(2, 1fr);
-                }}
-            }}
-            @media (min-width: 900px) {{
-                .grid {{
-                    grid-template-columns: repeat(3, 1fr);
-                }}
+                gap: 12px;
             }}
             .card {{
-                padding: 25px;
-                border-radius: 12px;
+                padding: 15px;
+                border-radius: 10px;
+                font-size: 1rem;
                 text-align: center;
-                font-weight: 700;
-                font-size: 1.2rem;
-                box-shadow: 0 6px 12px rgba(0,0,0,0.4);
-                transition: transform 0.25s ease, box-shadow 0.25s ease;
-                cursor: pointer;
-                user-select: none;
+                position: relative;
             }}
             .card a {{
                 color: #fff;
                 text-decoration: none;
                 display: block;
-                outline-offset: 4px;
-                outline-color: transparent;
-                transition: outline-color 0.3s ease;
             }}
-            .card:hover, .card:focus-within {{
-                transform: scale(1.05);
-                box-shadow: 0 10px 20px rgba(0,0,0,0.6);
-            }}
-            .card a:hover, .card a:focus {{
-                outline-color: #fff;
-                text-decoration: underline;
+            .fav-btn {{
+                position: absolute;
+                top: 6px;
+                right: 10px;
+                background: none;
+                border: none;
+                color: #ffd700;
+                font-size: 1.2rem;
+                cursor: pointer;
             }}
             footer {{
                 text-align: center;
-                font-size: 0.9rem;
+                font-size: 0.75rem;
                 color: #aaa;
-                padding: 15px 10px 0;
-                user-select: none;
+                margin-top: 15px;
             }}
         </style>
     </head>
     <body>
-        <h1>🎧 Available Radio Streams</h1>
-        <div class="grid">
+        <h1>🎧 Radio Streams</h1>
+        <div class="tabs">
+            <button id="allBtn" class="active" onclick="showTab('all')">All</button>
+            <button id="favBtn" onclick="showTab('fav')">Favourites</button>
+        </div>
+        <div class="grid" id="stationGrid">
             {links_html}
         </div>
         <footer>© 2025 Your Radio App</footer>
+        <script>
+            function toggleFavourite(name) {{
+                let favs = JSON.parse(localStorage.getItem("favourites") || "[]");
+                if (favs.includes(name)) {{
+                    favs = favs.filter(n => n !== name);
+                }} else {{
+                    favs.push(name);
+                }}
+                localStorage.setItem("favourites", JSON.stringify(favs));
+                updateDisplay();
+            }}
+
+            function updateDisplay() {{
+                const favs = JSON.parse(localStorage.getItem("favourites") || "[]");
+                document.querySelectorAll(".card").forEach(card => {{
+                    const name = card.getAttribute("data-name");
+                    card.style.display = (activeTab === "all" || favs.includes(name)) ? "block" : "none";
+                    card.querySelector(".fav-btn").textContent = favs.includes(name) ? "★" : "⭐";
+                }});
+            }}
+
+            let activeTab = "all";
+            function showTab(tab) {{
+                activeTab = tab;
+                document.getElementById("allBtn").classList.toggle("active", tab === "all");
+                document.getElementById("favBtn").classList.toggle("active", tab === "fav");
+                updateDisplay();
+            }}
+
+            window.onload = updateDisplay;
+        </script>
     </body>
     </html>
     """
