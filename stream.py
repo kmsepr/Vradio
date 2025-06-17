@@ -69,8 +69,7 @@ RADIO_STATIONS = {
     "vom_radio": "https://radio.psm.mv/draair",
 }
 
-
-# 🔄 FFmpeg stream generator
+# 🔁 FFmpeg stream generator
 def generate_stream(url):
     process = None
     while True:
@@ -90,10 +89,12 @@ def generate_stream(url):
         except GeneratorExit:
             process.kill()
             break
-        except Exception:
-            time.sleep(5)
+        except Exception as e:
+            print(f"⚠️ Stream error: {e}")
+        print("🔄 FFmpeg stopped, restarting stream...")
+        time.sleep(5)
 
-# 🎧 Stream a station
+# 🎧 Stream a radio station
 @app.route("/<station_name>")
 def stream(station_name):
     url = RADIO_STATIONS.get(station_name)
@@ -101,7 +102,7 @@ def stream(station_name):
         return "⚠️ Station not found", 404
     return Response(generate_stream(url), mimetype="audio/mpeg")
 
-# ➕ Add new station via POST
+# ➕ Add new station
 @app.route("/add", methods=["POST"])
 def add_station():
     name = request.form.get("name", "").strip().lower().replace(" ", "_")
@@ -110,50 +111,68 @@ def add_station():
         RADIO_STATIONS[name] = url
     return redirect("/")
 
-# 🎨 Utility: generate pastel colors
-def pastel_color(i):
-    r = (100 + (i * 40)) % 256
-    g = (150 + (i * 60)) % 256
-    b = (200 + (i * 80)) % 256
-    return f"{r}, {g}, {b}"
+# 🏠 Homepage UI
+@app.route("/")
+def index():
+    def pastel_color(i):
+        r = (100 + (i * 40)) % 256
+        g = (150 + (i * 60)) % 256
+        b = (200 + (i * 80)) % 256
+        return f"{r}, {g}, {b}"
 
-# 🧱 Generate station cards
-def generate_station_cards(stations):
-    return "".join(
+    links_html = "".join(
         f"""
         <div class='card' data-name='{name}' style='background-color: rgba({pastel_color(i)}, 0.85);'>
             <a href='/{name}' target='_blank' rel='noopener noreferrer'>{name}</a>
             <button class="fav-btn" onclick="toggleFavourite('{name}')">⭐</button>
         </div>
-        """ for i, name in enumerate(stations)
+        """ for i, name in enumerate(RADIO_STATIONS)
     )
 
-# 🏠 Homepage
-@app.route("/")
-def index():
-    all_stations_html = generate_station_cards(RADIO_STATIONS.keys())
     return f"""
-    <html>
+    <!DOCTYPE html>
+    <html lang="en">
     <head>
-        <title>Radio Streams</title>
+        <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Radio Streams</title>
         <style>
             body {{
                 font-family: sans-serif;
                 background: #1e1e2f;
                 color: white;
+                margin: 0;
                 padding: 10px;
+            }}
+            h1 {{
+                text-align: center;
+                font-size: 1.5rem;
+            }}
+            .tabs {{
+                text-align: center;
+                margin: 10px 0;
+            }}
+            .tabs button {{
+                background: #444;
+                color: #fff;
+                border: none;
+                padding: 8px 16px;
+                margin: 0 5px;
+                border-radius: 6px;
+                cursor: pointer;
+            }}
+            .tabs button.active {{
+                background: #007acc;
             }}
             .grid {{
                 display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-                gap: 10px;
+                grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+                gap: 12px;
             }}
             .card {{
                 padding: 12px;
-                border-radius: 12px;
+                border-radius: 10px;
                 text-align: center;
-                background: #333;
                 position: relative;
             }}
             .card a {{
@@ -162,7 +181,7 @@ def index():
             }}
             .fav-btn {{
                 position: absolute;
-                top: 5px;
+                top: 6px;
                 right: 10px;
                 background: none;
                 border: none;
@@ -176,169 +195,98 @@ def index():
             .tab-content.active {{
                 display: block;
             }}
-            .tabs {{
+            .add-form {{
+                max-width: 400px;
+                margin: 20px auto;
                 display: flex;
-                margin-bottom: 15px;
-                border-bottom: 1px solid #444;
-            }}
-            .tab {{
-                padding: 10px 20px;
-                cursor: pointer;
-                background: #2a2a3a;
-                margin-right: 5px;
-                border-radius: 5px 5px 0 0;
-            }}
-            .tab.active {{
-                background: #007acc;
-            }}
-            .add-station-form {{
-                display: none;
-                margin: 15px 0;
                 flex-direction: column;
-                gap: 5px;
+                gap: 10px;
                 background: #2a2a3a;
                 padding: 15px;
-                border-radius: 5px;
+                border-radius: 8px;
             }}
-            .add-station-form.active {{
-                display: flex;
-            }}
-            input[type=text] {{
-                padding: 8px;
+            .add-form input {{
+                padding: 10px;
                 font-size: 1rem;
                 border-radius: 5px;
-                border: 1px solid #888;
-                background: #333;
+                border: 1px solid #666;
+                background: #1e1e2f;
                 color: white;
             }}
-            input[type=submit] {{
-                padding: 8px;
+            .add-form input[type=submit] {{
                 background: #007acc;
-                color: white;
+                cursor: pointer;
                 border: none;
-                font-size: 1rem;
-                border-radius: 5px;
-                cursor: pointer;
-            }}
-            .add-icon {{
-                position: fixed;
-                bottom: 20px;
-                right: 20px;
-                background: #007acc;
-                color: white;
-                width: 50px;
-                height: 50px;
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 1.5rem;
-                cursor: pointer;
-                box-shadow: 0 2px 5px rgba(0,0,0,0.3);
             }}
         </style>
     </head>
     <body>
         <h1>📻 Radio Streams</h1>
-
         <div class="tabs">
-            <div class="tab active" onclick="switchTab('all')">All Stations</div>
-            <div class="tab" onclick="switchTab('favorites')">Favorites</div>
+            <button id="allBtn" class="active" onclick="showTab('all')">All</button>
+            <button id="favBtn" onclick="showTab('fav')">Favourites</button>
+            <button id="addBtn" onclick="showTab('add')">Add</button>
         </div>
 
-        <div class="add-station-form" id="addForm">
-            <h3>Add New Station</h3>
-            <form method="POST" action="/add">
+        <div id="allTab" class="tab-content active">
+            <div class="grid" id="stationGrid">{links_html}</div>
+        </div>
+
+        <div id="favTab" class="tab-content">
+            <div class="grid" id="favGrid"></div>
+        </div>
+
+        <div id="addTab" class="tab-content">
+            <form class="add-form" method="POST" action="/add">
                 <input type="text" name="name" placeholder="Station name (no space)" required />
                 <input type="text" name="url" placeholder="Stream URL" required />
                 <input type="submit" value="Add Station" />
             </form>
         </div>
 
-        <div class="tab-content active" id="allStations">
-            <div class="grid">{all_stations_html}</div>
-        </div>
-
-        <div class="tab-content" id="favorites">
-            <div class="grid" id="favoritesGrid"></div>
-        </div>
-
-        <div class="add-icon" onclick="toggleAddForm()">+</div>
-
         <script>
-            let currentTab = 'all';
-            let favorites = JSON.parse(localStorage.getItem("favorites")) || [];
-
-            function switchTab(tab) {{
-                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-                document.querySelectorAll('.tab').forEach(tabEl => tabEl.classList.remove('active'));
-                document.getElementById(tab + 'Stations').classList.add('active');
-                document.querySelector(`.tab[onclick="switchTab('${{tab}}')"]`).classList.add('active');
-                currentTab = tab;
-                if (tab === 'favorites') {{
-                    updateFavoritesDisplay();
-                }}
-            }}
+            let activeTab = "all";
 
             function toggleFavourite(name) {{
-                const index = favorites.indexOf(name);
-                if (index === -1) {{
-                    favorites.push(name);
+                let favs = JSON.parse(localStorage.getItem("favourites") || "[]");
+                if (favs.includes(name)) {{
+                    favs = favs.filter(n => n !== name);
                 }} else {{
-                    favorites.splice(index, 1);
+                    favs.push(name);
                 }}
-                localStorage.setItem("favorites", JSON.stringify(favorites));
+                localStorage.setItem("favourites", JSON.stringify(favs));
                 updateDisplay();
-                if (currentTab === 'favorites') {{
-                    updateFavoritesDisplay();
-                }}
             }}
 
             function updateDisplay() {{
+                const favs = JSON.parse(localStorage.getItem("favourites") || "[]");
                 document.querySelectorAll(".card").forEach(card => {{
                     const name = card.getAttribute("data-name");
+                    card.style.display = (activeTab === "all" || (activeTab === "fav" && favs.includes(name))) ? "block" : "none";
                     const btn = card.querySelector(".fav-btn");
-                    if (favorites.includes(name)) {{
-                        btn.textContent = "★";
-                    }} else {{
-                        btn.textContent = "⭐";
-                    }}
+                    if (btn) btn.textContent = favs.includes(name) ? "★" : "⭐";
                 }});
-            }}
 
-            function updateFavoritesDisplay() {{
-                const favoritesGrid = document.getElementById("favoritesGrid");
-                favoritesGrid.innerHTML = "";
-                favorites.forEach((name, i) => {{
-                    const card = document.createElement("div");
-                    card.className = "card";
-                    card.setAttribute("data-name", name);
-                    card.style.backgroundColor = `rgba(${{getPastelColor(i)}}, 0.85)`;
-                    card.innerHTML = `
-                        <a href="/${{name}}" target="_blank" rel="noopener noreferrer">${{name}}</a>
-                        <button class="fav-btn" onclick="toggleFavourite('${{name}}')">★</button>
-                    `;
-                    favoritesGrid.appendChild(card);
-                }});
-            }}
-
-            function getPastelColor(i) {{
-                const r = (100 + (i * 40)) % 256;
-                const g = (150 + (i * 60)) % 256;
-                const b = (200 + (i * 80)) % 256;
-                return `${{r}}, ${{g}}, ${{b}}`;
-            }}
-
-            function toggleAddForm() {{
-                document.getElementById("addForm").classList.toggle("active");
-            }}
-
-            window.onload = function() {{
-                updateDisplay();
-                if (currentTab === 'favorites') {{
-                    updateFavoritesDisplay();
+                const favGrid = document.getElementById("favGrid");
+                if (favGrid) {{
+                    favGrid.innerHTML = "";
+                    favs.forEach(name => {{
+                        const el = document.querySelector(`[data-name='${{name}}']`);
+                        if (el) favGrid.appendChild(el.cloneNode(true));
+                    }});
                 }}
-            }};
+            }}
+
+            function showTab(tab) {{
+                activeTab = tab;
+                document.querySelectorAll(".tab-content").forEach(div => div.classList.remove("active"));
+                document.querySelectorAll(".tabs button").forEach(btn => btn.classList.remove("active"));
+                document.getElementById(tab + "Tab").classList.add("active");
+                document.getElementById(tab + "Btn").classList.add("active");
+                updateDisplay();
+            }}
+
+            window.onload = updateDisplay;
         </script>
     </body>
     </html>
