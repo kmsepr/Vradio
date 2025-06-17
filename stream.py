@@ -1,6 +1,7 @@
 import subprocess
 import time
 from flask import Flask, Response, send_from_directory
+from flask import request, redirect
 import os
 
 app = Flask(__name__)
@@ -125,10 +126,16 @@ def serve_radiobee():
     else:
         return "⚠️ File not found", 404
 
-
+@app.route("/add", methods=["POST"])
+def add_station():
+    name = request.form.get("name", "").strip().lower().replace(" ", "_")
+    url = request.form.get("url", "").strip()
+    if name and url:
+        RADIO_STATIONS[name] = url
+    return redirect("/")
 
 # 🏠 Homepage with links
-@app.route("/")
+@app.route("/", methods=["GET"])
 def index():
     def pastel_color(i):
         r = (100 + (i * 40)) % 256
@@ -145,88 +152,78 @@ def index():
         """ for i, name in enumerate(RADIO_STATIONS)
     )
 
-    html = f"""
-    <html lang="en">
+    return f"""
+    <html>
     <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>Radio Streams</title>
-        <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
         <style>
             body {{
-                font-family: 'Roboto', sans-serif;
-                background: linear-gradient(135deg, #1e1e2f, #27293d);
-                color: #eee;
-                margin: 0;
+                font-family: sans-serif;
+                background: #1e1e2f;
+                color: white;
                 padding: 10px;
-            }}
-            h1 {{
-                text-align: center;
-                font-size: 1.5rem;
-                margin-bottom: 10px;
-            }}
-            .tabs {{
-                text-align: center;
-                margin-bottom: 10px;
-            }}
-            .tabs button {{
-                background-color: #444;
-                color: #fff;
-                border: none;
-                padding: 8px 16px;
-                margin: 0 5px;
-                font-size: 1rem;
-                border-radius: 6px;
-                cursor: pointer;
-            }}
-            .tabs button.active {{
-                background-color: #007acc;
             }}
             .grid {{
                 display: grid;
-                grid-template-columns: 1fr;
-                gap: 12px;
+                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                gap: 10px;
             }}
             .card {{
-                padding: 15px;
-                border-radius: 10px;
-                font-size: 1rem;
+                padding: 12px;
+                border-radius: 12px;
                 text-align: center;
+                background: #333;
                 position: relative;
             }}
             .card a {{
-                color: #fff;
+                color: white;
                 text-decoration: none;
-                display: block;
             }}
             .fav-btn {{
                 position: absolute;
-                top: 6px;
+                top: 5px;
                 right: 10px;
                 background: none;
                 border: none;
-                color: #ffd700;
+                color: gold;
                 font-size: 1.2rem;
                 cursor: pointer;
             }}
-            footer {{
-                text-align: center;
-                font-size: 0.75rem;
-                color: #aaa;
-                margin-top: 15px;
+            form {{
+                margin: 15px 0;
+                display: flex;
+                flex-direction: column;
+                gap: 5px;
+            }}
+            input[type=text] {{
+                padding: 8px;
+                font-size: 1rem;
+                border-radius: 5px;
+                border: 1px solid #888;
+            }}
+            input[type=submit] {{
+                padding: 8px;
+                background: #007acc;
+                color: white;
+                border: none;
+                font-size: 1rem;
+                border-radius: 5px;
+                cursor: pointer;
             }}
         </style>
     </head>
     <body>
-        <h1>🎧 Radio Streams</h1>
-        <div class="tabs">
-            <button id="allBtn" class="active" onclick="showTab('all')">All</button>
-            <button id="favBtn" onclick="showTab('fav')">Favourites</button>
-        </div>
-        <div class="grid" id="stationGrid">
-            {links_html}
-        </div>
-        <footer>© 2025 Your Radio App</footer>
+        <h1>📻 Radio Streams</h1>
+
+        <form method="POST" action="/add">
+            <input type="text" name="name" placeholder="Station name (no space)" required />
+            <input type="text" name="url" placeholder="Stream URL" required />
+            <input type="submit" value="Add Station" />
+        </form>
+
+        <div class="grid">{links_html}</div>
+
         <script>
             function toggleFavourite(name) {{
                 let favs = JSON.parse(localStorage.getItem("favourites") || "[]");
@@ -243,17 +240,8 @@ def index():
                 const favs = JSON.parse(localStorage.getItem("favourites") || "[]");
                 document.querySelectorAll(".card").forEach(card => {{
                     const name = card.getAttribute("data-name");
-                    card.style.display = (activeTab === "all" || favs.includes(name)) ? "block" : "none";
                     card.querySelector(".fav-btn").textContent = favs.includes(name) ? "★" : "⭐";
                 }});
-            }}
-
-            let activeTab = "all";
-            function showTab(tab) {{
-                activeTab = tab;
-                document.getElementById("allBtn").classList.toggle("active", tab === "all");
-                document.getElementById("favBtn").classList.toggle("active", tab === "fav");
-                updateDisplay();
             }}
 
             window.onload = updateDisplay;
