@@ -69,6 +69,8 @@ RADIO_STATIONS = {
     "vom_radio": "https://radio.psm.mv/draair",
 }
 
+
+
 # 🔄 FFmpeg stream generator
 def generate_stream(url):
     process = None
@@ -290,6 +292,9 @@ def index():
         <script>
             let currentTab = 'all';
             
+            // Initialize favorites from localStorage
+            let favorites = JSON.parse(localStorage.getItem("favorites")) || [];
+            
             function switchTab(tab) {{
                 document.querySelectorAll('.tab-content').forEach(content => {{
                     content.classList.remove('active');
@@ -308,13 +313,13 @@ def index():
             }}
             
             function toggleFavourite(name) {{
-                let favs = JSON.parse(localStorage.getItem("favourites") || "[]");
-                if (favs.includes(name)) {{
-                    favs = favs.filter(n => n !== name);
+                const index = favorites.indexOf(name);
+                if (index === -1) {{
+                    favorites.push(name);
                 }} else {{
-                    favs.push(name);
+                    favorites.splice(index, 1);
                 }}
-                localStorage.setItem("favourites", JSON.stringify(favs));
+                localStorage.setItem("favorites", JSON.stringify(favorites));
                 updateDisplay();
                 
                 if (currentTab === 'favorites') {{
@@ -323,30 +328,33 @@ def index():
             }}
 
             function updateDisplay() {{
-                const favs = JSON.parse(localStorage.getItem("favourites") || "[]");
                 document.querySelectorAll(".card").forEach(card => {{
                     const name = card.getAttribute("data-name");
-                    card.querySelector(".fav-btn").textContent = favs.includes(name) ? "★" : "⭐";
+                    const btn = card.querySelector(".fav-btn");
+                    if (favorites.includes(name)) {{
+                        btn.textContent = "★";
+                        btn.style.color = "gold";
+                    }} else {{
+                        btn.textContent = "⭐";
+                        btn.style.color = "gold";
+                    }}
                 }});
             }}
             
             function updateFavoritesDisplay() {{
-                const favs = JSON.parse(localStorage.getItem("favourites") || "[]");
                 const favoritesGrid = document.getElementById("favoritesGrid");
                 favoritesGrid.innerHTML = "";
                 
-                favs.forEach(name => {{
-                    if (RADIO_STATIONS[name]) {{
-                        const card = document.createElement("div");
-                        card.className = "card";
-                        card.setAttribute("data-name", name);
-                        card.style.backgroundColor = `rgba(${{getPastelColor(favs.indexOf(name))}}, 0.85)`;
-                        card.innerHTML = `
-                            <a href="/${{name}}" target="_blank" rel="noopener noreferrer">${{name}}</a>
-                            <button class="fav-btn" onclick="toggleFavourite('${{name}}')">★</button>
-                        `;
-                        favoritesGrid.appendChild(card);
-                    }}
+                favorites.forEach((name, i) => {{
+                    const card = document.createElement("div");
+                    card.className = "card";
+                    card.setAttribute("data-name", name);
+                    card.style.backgroundColor = `rgba(${{getPastelColor(i)}}, 0.85)`;
+                    card.innerHTML = `
+                        <a href="/${{name}}" target="_blank" rel="noopener noreferrer">${{name}}</a>
+                        <button class="fav-btn" onclick="toggleFavourite('${{name}}')">★</button>
+                    `;
+                    favoritesGrid.appendChild(card);
                 }});
             }}
             
@@ -362,13 +370,12 @@ def index():
                 form.classList.toggle("active");
             }}
 
-            // Initialize RADIO_STATIONS for JavaScript
-            const RADIO_STATIONS = {{
-                {', '.join(f'"{k}": "{v}"' for k, v in RADIO_STATIONS.items())}
-            }};
-
             window.onload = function() {{
                 updateDisplay();
+                // Force refresh to show newly added stations
+                if (performance.navigation.type === 1) {{
+                    updateFavoritesDisplay();
+                }}
             }};
         </script>
     </body>
