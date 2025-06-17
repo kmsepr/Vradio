@@ -116,7 +116,6 @@ def serve_xml():
     else:
         return "⚠️ File not found", 404
 
-
 # 📄 Serve TXT file at /Radiobee/radiobee.txt
 @app.route("/Radiobee/radiobee.txt")
 def serve_radiobee():
@@ -134,24 +133,27 @@ def add_station():
         RADIO_STATIONS[name] = url
     return redirect("/")
 
-# 🏠 Homepage with links
-@app.route("/", methods=["GET"])
-def index():
-    def pastel_color(i):
-        r = (100 + (i * 40)) % 256
-        g = (150 + (i * 60)) % 256
-        b = (200 + (i * 80)) % 256
-        return f"{r}, {g}, {b}"
+def pastel_color(i):
+    r = (100 + (i * 40)) % 256
+    g = (150 + (i * 60)) % 256
+    b = (200 + (i * 80)) % 256
+    return f"{r}, {g}, {b}"
 
-    links_html = "".join(
+def generate_station_cards(stations):
+    return "".join(
         f"""
         <div class='card' data-name='{name}' style='background-color: rgba({pastel_color(i)}, 0.85);'>
             <a href='/{name}' target='_blank' rel='noopener noreferrer'>{name}</a>
             <button class="fav-btn" onclick="toggleFavourite('{name}')">⭐</button>
         </div>
-        """ for i, name in enumerate(RADIO_STATIONS)
+        """ for i, name in enumerate(stations)
     )
 
+# 🏠 Homepage with tabs
+@app.route("/", methods=["GET"])
+def index():
+    all_stations_html = generate_station_cards(RADIO_STATIONS.keys())
+    
     return f"""
     <html>
     <head>
@@ -190,17 +192,46 @@ def index():
                 font-size: 1.2rem;
                 cursor: pointer;
             }}
-            form {{
-                margin: 15px 0;
+            .tab-content {{
+                display: none;
+            }}
+            .tab-content.active {{
+                display: block;
+            }}
+            .tabs {{
                 display: flex;
+                margin-bottom: 15px;
+                border-bottom: 1px solid #444;
+            }}
+            .tab {{
+                padding: 10px 20px;
+                cursor: pointer;
+                background: #2a2a3a;
+                margin-right: 5px;
+                border-radius: 5px 5px 0 0;
+            }}
+            .tab.active {{
+                background: #007acc;
+            }}
+            .add-station-form {{
+                display: none;
+                margin: 15px 0;
                 flex-direction: column;
                 gap: 5px;
+                background: #2a2a3a;
+                padding: 15px;
+                border-radius: 5px;
+            }}
+            .add-station-form.active {{
+                display: flex;
             }}
             input[type=text] {{
                 padding: 8px;
                 font-size: 1rem;
                 border-radius: 5px;
                 border: 1px solid #888;
+                background: #333;
+                color: white;
             }}
             input[type=submit] {{
                 padding: 8px;
@@ -211,20 +242,71 @@ def index():
                 border-radius: 5px;
                 cursor: pointer;
             }}
+            .add-icon {{
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                background: #007acc;
+                color: white;
+                width: 50px;
+                height: 50px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.5rem;
+                cursor: pointer;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            }}
         </style>
     </head>
     <body>
         <h1>📻 Radio Streams</h1>
 
-        <form method="POST" action="/add">
-            <input type="text" name="name" placeholder="Station name (no space)" required />
-            <input type="text" name="url" placeholder="Stream URL" required />
-            <input type="submit" value="Add Station" />
-        </form>
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('all')">All Stations</div>
+            <div class="tab" onclick="switchTab('favorites')">Favorites</div>
+        </div>
 
-        <div class="grid">{links_html}</div>
+        <div class="add-station-form" id="addForm">
+            <h3>Add New Station</h3>
+            <form method="POST" action="/add">
+                <input type="text" name="name" placeholder="Station name (no space)" required />
+                <input type="text" name="url" placeholder="Stream URL" required />
+                <input type="submit" value="Add Station" />
+            </form>
+        </div>
+
+        <div class="tab-content active" id="allStations">
+            <div class="grid">{all_stations_html}</div>
+        </div>
+
+        <div class="tab-content" id="favorites">
+            <div class="grid" id="favoritesGrid"></div>
+        </div>
+
+        <div class="add-icon" onclick="toggleAddForm()">+</div>
 
         <script>
+            let currentTab = 'all';
+            
+            function switchTab(tab) {{
+                document.querySelectorAll('.tab-content').forEach(content => {{
+                    content.classList.remove('active');
+                }});
+                document.querySelectorAll('.tab').forEach(tabEl => {{
+                    tabEl.classList.remove('active');
+                }});
+                
+                document.getElementById(tab + 'Stations').classList.add('active');
+                document.querySelector(`.tab[onclick="switchTab('${{tab}}')"]`).classList.add('active');
+                currentTab = tab;
+                
+                if (tab === 'favorites') {{
+                    updateFavoritesDisplay();
+                }}
+            }}
+            
             function toggleFavourite(name) {{
                 let favs = JSON.parse(localStorage.getItem("favourites") || "[]");
                 if (favs.includes(name)) {{
@@ -234,6 +316,10 @@ def index():
                 }}
                 localStorage.setItem("favourites", JSON.stringify(favs));
                 updateDisplay();
+                
+                if (currentTab === 'favorites') {{
+                    updateFavoritesDisplay();
+                }}
             }}
 
             function updateDisplay() {{
@@ -243,13 +329,51 @@ def index():
                     card.querySelector(".fav-btn").textContent = favs.includes(name) ? "★" : "⭐";
                 }});
             }}
+            
+            function updateFavoritesDisplay() {{
+                const favs = JSON.parse(localStorage.getItem("favourites") || "[]");
+                const favoritesGrid = document.getElementById("favoritesGrid");
+                favoritesGrid.innerHTML = "";
+                
+                favs.forEach(name => {{
+                    if (RADIO_STATIONS[name]) {{
+                        const card = document.createElement("div");
+                        card.className = "card";
+                        card.setAttribute("data-name", name);
+                        card.style.backgroundColor = `rgba(${{getPastelColor(favs.indexOf(name))}}, 0.85)`;
+                        card.innerHTML = `
+                            <a href="/${{name}}" target="_blank" rel="noopener noreferrer">${{name}}</a>
+                            <button class="fav-btn" onclick="toggleFavourite('${{name}}')">★</button>
+                        `;
+                        favoritesGrid.appendChild(card);
+                    }}
+                }});
+            }}
+            
+            function getPastelColor(i) {{
+                const r = (100 + (i * 40)) % 256;
+                const g = (150 + (i * 60)) % 256;
+                const b = (200 + (i * 80)) % 256;
+                return `${{r}}, ${{g}}, ${{b}}`;
+            }}
+            
+            function toggleAddForm() {{
+                const form = document.getElementById("addForm");
+                form.classList.toggle("active");
+            }}
 
-            window.onload = updateDisplay;
+            // Initialize RADIO_STATIONS for JavaScript
+            const RADIO_STATIONS = {{
+                {', '.join(f'"{k}": "{v}"' for k, v in RADIO_STATIONS.items())}
+            }};
+
+            window.onload = function() {{
+                updateDisplay();
+            }};
         </script>
     </body>
     </html>
     """
-    return html
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=80)
