@@ -70,14 +70,12 @@ RADIO_STATIONS = {
 }
 
 
-
 # 🔄 FFmpeg stream generator
 def generate_stream(url):
     process = None
     while True:
         if process:
             process.kill()
-
         process = subprocess.Popen(
             [
                 "ffmpeg", "-reconnect", "1", "-reconnect_streamed", "1",
@@ -86,22 +84,16 @@ def generate_stream(url):
             ],
             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=8192
         )
-
-        print(f"🎵 Streaming from: {url} (Mono, 40kbps)")
-
         try:
             for chunk in iter(lambda: process.stdout.read(8192), b""):
                 yield chunk
         except GeneratorExit:
             process.kill()
             break
-        except Exception as e:
-            print(f"⚠️ Stream error: {e}")
+        except Exception:
+            time.sleep(5)
 
-        print("🔄 FFmpeg stopped, restarting stream...")
-        time.sleep(5)
-
-# 🌍 Route for station streaming
+# 🎧 Stream a station
 @app.route("/<station_name>")
 def stream(station_name):
     url = RADIO_STATIONS.get(station_name)
@@ -109,24 +101,7 @@ def stream(station_name):
         return "⚠️ Station not found", 404
     return Response(generate_stream(url), mimetype="audio/mpeg")
 
-# 🚀 Serve XML file
-@app.route("/RVR/vr.xml")
-def serve_xml():
-    xml_file_path = os.path.join(os.getcwd(), "RVR", "vr.xml")
-    if os.path.exists(xml_file_path):
-        return send_from_directory(os.path.join(os.getcwd(), "RVR"), "vr.xml", mimetype="application/xml")
-    else:
-        return "⚠️ File not found", 404
-
-# 📄 Serve TXT file at /Radiobee/radiobee.txt
-@app.route("/Radiobee/radiobee.txt")
-def serve_radiobee():
-    txt_path = os.path.join(os.getcwd(), "Radiobee", "radiobee.txt")
-    if os.path.exists(txt_path):
-        return send_from_directory(os.path.join(os.getcwd(), "Radiobee"), "radiobee.txt", mimetype="text/plain")
-    else:
-        return "⚠️ File not found", 404
-
+# ➕ Add new station via POST
 @app.route("/add", methods=["POST"])
 def add_station():
     name = request.form.get("name", "").strip().lower().replace(" ", "_")
@@ -135,12 +110,14 @@ def add_station():
         RADIO_STATIONS[name] = url
     return redirect("/")
 
+# 🎨 Utility: generate pastel colors
 def pastel_color(i):
     r = (100 + (i * 40)) % 256
     g = (150 + (i * 60)) % 256
     b = (200 + (i * 80)) % 256
     return f"{r}, {g}, {b}"
 
+# 🧱 Generate station cards
 def generate_station_cards(stations):
     return "".join(
         f"""
@@ -151,11 +128,10 @@ def generate_station_cards(stations):
         """ for i, name in enumerate(stations)
     )
 
-# 🏠 Homepage with tabs
-@app.route("/", methods=["GET"])
+# 🏠 Homepage
+@app.route("/")
 def index():
     all_stations_html = generate_station_cards(RADIO_STATIONS.keys())
-    
     return f"""
     <html>
     <head>
@@ -291,27 +267,19 @@ def index():
 
         <script>
             let currentTab = 'all';
-            
-            // Initialize favorites from localStorage
             let favorites = JSON.parse(localStorage.getItem("favorites")) || [];
-            
+
             function switchTab(tab) {{
-                document.querySelectorAll('.tab-content').forEach(content => {{
-                    content.classList.remove('active');
-                }});
-                document.querySelectorAll('.tab').forEach(tabEl => {{
-                    tabEl.classList.remove('active');
-                }});
-                
+                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                document.querySelectorAll('.tab').forEach(tabEl => tabEl.classList.remove('active'));
                 document.getElementById(tab + 'Stations').classList.add('active');
                 document.querySelector(`.tab[onclick="switchTab('${{tab}}')"]`).classList.add('active');
                 currentTab = tab;
-                
                 if (tab === 'favorites') {{
                     updateFavoritesDisplay();
                 }}
             }}
-            
+
             function toggleFavourite(name) {{
                 const index = favorites.indexOf(name);
                 if (index === -1) {{
@@ -321,7 +289,6 @@ def index():
                 }}
                 localStorage.setItem("favorites", JSON.stringify(favorites));
                 updateDisplay();
-                
                 if (currentTab === 'favorites') {{
                     updateFavoritesDisplay();
                 }}
@@ -333,18 +300,15 @@ def index():
                     const btn = card.querySelector(".fav-btn");
                     if (favorites.includes(name)) {{
                         btn.textContent = "★";
-                        btn.style.color = "gold";
                     }} else {{
                         btn.textContent = "⭐";
-                        btn.style.color = "gold";
                     }}
                 }});
             }}
-            
+
             function updateFavoritesDisplay() {{
                 const favoritesGrid = document.getElementById("favoritesGrid");
                 favoritesGrid.innerHTML = "";
-                
                 favorites.forEach((name, i) => {{
                     const card = document.createElement("div");
                     card.className = "card";
@@ -357,23 +321,21 @@ def index():
                     favoritesGrid.appendChild(card);
                 }});
             }}
-            
+
             function getPastelColor(i) {{
                 const r = (100 + (i * 40)) % 256;
                 const g = (150 + (i * 60)) % 256;
                 const b = (200 + (i * 80)) % 256;
                 return `${{r}}, ${{g}}, ${{b}}`;
             }}
-            
+
             function toggleAddForm() {{
-                const form = document.getElementById("addForm");
-                form.classList.toggle("active");
+                document.getElementById("addForm").classList.toggle("active");
             }}
 
             window.onload = function() {{
                 updateDisplay();
-                // Force refresh to show newly added stations
-                if (performance.navigation.type === 1) {{
+                if (currentTab === 'favorites') {{
                     updateFavoritesDisplay();
                 }}
             }};
