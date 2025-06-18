@@ -92,10 +92,13 @@ def podcast():
             input {{ width: 100%; padding: 10px; margin: 10px 0; background: #333; border: none; color: white; }}
         </style></head><body>
         <h2>🎙️ Saved Podcasts</h2>
-        {"".join(f"<div class='podcast'><b>{get_podcast_title(url)}</b><br>{url}<br>"
-                 f"<a href='/podcast?url={url}'>View</a> "
-                 f"<button class='remove' onclick=\"location.href='/podcast?url={url}&action=remove'\">Remove</button></div>"
-                 for url in saved_podcasts) or "<p>No podcasts saved</p>"}
+        {"".join(
+            "<div class='podcast'><b>{}</b><br>{}<br><a href='/podcast?url={}'>View</a> "
+            "<a href='/podcast?url={}&action=remove'><button class='remove'>Remove</button></a></div>".format(
+                get_podcast_title(url), url, url, url
+            )
+            for url in saved_podcasts
+        ) or "<p>No podcasts saved</p>"}
         <form method="get" action="/podcast">
             <input type="text" name="url" placeholder="Enter RSS feed URL" required>
             <input type="submit" value="Add Podcast">
@@ -103,10 +106,11 @@ def podcast():
         </body></html>
         """
 
+    # If a feed URL is specified, show episodes
     try:
         feed = feedparser.parse(rss_url)
         if not feed.entries:
-            return "Invalid or empty podcast feed."
+            return "⚠️ Invalid or empty podcast feed."
 
         if rss_url not in saved_podcasts:
             saved_podcasts.append(rss_url)
@@ -122,7 +126,7 @@ def podcast():
                         f"<audio controls src='{audio}'></audio><hr></div>"
         return f"<html><body style='background:#1e1e2f;color:white;padding:15px;font-family:sans-serif;'>{html}<br><a href='/podcast' style='color:lime'>← Back</a></body></html>"
     except Exception as e:
-        return f"Error loading podcast: {str(e)}"
+        return f"⚠️ Error loading podcast: {str(e)}"
 
 @app.route("/podcast_search")
 def podcast_search():
