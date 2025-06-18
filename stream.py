@@ -242,6 +242,8 @@ DEFAULT_STATIONS = {
     }
 }
 
+
+
 def load_data(filename, default_data):
     try:
         if Path(filename).exists():
@@ -264,7 +266,7 @@ FLAT_STATION_MAP = {
     sid: station["url"]
     for category in RADIO_STATIONS.values()
     for sid, station in category.items()
-    if not station["url"].startswith("http://capitalist-anthe")  # manually added = direct
+    if not station["url"].startswith("http://capitalist-anthe")
 }
 
 def generate_stream(url):
@@ -317,7 +319,7 @@ def index():
             html_stations += f"""
             <div class='station-card' data-category="{category}">
                 <div class='station-header'>
-                    <span class='station-name' onclick="playStream('{play_link}')">{display_name}</span>
+                    <span class='station-name' onclick="playStream('{play_link}', '{display_name}')">{display_name}</span>
                     <form method='POST' action='/delete/{category}/{sid}' style='display:inline;'>
                         <button type='submit'>🗑️</button>
                     </form>
@@ -348,6 +350,7 @@ def index():
             .station-name {{ color:#4CAF50; font-weight:bold; cursor:pointer; }}
             button {{ background:none; border:1px solid #555; color:white; padding:4px 8px; border-radius:4px; cursor:pointer; }}
             .back-button {{ color:#4CAF50; margin-bottom:10px; cursor:pointer; }}
+            #player {{ margin:10px 0; display:none; }}
         </style>
     </head>
     <body>
@@ -357,6 +360,11 @@ def index():
         <div id="stations-container" style="display:none;">
             <div class="back-button" onclick="showCategories()">← Back</div>
             <div id="stations">{html_stations}</div>
+        </div>
+
+        <div id="player">
+            <p id="now-playing"></p>
+            <audio id="audio-player" controls style="width:100%;"></audio>
         </div>
 
         <script>
@@ -371,9 +379,16 @@ def index():
             function showCategories() {{
                 document.getElementById('categories').style.display = 'grid';
                 document.getElementById('stations-container').style.display = 'none';
+                document.getElementById('player').style.display = 'none';
             }}
-            function playStream(url) {{
-                window.open(url, '_blank');
+            function playStream(url, name) {{
+                const audio = document.getElementById('audio-player');
+                const player = document.getElementById('player');
+                const nowPlaying = document.getElementById('now-playing');
+                audio.src = url;
+                audio.play();
+                nowPlaying.innerText = "🎶 Now Playing: " + name;
+                player.style.display = 'block';
             }}
         </script>
     </body>
