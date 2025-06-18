@@ -179,6 +179,7 @@ def index():
             }}
             form {{
                 margin-top: 40px;
+                max-width: 400px;
             }}
             input {{
                 width: 100%;
@@ -207,13 +208,15 @@ def index():
             <div id="stations" class="stations"></div>
         </div>
 
-        <h2>Add New Station</h2>
-        <form method="POST" action="/add">
-            <input name="category" placeholder="Category (e.g. News)" required>
-            <input name="name" placeholder="Station Name" required>
-            <input name="url" placeholder="Stream URL (http://...)" required>
-            <button type="submit" class="submit-btn">Add Station</button>
-        </form>
+        <div id="add-form">
+            <h2>Add New Station</h2>
+            <form method="POST" action="/add">
+                <input name="category" placeholder="Category (e.g. News)" required>
+                <input name="name" placeholder="Station Name" required>
+                <input name="url" placeholder="Stream URL (http://...)" required>
+                <button type="submit" class="submit-btn">Add Station</button>
+            </form>
+        </div>
 
         <script>
             const allStationsHTML = `{stations_html}`;
@@ -221,6 +224,7 @@ def index():
             function showStations(category) {{
                 document.getElementById('categories').style.display = 'none';
                 document.getElementById('stations-container').style.display = 'block';
+                document.getElementById('add-form').style.display = 'none';
                 const container = document.getElementById('stations');
                 container.innerHTML = '';
                 const tempDiv = document.createElement('div');
@@ -232,6 +236,7 @@ def index():
             function showCategories() {{
                 document.getElementById('categories').style.display = 'grid';
                 document.getElementById('stations-container').style.display = 'none';
+                document.getElementById('add-form').style.display = 'block';
             }}
 
             function playStream(url) {{
