@@ -13,11 +13,11 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy all files
+# Copy all app files
 COPY . .
 
-# Create necessary directories
+# Create necessary directories (optional for uploads/logos)
 RUN mkdir -p static/logos
 
-# Explicitly set the command (critical for Koyeb)
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "2", "stream:app"]
+# Run Flask directly (good for personal, low-load apps)
+CMD ["python", "stream.py"]
