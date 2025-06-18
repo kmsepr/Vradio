@@ -8,8 +8,6 @@ from pathlib import Path
 app = Flask(__name__)
 
 STATIONS_FILE = "radio_stations.json"
-BASE_URL = os.getenv('BASE_URL', 'http://localhost:8000')
-
 DEFAULT_STATIONS = {
     "News": {
         "al_jazeera": "http://live-hls-audio-web-aja.getaj.net/VOICE-AJA",
@@ -47,7 +45,7 @@ def generate_stream(url):
             [
                 "ffmpeg", "-reconnect", "1", "-reconnect_streamed", "1",
                 "-reconnect_delay_max", "10", "-fflags", "nobuffer", "-flags", "low_delay",
-                "-i", url, "-vn", "-ac", "1", "-b:a", "40k", "-buffer_size", "1024k", "-f", "mp3", "-"
+                "-i", url, "-vn", "-ac", "1", "-b:a", "64k", "-f", "mp3", "-"
             ],
             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=8192
         )
@@ -92,7 +90,7 @@ def index():
         f"""
         <div class='station-card' data-category='{category}'>
             <div class='station-header'>
-                <a href='/{category}/{name}' target='audio_player' class='station-name'>{name.replace('_', ' ').title()}</a>
+                <span class='station-name' onclick="playStream('/{category}/{name}')">{name.replace('_', ' ').title()}</span>
                 <form method='POST' action='/delete/{category}/{name}' style='display:inline;'>
                     <button type='submit'>🗑️</button>
                 </form>
@@ -108,7 +106,7 @@ def index():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Radio Stations</title>
+        <title>Radio</title>
         <style>
             body {{
                 font-family: Arial, sans-serif;
@@ -128,18 +126,13 @@ def index():
                 padding: 15px;
                 border-radius: 8px;
                 cursor: pointer;
-                transition: transform 0.2s;
-            }}
-            .category-card:hover {{
-                transform: translateY(-3px);
             }}
             .stations-container {{
                 display: none;
             }}
             .stations {{
                 display: grid;
-                grid-template-columns: 1fr;
-                gap: 15px;
+                gap: 10px;
             }}
             .station-card {{
                 background: #2b2b3c;
@@ -152,64 +145,60 @@ def index():
                 align-items: center;
             }}
             .station-name {{
-                color: white;
-                text-decoration: none;
+                color: #4CAF50;
                 font-weight: bold;
-                font-size: 1.1em;
+                cursor: pointer;
             }}
-            .station-header button {{
+            button {{
                 background: none;
                 border: 1px solid #444;
                 color: white;
                 padding: 5px 10px;
                 border-radius: 4px;
                 cursor: pointer;
-                margin-left: 5px;
             }}
             .back-button {{
-                margin-bottom: 15px;
+                margin-bottom: 10px;
                 cursor: pointer;
                 color: #4CAF50;
-                font-weight: bold;
             }}
         </style>
     </head>
     <body>
-        <h1>Radio Stations</h1>
+        <h1>Radio</h1>
 
-        <div id="categories" class="categories">
-            {categories_html}
-        </div>
+        <div id="categories" class="categories">{categories_html}</div>
 
         <div id="stations-container" class="stations-container">
-            <div class="back-button" onclick="showCategories()">← Back to Categories</div>
+            <div class="back-button" onclick="showCategories()">← Back</div>
             <div id="stations" class="stations"></div>
         </div>
 
-        <iframe name="audio_player" style="display:none;"></iframe>
+        <audio id="audio-player" controls autoplay style="width:100%; margin-top: 20px;"></audio>
 
         <script>
             const allStationsHTML = `{stations_html}`;
-            
+
             function showStations(category) {{
                 document.getElementById('categories').style.display = 'none';
                 document.getElementById('stations-container').style.display = 'block';
-                
-                const stationsContainer = document.getElementById('stations');
-                stationsContainer.innerHTML = '';
-                
+                const container = document.getElementById('stations');
+                container.innerHTML = '';
                 const tempDiv = document.createElement('div');
                 tempDiv.innerHTML = allStationsHTML;
-                
-                const stationsInCategory = tempDiv.querySelectorAll(`.station-card[data-category='${{category}}']`);
-                stationsInCategory.forEach(station => {{
-                    stationsContainer.appendChild(station.cloneNode(true));
-                }});
+                const items = tempDiv.querySelectorAll(`.station-card[data-category='${{category}}']`);
+                items.forEach(el => container.appendChild(el.cloneNode(true)));
             }}
-            
+
             function showCategories() {{
                 document.getElementById('categories').style.display = 'grid';
                 document.getElementById('stations-container').style.display = 'none';
+            }}
+
+            function playStream(url) {{
+                const player = document.getElementById("audio-player");
+                player.src = url;
+                player.play();
             }}
         </script>
     </body>
@@ -219,4 +208,4 @@ def index():
 if __name__ == "__main__":
     if not Path(STATIONS_FILE).exists():
         save_data(STATIONS_FILE, DEFAULT_STATIONS)
-    app.run(host="0.0.0.0", port=8000)
+    app.run(host="0.0.0.0", port=8000, threaded=True)
