@@ -11,11 +11,20 @@ STATIONS_FILE = "radio_stations.json"
 # 🎧 Default stations
 DEFAULT_STATIONS = {
     "News": {
-        "al_jazeera": "http://live-hls-audio-web-aja.getaj.net/VOICE-AJA/index.m3u8",
-        "asianet_news": "https://vidcdn.vidgyor.com/asianet-origin/audioonly/chunks.m3u8"
+        "al_jazeera": {
+            "name": "Al Jazeera",
+            "url": "http://live-hls-audio-web-aja.getaj.net/VOICE-AJA/index.m3u8"
+        },
+        "asianet_news": {
+            "name": "Asianet News",
+            "url": "https://vidcdn.vidgyor.com/asianet-origin/audioonly/chunks.m3u8"
+        }
     },
     "Islamic": {
-        "muthnabi_radio": "http://cast4.my-control-panel.com/proxy/muthnabi/stream"
+        "muthnabi_radio": {
+            "name": "Muthnabi Radio",
+            "url": "http://cast4.my-control-panel.com/proxy/muthnabi/stream"
+        }
     }
 }
 
@@ -35,18 +44,16 @@ def save_data(filename, data):
     except Exception as e:
         print(f"Error saving {filename}: {e}")
 
-# Load stations
 RADIO_STATIONS = load_data(STATIONS_FILE, DEFAULT_STATIONS)
 
-# Flat map for FFmpeg proxy routing
+# Flat map for FFmpeg proxy routes
 FLAT_STATION_MAP = {
-    sid: url
+    sid: station["url"]
     for category in RADIO_STATIONS.values()
-    for sid, url in category.items()
-    if not sid.startswith("http://") and not sid.startswith("https://")  # Exclude manual URLs
+    for sid, station in category.items()
+    if not station["url"].startswith("http://your-koyeb") and not sid.startswith("http")
 }
 
-# FFmpeg proxy stream
 def generate_stream(url):
     process = None
     while True:
@@ -94,12 +101,19 @@ def add_station():
     if not category or not url:
         return "Missing fields", 400
 
-    # Use full URL as ID for manual stations
-    station_id = url if url.startswith("http://") or url.startswith("https://") else re.sub(r'\W+', '_', name.lower())
+    if not name:
+        name = url  # fallback to URL as display
+
+    station_id = re.sub(r'\W+', '_', name.lower())
+
+    new_station = {
+        "name": name,
+        "url": url
+    }
 
     if category not in RADIO_STATIONS:
         RADIO_STATIONS[category] = {}
-    RADIO_STATIONS[category][station_id] = url
+    RADIO_STATIONS[category][station_id] = new_station
     save_data(STATIONS_FILE, RADIO_STATIONS)
     return redirect("/")
 
@@ -107,10 +121,11 @@ def add_station():
 def index():
     html_stations = ""
     for category, stations in RADIO_STATIONS.items():
-        for sid, url in stations.items():
-            display_name = sid.replace("_", " ").title()
-            is_manual = sid.startswith("http://") or sid.startswith("https://")
-            play_link = sid if is_manual else f"/{sid}"
+        for sid, station in stations.items():
+            display_name = station.get("name", sid.replace("_", " ").title())
+            url = station.get("url", "")
+            is_manual = sid.startswith("http") or url.startswith("http://") or url.startswith("https://")
+            play_link = url if sid.startswith("http") else f"/{sid}"
             html_stations += f"""
             <div class='station-card' data-category="{category}">
                 <div class='station-header'>
@@ -162,7 +177,7 @@ def index():
             <h2>Add New Station</h2>
             <form method="POST" action="/add">
                 <input name="category" placeholder="Category (e.g. Malayalam)" required>
-                <input name="name" placeholder="Display Name (optional)">
+                <input name="name" placeholder="Display Name (e.g. Media One)">
                 <input name="url" placeholder="Stream URL (http://...)" required>
                 <button class="submit-btn" type="submit">Add Station</button>
             </form>
