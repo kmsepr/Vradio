@@ -175,11 +175,6 @@ def podcast():
                     background: #4CAF50;
                     cursor: pointer;
                 }}
-                .loading {{
-                    text-align: center;
-                    padding: 20px;
-                    color: #4CAF50;
-                }}
             </style>
             <script>
                 function confirmRemove(url) {{
@@ -324,11 +319,217 @@ def podcast():
     except Exception as e:
         return f"⚠️ Error loading podcast: {str(e)}"
 
-# 🏠 Homepage UI (same as before)
+# 🏠 Homepage UI
 @app.route("/")
 def index():
-    # ... (keep your existing index function)
-    pass
+    def pastel_color(i):
+        r = (100 + (i * 40)) % 256
+        g = (150 + (i * 60)) % 256
+        b = (200 + (i * 80)) % 256
+        return f"{r}, {g}, {b}"
+
+    links_html = "".join(
+        f"""
+        <div class='card' data-name='{name}' style='background-color: rgba({pastel_color(i)}, 0.85);'>
+            <a href='/{name}' target='_blank' rel='noopener noreferrer'>{name}</a>
+            <button class="fav-btn" onclick="toggleFavourite('{name}')">⭐</button>
+        </div>
+        """ for i, name in enumerate(reversed(list(RADIO_STATIONS)))
+    )
+
+    return f"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Radio Favourites</title>
+        <style>
+            body {{
+                font-family: sans-serif;
+                background: #1e1e2f;
+                color: white;
+                margin: 0;
+                padding: 0;
+            }}
+            .header {{
+                display: flex;
+                align-items: center;
+                background: #2b2b3c;
+                padding: 10px;
+            }}
+            .menu-icon {{
+                font-size: 1.5rem;
+                cursor: pointer;
+                margin-right: 10px;
+            }}
+            .side-menu {{
+                position: fixed;
+                top: 0;
+                left: -220px;
+                width: 200px;
+                height: 100%;
+                background: #2b2b3c;
+                padding-top: 60px;
+                transition: left 0.3s;
+                z-index: 999;
+            }}
+            .side-menu a {{
+                display: block;
+                padding: 12px 20px;
+                color: white;
+                text-decoration: none;
+                border-bottom: 1px solid #444;
+            }}
+            .side-menu a:hover {{
+                background-color: #444;
+            }}
+            h1 {{
+                font-size: 1.2rem;
+                margin: 0;
+            }}
+            .scroll-container {{
+                max-height: 70vh;
+                overflow-y: auto;
+                padding: 10px;
+            }}
+            .grid {{
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+                gap: 12px;
+            }}
+            .card {{
+                padding: 12px;
+                border-radius: 10px;
+                text-align: center;
+                position: relative;
+            }}
+            .card a {{
+                color: white;
+                text-decoration: none;
+            }}
+            .fav-btn {{
+                position: absolute;
+                top: 6px;
+                right: 10px;
+                background: none;
+                border: none;
+                color: gold;
+                font-size: 1.2rem;
+                cursor: pointer;
+            }}
+            .tab-content {{
+                display: none;
+            }}
+            .tab-content.active {{
+                display: block;
+            }}
+            .add-form {{
+                max-width: 400px;
+                margin: 20px auto;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                background: #2a2a3a;
+                padding: 15px;
+                border-radius: 8px;
+            }}
+            .add-form input {{
+                padding: 10px;
+                font-size: 1rem;
+                border-radius: 5px;
+                border: 1px solid #666;
+                background: #1e1e2f;
+                color: white;
+            }}
+            .add-form input[type=submit] {{
+                background: #007acc;
+                cursor: pointer;
+                border: none;
+            }}
+        </style>
+        <script>
+            let activeTab = "fav";
+
+            function toggleFavourite(name) {{
+                let favs = JSON.parse(localStorage.getItem("favourites") || "[]");
+                if (favs.includes(name)) {{
+                    favs = favs.filter(n => n !== name);
+                }} else {{
+                    favs.push(name);
+                }}
+                localStorage.setItem("favourites", JSON.stringify(favs));
+                updateDisplay();
+            }}
+
+            function updateDisplay() {{
+                const favs = JSON.parse(localStorage.getItem("favourites") || "[]");
+                document.querySelectorAll(".card").forEach(card => {{
+                    const name = card.getAttribute("data-name");
+                    card.style.display = (activeTab === "all" || (activeTab === "fav" && favs.includes(name))) ? "block" : "none";
+                    const btn = card.querySelector(".fav-btn");
+                    if (btn) btn.textContent = favs.includes(name) ? "★" : "⭐";
+                }});
+
+                const favGrid = document.getElementById("favGrid");
+                if (favGrid) {{
+                    favGrid.innerHTML = "";
+                    favs.forEach(name => {{
+                        const el = document.querySelector(`[data-name='${{name}}']`);
+                        if (el) favGrid.appendChild(el.cloneNode(true));
+                    }});
+                }}
+            }}
+
+            function showTab(tab) {{
+                activeTab = tab;
+                document.querySelectorAll(".tab-content").forEach(div => div.classList.remove("active"));
+                document.getElementById(tab + "Tab").classList.add("active");
+                updateDisplay();
+            }}
+
+            function toggleMenu() {{
+                const menu = document.getElementById("sideMenu");
+                menu.style.left = (menu.style.left === "0px") ? "-220px" : "0px";
+            }}
+
+            window.onload = updateDisplay;
+        </script>
+    </head>
+    <body>
+        <div class="header">
+            <span class="menu-icon" onclick="toggleMenu()">☰</span>
+            <h1>⭐ Favourite Radios</h1>
+        </div>
+
+        <div class="side-menu" id="sideMenu">
+            <a href="#" onclick="showTab('all'); toggleMenu();">📻 All Stations</a>
+            <a href="#" onclick="showTab('add'); toggleMenu();">➕ Add Station</a>
+            <a href="/podcast" onclick="toggleMenu();">🎙️ Podcasts</a>
+        </div>
+
+        <div id="favTab" class="tab-content active">
+            <div class="scroll-container">
+                <div class="grid" id="favGrid"></div>
+            </div>
+        </div>
+
+        <div id="allTab" class="tab-content">
+            <div class="scroll-container">
+                <div class="grid" id="stationGrid">{links_html}</div>
+            </div>
+        </div>
+
+        <div id="addTab" class="tab-content">
+            <form class="add-form" method="POST" action="/add">
+                <input type="text" name="name" placeholder="Station name (no space)" required />
+                <input type="text" name="url" placeholder="Stream URL" required />
+                <input type="submit" value="Add Station" />
+            </form>
+        </div>
+    </body>
+    </html>
+    """
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=80)
