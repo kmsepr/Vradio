@@ -7,14 +7,12 @@ from pathlib import Path
 
 app = Flask(__name__)
 
-# Configuration
 STATIONS_FILE = "radio_stations.json"
-BASE_URL = os.getenv('BASE_URL', 'http://localhost:8000')  # Uses your Koyeb environment variable
+BASE_URL = os.getenv('BASE_URL', 'http://localhost:8000')
 
-# Organized radio stations by category
 DEFAULT_STATIONS = {
     "News": {
-        "al_jazeera": "http://live-hls-audio-web-aja.getaj.net/VOICE-AJA/index.m3u8",
+        "al_jazeera": "http://live-hls-audio-web-aja.getaj.net/VOICE-AJA",
         "asianet_news": "https://vidcdn.vidgyor.com/asianet-origin/audioonly/chunks.m3u8"
     },
     "Islamic": {
@@ -38,10 +36,8 @@ def save_data(filename, data):
     except Exception as e:
         print(f"Error saving {filename}: {e}")
 
-# Load data at startup
 RADIO_STATIONS = load_data(STATIONS_FILE, DEFAULT_STATIONS)
 
-# 🔁 FFmpeg stream generator (unchanged from your original)
 def generate_stream(url):
     process = None
     while True:
@@ -51,7 +47,7 @@ def generate_stream(url):
             [
                 "ffmpeg", "-reconnect", "1", "-reconnect_streamed", "1",
                 "-reconnect_delay_max", "10", "-fflags", "nobuffer", "-flags", "low_delay",
-                "-i", url, "-vn", "-ac", "1", "-b:a", "64k", "-buffer_size", "1024k", "-f", "mp3", "-"
+                "-i", url, "-vn", "-ac", "1", "-b:a", "40k", "-buffer_size", "1024k", "-f", "mp3", "-"
             ],
             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=8192
         )
@@ -72,7 +68,14 @@ def stream(category, station_name):
         return Response(generate_stream(url), mimetype="audio/mpeg")
     return "Station not found", 404
 
-# ... [keep all your other routes: add, edit, delete] ...
+@app.route("/delete/<category>/<station_name>", methods=["POST"])
+def delete_station(category, station_name):
+    if category in RADIO_STATIONS and station_name in RADIO_STATIONS[category]:
+        del RADIO_STATIONS[category][station_name]
+        if not RADIO_STATIONS[category]:
+            del RADIO_STATIONS[category]
+        save_data(STATIONS_FILE, RADIO_STATIONS)
+    return redirect("/")
 
 @app.route("/")
 def index():
@@ -88,32 +91,15 @@ def index():
     stations_html = "".join(
         f"""
         <div class='station-card' data-category='{category}'>
-            <div class='station-info'>
-                <div class='station-header'>
-                    <a href='/{category}/{name}' target='_blank' class='station-name'>{name.replace('_', ' ').title()}</a>
-                    <div class='station-actions'>
-                        <button onclick="openEditModal('{category}', '{name}', '{url}')">✏️</button>
-                        <form method='POST' action='/delete/{category}/{name}' style='display:inline;'>
-                            <button type='submit'>🗑️</button>
-                        </form>
-                    </div>
-                </div>
-                <div class='station-urls'>
-                    <div class='url-group'>
-                        <label>Original URL</label>
-                        <input type='text' value='{url}' readonly>
-                        <button onclick="copyUrl(this)">Copy</button>
-                    </div>
-                    <div class='url-group'>
-                        <label>Transcoded URL</label>
-                        <input type='text' value='{BASE_URL}/{category}/{name}' readonly>
-                        <button onclick="copyUrl(this)">Copy</button>
-                    </div>
-                </div>
+            <div class='station-header'>
+                <a href='/{category}/{name}' target='audio_player' class='station-name'>{name.replace('_', ' ').title()}</a>
+                <form method='POST' action='/delete/{category}/{name}' style='display:inline;'>
+                    <button type='submit'>🗑️</button>
+                </form>
             </div>
         </div>
         """ for category, stations in RADIO_STATIONS.items() 
-        for name, url in stations.items()
+        for name in stations
     )
 
     return f"""
@@ -164,7 +150,6 @@ def index():
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                margin-bottom: 10px;
             }}
             .station-name {{
                 color: white;
@@ -172,7 +157,7 @@ def index():
                 font-weight: bold;
                 font-size: 1.1em;
             }}
-            .station-actions button {{
+            .station-header button {{
                 background: none;
                 border: 1px solid #444;
                 color: white;
@@ -181,59 +166,29 @@ def index():
                 cursor: pointer;
                 margin-left: 5px;
             }}
-            .station-urls {{
-                display: grid;
-                gap: 10px;
-            }}
-            .url-group {{
-                display: grid;
-                gap: 5px;
-            }}
-            .url-group label {{
-                font-size: 0.8em;
-                color: #aaa;
-            }}
-            .url-group input {{
-                width: 100%;
-                padding: 8px;
-                background: #1e1e2f;
-                color: white;
-                border: 1px solid #444;
-                border-radius: 4px;
-            }}
-            .url-group button {{
-                background: #4CAF50;
-                color: white;
-                border: none;
-                padding: 8px;
-                border-radius: 4px;
-                cursor: pointer;
-            }}
             .back-button {{
                 margin-bottom: 15px;
                 cursor: pointer;
                 color: #4CAF50;
                 font-weight: bold;
             }}
-            /* [Keep all your other existing CSS] */
         </style>
     </head>
     <body>
         <h1>Radio Stations</h1>
-        
+
         <div id="categories" class="categories">
             {categories_html}
         </div>
-        
+
         <div id="stations-container" class="stations-container">
             <div class="back-button" onclick="showCategories()">← Back to Categories</div>
             <div id="stations" class="stations"></div>
         </div>
-        
-        <!-- [Keep your add station form and edit modal] -->
-        
+
+        <iframe name="audio_player" style="display:none;"></iframe>
+
         <script>
-            // Store all stations HTML
             const allStationsHTML = `{stations_html}`;
             
             function showStations(category) {{
@@ -243,7 +198,6 @@ def index():
                 const stationsContainer = document.getElementById('stations');
                 stationsContainer.innerHTML = '';
                 
-                // Filter stations by category and add to container
                 const tempDiv = document.createElement('div');
                 tempDiv.innerHTML = allStationsHTML;
                 
@@ -257,16 +211,6 @@ def index():
                 document.getElementById('categories').style.display = 'grid';
                 document.getElementById('stations-container').style.display = 'none';
             }}
-            
-            function copyUrl(button) {{
-                const input = button.previousElementSibling;
-                input.select();
-                document.execCommand('copy');
-                button.textContent = 'Copied!';
-                setTimeout(() => button.textContent = 'Copy', 2000);
-            }}
-            
-            // [Keep all your other existing JavaScript functions]
         </script>
     </body>
     </html>
