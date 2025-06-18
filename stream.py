@@ -1,7 +1,6 @@
 import subprocess
 import time
-from flask import Flask, Response, redirect, request, send_from_directory
-import os
+from flask import Flask, Response, redirect, request
 import json
 from pathlib import Path
 
@@ -9,11 +8,8 @@ app = Flask(__name__)
 
 # Configuration
 STATIONS_FILE = "radio_stations.json"
-UPLOAD_FOLDER = 'static/logos'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# Radio stations organized by category
+# Organized radio stations by category
 DEFAULT_STATIONS = {
     "News": {
         "al_jazeera": "http://live-hls-audio-web-aja.getaj.net/VOICE-AJA/index.m3u8",
@@ -29,6 +25,14 @@ DEFAULT_STATIONS = {
         "muthnabi_radio": "http://cast4.my-control-panel.com/proxy/muthnabi/stream",
         "radio_keralam": "http://ice31.securenetsystems.net/RADIOKERAL",
         "malayalam_1": "http://167.114.131.90:5412/stream"
+    },
+    "Hindi": {
+        "nonstop_hindi": "http://s5.voscast.com:8216/stream",
+        "fm_gold": "https://airhlspush.pc.cdn.bitgravity.com/httppush/hispbaudio005/hispbaudio00564kbps.m3u8"
+    },
+    "Arabic": {
+        "eram_fm": "http://icecast2.edisimo.com:8000/eramfm.mp3",
+        "al_sumood_fm": "http://us3.internet-radio.com/proxy/alsumoodfm2020?mp=/stream"
     }
 }
 
@@ -53,6 +57,7 @@ def save_data(filename, data):
 # Load data at startup
 RADIO_STATIONS = load_data(STATIONS_FILE, DEFAULT_STATIONS)
 
+# 🔁 FFmpeg stream generator (kept your transcoding code)
 def generate_stream(url):
     process = None
     while True:
@@ -105,16 +110,15 @@ def edit_station(category, old_name):
         return redirect("/")
 
     if category in RADIO_STATIONS and old_name in RADIO_STATIONS[category]:
-        # Remove from old category if category changed
         if new_category != category:
             RADIO_STATIONS[category].pop(old_name)
             if new_category not in RADIO_STATIONS:
                 RADIO_STATIONS[new_category] = {}
             RADIO_STATIONS[new_category][new_name] = new_url
         else:
-            # Just update within same category
-            RADIO_STATIONS[category].pop(old_name)
             RADIO_STATIONS[category][new_name] = new_url
+            if old_name != new_name:
+                RADIO_STATIONS[category].pop(old_name)
 
         save_data(STATIONS_FILE, RADIO_STATIONS)
     return redirect("/")
@@ -123,7 +127,6 @@ def edit_station(category, old_name):
 def delete_station(category, station_name):
     if category in RADIO_STATIONS and station_name in RADIO_STATIONS[category]:
         del RADIO_STATIONS[category][station_name]
-        # Remove category if empty
         if not RADIO_STATIONS[category]:
             del RADIO_STATIONS[category]
         save_data(STATIONS_FILE, RADIO_STATIONS)
@@ -169,7 +172,8 @@ def index():
                 font-family: Arial, sans-serif;
                 margin: 0;
                 padding: 20px;
-                background: #f5f5f5;
+                background: #1e1e2f;
+                color: white;
             }}
             .categories {{
                 display: grid;
@@ -178,24 +182,14 @@ def index():
                 margin-bottom: 20px;
             }}
             .category-card {{
-                background: #fff;
+                background: #2b2b3c;
                 padding: 15px;
                 border-radius: 8px;
-                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
                 cursor: pointer;
                 transition: transform 0.2s;
             }}
             .category-card:hover {{
                 transform: translateY(-3px);
-            }}
-            .category-card h3 {{
-                margin: 0 0 5px 0;
-                color: #333;
-            }}
-            .category-card p {{
-                margin: 0;
-                color: #666;
-                font-size: 0.9em;
             }}
             .stations-container {{
                 display: none;
@@ -206,15 +200,13 @@ def index():
                 gap: 15px;
             }}
             .station-card {{
-                background: #fff;
+                background: #2b2b3c;
                 padding: 15px;
                 border-radius: 8px;
-                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             }}
             .station-info a {{
-                color: #0066cc;
+                color: white;
                 text-decoration: none;
-                font-weight: bold;
             }}
             .station-actions {{
                 margin-top: 10px;
@@ -223,16 +215,16 @@ def index():
             }}
             .station-actions button {{
                 background: none;
-                border: 1px solid #ddd;
+                border: 1px solid #444;
+                color: white;
                 padding: 5px 10px;
                 border-radius: 4px;
                 cursor: pointer;
             }}
             .add-station-form {{
-                background: #fff;
+                background: #2b2b3c;
                 padding: 20px;
                 border-radius: 8px;
-                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
                 margin-top: 20px;
                 max-width: 500px;
             }}
@@ -240,8 +232,10 @@ def index():
                 width: 100%;
                 padding: 8px;
                 margin-bottom: 10px;
-                border: 1px solid #ddd;
+                border: 1px solid #444;
                 border-radius: 4px;
+                background: #1e1e2f;
+                color: white;
             }}
             .add-station-form button {{
                 background: #4CAF50;
@@ -258,13 +252,13 @@ def index():
                 left: 0;
                 width: 100%;
                 height: 100%;
-                background: rgba(0,0,0,0.5);
+                background: rgba(0,0,0,0.7);
                 z-index: 1000;
                 justify-content: center;
                 align-items: center;
             }}
             .modal-content {{
-                background: white;
+                background: #2b2b3c;
                 padding: 20px;
                 border-radius: 8px;
                 width: 80%;
@@ -273,12 +267,13 @@ def index():
             .close {{
                 float: right;
                 cursor: pointer;
+                color: white;
                 font-size: 1.5em;
             }}
             .back-button {{
                 margin-bottom: 15px;
                 cursor: pointer;
-                color: #0066cc;
+                color: #4CAF50;
                 font-weight: bold;
             }}
         </style>
