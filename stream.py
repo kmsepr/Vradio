@@ -3,12 +3,10 @@ import time
 from flask import Flask, Response, redirect, request
 import json
 from pathlib import Path
-import re
 
 app = Flask(__name__)
 STATIONS_FILE = "radio_stations.json"
 
-# 🎧 Default stations
 DEFAULT_STATIONS = {
     "News": {
         "al_jazeera": {
@@ -56,12 +54,11 @@ def save_data(filename, data):
 
 RADIO_STATIONS = load_data(STATIONS_FILE, DEFAULT_STATIONS)
 
-# Flat map for FFmpeg proxy routes
 FLAT_STATION_MAP = {
     sid: station["url"]
     for category in RADIO_STATIONS.values()
     for sid, station in category.items()
-    if not station["url"].startswith("http://your-koyeb") and not sid.startswith("http")
+    if not station["url"].startswith("http://capitalist-anthe")  # manually added = direct
 }
 
 def generate_stream(url):
@@ -102,31 +99,6 @@ def delete_station(category, station_id):
         save_data(STATIONS_FILE, RADIO_STATIONS)
     return redirect("/")
 
-@app.route("/add", methods=["POST"])
-def add_station():
-    category = request.form.get("category", "").strip()
-    url = request.form.get("url", "").strip()
-    name = request.form.get("name", "").strip()
-
-    if not category or not url:
-        return "Missing fields", 400
-
-    if not name:
-        name = url  # fallback to URL as display
-
-    station_id = re.sub(r'\W+', '_', name.lower())
-
-    new_station = {
-        "name": name,
-        "url": url
-    }
-
-    if category not in RADIO_STATIONS:
-        RADIO_STATIONS[category] = {}
-    RADIO_STATIONS[category][station_id] = new_station
-    save_data(STATIONS_FILE, RADIO_STATIONS)
-    return redirect("/")
-
 @app.route("/")
 def index():
     html_stations = ""
@@ -134,8 +106,8 @@ def index():
         for sid, station in stations.items():
             display_name = station.get("name", sid.replace("_", " ").title())
             url = station.get("url", "")
-            is_manual = sid.startswith("http") or url.startswith("http://") or url.startswith("https://")
-            play_link = url if sid.startswith("http") else f"/{sid}"
+            is_direct = url.startswith("http://capitalist-anthe") or sid.startswith("http")
+            play_link = url if is_direct else f"/{sid}"
             html_stations += f"""
             <div class='station-card' data-category="{category}">
                 <div class='station-header'>
@@ -169,8 +141,6 @@ def index():
             .station-header {{ display:flex; justify-content:space-between; align-items:center; }}
             .station-name {{ color:#4CAF50; font-weight:bold; cursor:pointer; }}
             button {{ background:none; border:1px solid #555; color:white; padding:4px 8px; border-radius:4px; cursor:pointer; }}
-            input {{ width:100%; padding:10px; margin-bottom:10px; border:none; border-radius:4px; }}
-            .submit-btn {{ background:#4CAF50; color:white; border:none; width:100%; padding:10px; border-radius:4px; }}
             .back-button {{ color:#4CAF50; margin-bottom:10px; cursor:pointer; }}
         </style>
     </head>
@@ -180,39 +150,22 @@ def index():
 
         <div id="stations-container" style="display:none;">
             <div class="back-button" onclick="showCategories()">← Back</div>
-            <div id="stations"></div>
-        </div>
-
-        <div id="add-form">
-            <h2>Add New Station</h2>
-            <form method="POST" action="/add">
-                <input name="category" placeholder="Category (e.g. Malayalam)" required>
-                <input name="name" placeholder="Display Name (e.g. Media One)">
-                <input name="url" placeholder="Stream URL (http://...)" required>
-                <button class="submit-btn" type="submit">Add Station</button>
-            </form>
+            <div id="stations">{html_stations}</div>
         </div>
 
         <script>
-            const allHTML = `{html_stations}`
-
             function showStations(category) {{
                 document.getElementById('categories').style.display = 'none';
                 document.getElementById('stations-container').style.display = 'block';
-                document.getElementById('add-form').style.display = 'none';
-                const container = document.getElementById('stations');
-                container.innerHTML = '';
-                const temp = document.createElement('div');
-                temp.innerHTML = allHTML;
-                temp.querySelectorAll(`[data-category="${{category}}"]`).forEach(el => container.appendChild(el));
+                const cards = document.querySelectorAll('.station-card');
+                cards.forEach(card => {{
+                    card.style.display = card.dataset.category === category ? 'block' : 'none';
+                }});
             }}
-
             function showCategories() {{
                 document.getElementById('categories').style.display = 'grid';
                 document.getElementById('stations-container').style.display = 'none';
-                document.getElementById('add-form').style.display = 'block';
             }}
-
             function playStream(url) {{
                 window.open(url, '_blank');
             }}
