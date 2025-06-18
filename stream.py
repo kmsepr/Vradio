@@ -4,11 +4,11 @@ from flask import Flask, Response, redirect, request
 import json
 from pathlib import Path
 import re
-import uuid
 
 app = Flask(__name__)
 STATIONS_FILE = "radio_stations.json"
 
+# 🎧 Default stations
 DEFAULT_STATIONS = {
     "News": {
         "al_jazeera": "http://live-hls-audio-web-aja.getaj.net/VOICE-AJA/index.m3u8",
@@ -35,14 +35,18 @@ def save_data(filename, data):
     except Exception as e:
         print(f"Error saving {filename}: {e}")
 
+# Load stations
 RADIO_STATIONS = load_data(STATIONS_FILE, DEFAULT_STATIONS)
 
+# Flat map for FFmpeg proxy routing
 FLAT_STATION_MAP = {
-    station_id: url
+    sid: url
     for category in RADIO_STATIONS.values()
-    for station_id, url in category.items()
+    for sid, url in category.items()
+    if not sid.startswith("http://") and not sid.startswith("https://")  # Exclude manual URLs
 }
 
+# FFmpeg proxy stream
 def generate_stream(url):
     process = None
     while True:
@@ -84,16 +88,18 @@ def delete_station(category, station_id):
 @app.route("/add", methods=["POST"])
 def add_station():
     category = request.form.get("category", "").strip()
-    stream_url = request.form.get("url", "").strip()
-    display_name = request.form.get("name", "").strip()
+    url = request.form.get("url", "").strip()
+    name = request.form.get("name", "").strip()
 
-    if not category or not stream_url:
+    if not category or not url:
         return "Missing fields", 400
 
-    safe_id = re.sub(r'[^a-z0-9_]', '', display_name.lower().replace(' ', '_')) if display_name else f"id_{uuid.uuid4().hex[:8]}"
+    # Use full URL as ID for manual stations
+    station_id = url if url.startswith("http://") or url.startswith("https://") else re.sub(r'\W+', '_', name.lower())
+
     if category not in RADIO_STATIONS:
         RADIO_STATIONS[category] = {}
-    RADIO_STATIONS[category][safe_id] = stream_url
+    RADIO_STATIONS[category][station_id] = url
     save_data(STATIONS_FILE, RADIO_STATIONS)
     return redirect("/")
 
@@ -103,8 +109,8 @@ def index():
     for category, stations in RADIO_STATIONS.items():
         for sid, url in stations.items():
             display_name = sid.replace("_", " ").title()
-            is_direct_url = url.startswith("http://") or url.startswith("https://")
-            play_link = url if is_direct_url else f"/{sid}"
+            is_manual = sid.startswith("http://") or sid.startswith("https://")
+            play_link = sid if is_manual else f"/{sid}"
             html_stations += f"""
             <div class='station-card' data-category="{category}">
                 <div class='station-header'>
