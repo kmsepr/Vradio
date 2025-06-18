@@ -1,10 +1,8 @@
 import subprocess
 import time
+from flask import Flask, Response, send_from_directory
+from flask import request, redirect
 import os
-import json
-import requests
-import feedparser
-from flask import Flask, Response, request, redirect
 
 app = Flask(__name__)
 
@@ -12,36 +10,77 @@ app = Flask(__name__)
 RADIO_STATIONS = {
     "muthnabi_radio": "http://cast4.my-control-panel.com/proxy/muthnabi/stream",
     "radio_keralam": "http://ice31.securenetsystems.net/RADIOKERAL",
+    "malayalam_1": "http://167.114.131.90:5412/stream",
+    "radio_digital_malayali": "https://radio.digitalmalayali.in/listen/stream/radio.mp3",
+    "malayalam_90s": "https://stream-159.zeno.fm/gm3g9amzm0hvv?zs-x-7jq8ksTOav9ZhlYHi9xw",
+    "aural_oldies": "https://stream-162.zeno.fm/tksfwb1mgzzuv?zs=SxeQj1-7R0alsZSWJie5eQ",
+    "radio_malayalam": "https://radiomalayalamfm.com/radio/8000/radio.mp3",
+    "swaranjali": "https://stream-161.zeno.fm/x7mve2vt01zuv?zs-D4nK05-7SSK2FZAsvumh2w",
+    "radio_beat_malayalam": "http://live.exertion.in:8050/radio.mp3",
+    "shahul_radio": "https://stream-150.zeno.fm/cynbm5ngx38uv?zs=Ktca5StNRWm-sdIR7GloVg",
+    "raja_radio": "http://159.203.111.241:8026/stream",
+    "nonstop_hindi": "http://s5.voscast.com:8216/stream",
+    "fm_gold": "https://airhlspush.pc.cdn.bitgravity.com/httppush/hispbaudio005/hispbaudio00564kbps.m3u8",
+    "motivational_series": "http://104.7.66.64:8010",
+    "deenagers_radio": "http://104.7.66.64:8003/",
+    "hajj_channel": "http://104.7.66.64:8005",
+    "abc_islam": "http://s10.voscast.com:9276/stream",
+    "eram_fm": "http://icecast2.edisimo.com:8000/eramfm.mp3",
+    "al_sumood_fm": "http://us3.internet-radio.com/proxy/alsumoodfm2020?mp=/stream",
+    "nur_ala_nur": "http://104.7.66.64:8011/",
+    "ruqya_radio": "http://104.7.66.64:8004",
+    "seiyun_radio": "http://s2.radio.co/s26c62011e/listen",
+    "noor_al_eman": "http://edge.mixlr.com/channel/boaht",
+    "sam_yemen": "https://edge.mixlr.com/channel/kijwr",
+    "afaq": "https://edge.mixlr.com/channel/rumps",
+    "alfasi_radio": "https://qurango.net/radio/mishary_alafasi",
+    "tafsir_quran": "https://radio.quranradiotafsir.com/9992/stream",
+    "sirat_al_mustaqim": "http://104.7.66.64:8091/stream",
+    "river_nile_radio": "http://104.7.66.64:8087",
+    "quran_radio_cairo": "http://n02.radiojar.com/8s5u5tpdtwzuv",
+    "quran_radio_nablus": "http://www.quran-radio.org:8002/",
+    "al_nour": "http://audiostreaming.itworkscdn.com:9066/",
+    "allahu_akbar_radio": "http://66.45.232.132:9996/stream",
+    "omar_abdul_kafi_radio": "http://104.7.66.64:8007",
+    "urdu_islamic_lecture": "http://144.91.121.54:27001/channel_02.aac",
+    "hob_nabi": "http://216.245.210.78:8098/stream",
+    "sanaa_radio": "http://dc5.serverse.com/proxy/pbmhbvxs/stream",
+    "rubat_ataq": "http://stream.zeno.fm/5tpfc8d7xqruv",
+    "al_jazeera": "http://live-hls-audio-web-aja.getaj.net/VOICE-AJA/index.m3u8",
+    "asianet_news": "https://vidcdn.vidgyor.com/asianet-origin/audioonly/chunks.m3u8",
+    "air_kavarati": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio189/chunklist.m3u8",
+    "air_calicut": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio082/chunklist.m3u8",
+    "manjeri_fm": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio101/chunklist.m3u8",
+    "real_fm": "http://air.pc.cdn.bitgravity.com/air/live/pbaudio083/playlist.m3u8",
+    "vom_news": "https://psmnews.mv/stream/radio-dhivehi-raajjeyge-adu",
+    "safari_tv": "https://j78dp346yq5r-hls-live.5centscdn.com/safari/live.stream/chunks.m3u8",
+    "victers_tv": "https://932y4x26ljv8-hls-live.5centscdn.com/victers/tv.stream/victers/tv1/chunks.m3u8",
+    "kairali_we": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/wetv_nim_https/050522/wetv/playlist.m3u8",
+    "flowers_tv": "http://103.199.161.254/Content/flowers/Live/Channel(Flowers)/index.m3u8",
+    "dd_malayalam": "https://d3eyhgoylams0m.cloudfront.net/v1/manifest/93ce20f0f52760bf38be911ff4c91ed02aa2fd92/ed7bd2c7-8d10-4051-b397-2f6b90f99acb/562ee8f9-9950-48a0-ba1d-effa00cf0478/2.m3u8",
+    "amrita_tv": "https://dr1zhpsuem5f4.cloudfront.net/master.m3u8",
+    "24_news": "https://segment.yuppcdn.net/110322/channel24/playlist.m3u8",
+    "mazhavil_manorama": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/mazhavilmanorama_nim_https/050522/mazhavilmanorama/playlist.m3u8",
+    "manorama_news": "http://103.199.161.254/Content/manoramanews/Live/Channel(ManoramaNews)/index.m3u8",
+    "aaj_tak": "https://feeds.intoday.in/aajtak/api/aajtakhd/master.m3u8",
+    "bloomberg_tv": "https://bloomberg-bloomberg-3-br.samsung.wurl.tv/manifest/playlist.m3u8",
+    "france_24": "https://live.france24.com/hls/live/2037218/F24_EN_HI_HLS/master_500.m3u8",
+    "n1_news": "https://best-str.umn.cdn.united.cloud/stream?stream=sp1400&sp=n1info&channel=n1bos&u=n1info&p=n1Sh4redSecre7iNf0&player=m3u8",
+    "vom_radio": "https://radio.psm.mv/draair",
 }
 
-PODCASTS_FILE = "podcasts.json"
-
-def load_podcasts():
-    if os.path.exists(PODCASTS_FILE):
-        with open(PODCASTS_FILE, "r") as f:
-            return json.load(f)
-    return []
-
-def save_podcasts(feeds):
-    with open(PODCASTS_FILE, "w") as f:
-        json.dump(feeds, f)
-
-def get_podcast_title(feed_url):
-    try:
-        feed = feedparser.parse(feed_url)
-        return feed.feed.get('title', feed_url.split('//')[-1].split('/')[0])
-    except:
-        return feed_url.split('//')[-1].split('/')[0]
-
+# 🔁 FFmpeg stream generator
 def generate_stream(url):
     process = None
     while True:
         if process:
             process.kill()
         process = subprocess.Popen(
-            ["ffmpeg", "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "10",
-             "-fflags", "nobuffer", "-flags", "low_delay", "-i", url, "-vn", "-ac", "1", "-b:a", "64k",
-             "-buffer_size", "1024k", "-f", "mp3", "-"],
+            [
+                "ffmpeg", "-reconnect", "1", "-reconnect_streamed", "1",
+                "-reconnect_delay_max", "10", "-fflags", "nobuffer", "-flags", "low_delay",
+                "-i", url, "-vn", "-ac", "1", "-b:a", "64k", "-buffer_size", "1024k", "-f", "mp3", "-"
+            ],
             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=8192
         )
         try:
@@ -51,17 +90,19 @@ def generate_stream(url):
             process.kill()
             break
         except Exception as e:
-            print(f"Stream error: {e}")
-        print("Restarting stream...")
+            print(f"⚠️ Stream error: {e}")
+        print("🔄 FFmpeg stopped, restarting stream...")
         time.sleep(5)
 
+# 🎧 Stream a radio station
 @app.route("/<station_name>")
 def stream(station_name):
     url = RADIO_STATIONS.get(station_name)
     if not url:
-        return "Station not found", 404
+        return "⚠️ Station not found", 404
     return Response(generate_stream(url), mimetype="audio/mpeg")
 
+# ➕ Add new station
 @app.route("/add", methods=["POST"])
 def add_station():
     name = request.form.get("name", "").strip().lower().replace(" ", "_")
@@ -70,102 +111,7 @@ def add_station():
         RADIO_STATIONS[name] = url
     return redirect("/")
 
-@app.route("/podcast")
-def podcast():
-    rss_url = request.args.get("url")
-    action = request.args.get("action")
-    saved_podcasts = load_podcasts()
-
-    if action == "remove" and rss_url:
-        if rss_url in saved_podcasts:
-            saved_podcasts.remove(rss_url)
-            save_podcasts(saved_podcasts)
-        return redirect("/podcast")
-
-    if not rss_url:
-        return f"""
-        <html><head><title>Podcasts</title><meta name="viewport" content="width=device-width, initial-scale=1">
-        <style>
-            body {{ font-family: sans-serif; background: #1e1e2f; color: white; padding: 15px; }}
-            .podcast {{ background: #2b2b3c; padding: 12px; border-radius: 8px; margin-bottom: 10px; }}
-            .remove {{ background: #f44336; border: none; color: white; padding: 5px 10px; }}
-            input {{ width: 100%; padding: 10px; margin: 10px 0; background: #333; border: none; color: white; }}
-        </style></head><body>
-        <h2>🎙️ Saved Podcasts</h2>
-        {"".join(
-            "<div class='podcast'><b>{}</b><br>{}<br><a href='/podcast?url={}'>View</a> "
-            "<a href='/podcast?url={}&action=remove'><button class='remove'>Remove</button></a></div>".format(
-                get_podcast_title(url), url, url, url
-            )
-            for url in saved_podcasts
-        ) or "<p>No podcasts saved</p>"}
-        <form method="get" action="/podcast">
-            <input type="text" name="url" placeholder="Enter RSS feed URL" required>
-            <input type="submit" value="Add Podcast">
-        </form>
-        </body></html>
-        """
-
-    # If a feed URL is specified, show episodes
-    try:
-        feed = feedparser.parse(rss_url)
-        if not feed.entries:
-            return "⚠️ Invalid or empty podcast feed."
-
-        if rss_url not in saved_podcasts:
-            saved_podcasts.append(rss_url)
-            save_podcasts(saved_podcasts)
-
-        episodes = sorted(feed.entries, key=lambda x: x.get('published_parsed', (0, 0, 0)), reverse=True)
-        html = f"<h2>{feed.feed.get('title', 'Podcast')}</h2><p>{feed.feed.get('description', '')}</p>"
-        for ep in episodes[:30]:
-            audio = next((l.href for l in ep.enclosures if l.type.startswith("audio")), None)
-            if audio:
-                date = ep.get("published", "")
-                html += f"<div><b>{ep.title}</b><br><small>{date}</small><br>{ep.get('summary', '')[:200]}...<br>" \
-                        f"<audio controls src='{audio}'></audio><hr></div>"
-        return f"<html><body style='background:#1e1e2f;color:white;padding:15px;font-family:sans-serif;'>{html}<br><a href='/podcast' style='color:lime'>← Back</a></body></html>"
-    except Exception as e:
-        return f"⚠️ Error loading podcast: {str(e)}"
-
-@app.route("/podcast_search")
-def podcast_search():
-    query = request.args.get("q", "").strip()
-    results_html = ""
-    if query:
-        try:
-            res = requests.get("https://itunes.apple.com/search", params={
-                "term": query, "media": "podcast", "limit": 10
-            })
-            data = res.json()
-            for item in data.get("results", []):
-                title = item.get("collectionName", "Untitled")
-                feed_url = item.get("feedUrl")
-                artwork = item.get("artworkUrl100", "")
-                if feed_url:
-                    results_html += f"""
-                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:15px;">
-                            <img src="{artwork}" width="60">
-                            <div>
-                                <b>{title}</b><br>
-                                <a href="/podcast?url={feed_url}">➕ Add & View</a>
-                            </div>
-                        </div><hr>
-                    """
-        except Exception as e:
-            results_html = f"<p>Error: {str(e)}</p>"
-
-    return f"""
-    <html><head><title>Search Podcasts</title><meta name="viewport" content="width=device-width, initial-scale=1">
-    <style>body{{background:#1e1e2f;color:white;font-family:sans-serif;padding:15px}}input{{width:100%;padding:10px;margin:10px 0;background:#333;border:none;color:white}}</style>
-    </head><body>
-    <h2>🔍 Search Global Podcasts</h2>
-    <form method="get"><input type="text" name="q" placeholder="Search podcasts..." value="{query}" required></form>
-    {results_html or "<p>Type above to search podcasts.</p>"}
-    <p><a href="/podcast" style="color:#4CAF50;">← Back to My Podcasts</a></p>
-    </body></html>
-    """
-
+# 🏠 Homepage UI
 @app.route("/")
 def index():
     def pastel_color(i):
@@ -175,61 +121,207 @@ def index():
         return f"{r}, {g}, {b}"
 
     links_html = "".join(
-        f"<div class='card' data-name='{name}' style='background-color:rgba({pastel_color(i)},0.85);'><a href='/{name}'>{name}</a><button class='fav-btn' onclick=\"toggleFavourite('{name}')\">⭐</button></div>"
-        for i, name in enumerate(reversed(list(RADIO_STATIONS)))
-    )
+    f"""
+    <div class='card' data-name='{name}' style='background-color: rgba({pastel_color(i)}, 0.85);'>
+        <a href='/{name}' target='_blank' rel='noopener noreferrer'>{name}</a>
+        <button class="fav-btn" onclick="toggleFavourite('{name}')">⭐</button>
+    </div>
+    """ for i, name in enumerate(reversed(list(RADIO_STATIONS)))
+)
 
     return f"""
-    <html><head><title>Radio</title><meta name="viewport" content="width=device-width, initial-scale=1">
-    <style>
-        body{{background:#1e1e2f;color:white;font-family:sans-serif;margin:0}}
-        .header{{background:#2b2b3c;padding:10px;display:flex;align-items:center}}
-        .menu-icon{{font-size:1.5rem;cursor:pointer;margin-right:10px}}
-        .side-menu{{position:fixed;top:0;left:-220px;width:200px;height:100%;background:#2b2b3c;padding-top:60px;transition:left 0.3s;z-index:999}}
-        .side-menu a{{display:block;padding:12px 20px;color:white;text-decoration:none;border-bottom:1px solid #444}}
-        .side-menu a:hover{{background-color:#444}}
-        .card{{padding:12px;border-radius:10px;text-align:center;position:relative;margin:10px}}
-        .card a{{color:white;text-decoration:none}}
-        .fav-btn{{position:absolute;top:6px;right:10px;background:none;border:none;color:gold;font-size:1.2rem;cursor:pointer}}
-        .grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;padding:10px}}
-    </style>
-    <script>
-        function toggleMenu() {{
-            const menu = document.getElementById("sideMenu");
-            menu.style.left = (menu.style.left === "0px") ? "-220px" : "0px";
-        }}
-        function toggleFavourite(name) {{
-            let favs = JSON.parse(localStorage.getItem("favourites") || "[]");
-            if (favs.includes(name)) {{ favs = favs.filter(n => n !== name); }}
-            else {{ favs.push(name); }}
-            localStorage.setItem("favourites", JSON.stringify(favs));
-            updateDisplay();
-        }}
-        function updateDisplay() {{
-            const favs = JSON.parse(localStorage.getItem("favourites") || "[]");
-            document.querySelectorAll(".card").forEach(card => {{
-                const name = card.getAttribute("data-name");
-                card.style.display = favs.includes(name) ? "block" : "none";
-                const btn = card.querySelector(".fav-btn");
-                if (btn) btn.textContent = favs.includes(name) ? "★" : "⭐";
-            }});
-        }}
-        window.onload = updateDisplay;
-    </script>
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Radio Favourites</title>
+        <style>
+            body {{
+                font-family: sans-serif;
+                background: #1e1e2f;
+                color: white;
+                margin: 0;
+                padding: 0;
+            }}
+            .header {{
+                display: flex;
+                align-items: center;
+                background: #2b2b3c;
+                padding: 10px;
+            }}
+            .menu-icon {{
+                font-size: 1.5rem;
+                cursor: pointer;
+                margin-right: 10px;
+            }}
+            .side-menu {{
+                position: fixed;
+                top: 0;
+                left: -220px;
+                width: 200px;
+                height: 100%;
+                background: #2b2b3c;
+                padding-top: 60px;
+                transition: left 0.3s;
+                z-index: 999;
+            }}
+            .side-menu a {{
+                display: block;
+                padding: 12px 20px;
+                color: white;
+                text-decoration: none;
+                border-bottom: 1px solid #444;
+            }}
+            .side-menu a:hover {{
+                background-color: #444;
+            }}
+            h1 {{
+                font-size: 1.2rem;
+                margin: 0;
+            }}
+            .scroll-container {{
+                max-height: 70vh;
+                overflow-y: auto;
+                padding: 10px;
+            }}
+            .grid {{
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+                gap: 12px;
+            }}
+            .card {{
+                padding: 12px;
+                border-radius: 10px;
+                text-align: center;
+                position: relative;
+            }}
+            .card a {{
+                color: white;
+                text-decoration: none;
+            }}
+            .fav-btn {{
+                position: absolute;
+                top: 6px;
+                right: 10px;
+                background: none;
+                border: none;
+                color: gold;
+                font-size: 1.2rem;
+                cursor: pointer;
+            }}
+            .tab-content {{
+                display: none;
+            }}
+            .tab-content.active {{
+                display: block;
+            }}
+            .add-form {{
+                max-width: 400px;
+                margin: 20px auto;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                background: #2a2a3a;
+                padding: 15px;
+                border-radius: 8px;
+            }}
+            .add-form input {{
+                padding: 10px;
+                font-size: 1rem;
+                border-radius: 5px;
+                border: 1px solid #666;
+                background: #1e1e2f;
+                color: white;
+            }}
+            .add-form input[type=submit] {{
+                background: #007acc;
+                cursor: pointer;
+                border: none;
+            }}
+        </style>
     </head>
     <body>
-    <div class="header">
-        <span class="menu-icon" onclick="toggleMenu()">☰</span>
-        <h2>⭐ Favourite Radios</h2>
-    </div>
-    <div class="side-menu" id="sideMenu">
-        <a href="/">🏠 Home</a>
-        <a href="/podcast">🎙️ Podcasts</a>
-        <a href="/podcast_search">🔍 Search Podcasts</a>
-    </div>
-    <div class="grid">{links_html}</div>
-    </body></html>
+        <div class="header">
+            <span class="menu-icon" onclick="toggleMenu()">☰</span>
+            <h1>⭐ Favourite Radios</h1>
+        </div>
+
+        <div class="side-menu" id="sideMenu">
+            <a href="#" onclick="showTab('all'); toggleMenu();">📻 All Stations</a>
+            <a href="#" onclick="showTab('add'); toggleMenu();">➕ Add Station</a>
+        </div>
+
+        <div id="favTab" class="tab-content active">
+            <div class="scroll-container">
+                <div class="grid" id="favGrid"></div>
+            </div>
+        </div>
+
+        <div id="allTab" class="tab-content">
+            <div class="scroll-container">
+                <div class="grid" id="stationGrid">{links_html}</div>
+            </div>
+        </div>
+
+        <div id="addTab" class="tab-content">
+            <form class="add-form" method="POST" action="/add">
+                <input type="text" name="name" placeholder="Station name (no space)" required />
+                <input type="text" name="url" placeholder="Stream URL" required />
+                <input type="submit" value="Add Station" />
+            </form>
+        </div>
+
+        <script>
+            let activeTab = "fav";
+
+            function toggleFavourite(name) {{
+                let favs = JSON.parse(localStorage.getItem("favourites") || "[]");
+                if (favs.includes(name)) {{
+                    favs = favs.filter(n => n !== name);
+                }} else {{
+                    favs.push(name);
+                }}
+                localStorage.setItem("favourites", JSON.stringify(favs));
+                updateDisplay();
+            }}
+
+            function updateDisplay() {{
+                const favs = JSON.parse(localStorage.getItem("favourites") || "[]");
+                document.querySelectorAll(".card").forEach(card => {{
+                    const name = card.getAttribute("data-name");
+                    card.style.display = (activeTab === "all" || (activeTab === "fav" && favs.includes(name))) ? "block" : "none";
+                    const btn = card.querySelector(".fav-btn");
+                    if (btn) btn.textContent = favs.includes(name) ? "★" : "⭐";
+                }});
+
+                const favGrid = document.getElementById("favGrid");
+                if (favGrid) {{
+                    favGrid.innerHTML = "";
+                    favs.forEach(name => {{
+                        const el = document.querySelector(`[data-name='${{name}}']`);
+                        if (el) favGrid.appendChild(el.cloneNode(true));
+                    }});
+                }}
+            }}
+
+            function showTab(tab) {{
+                activeTab = tab;
+                document.querySelectorAll(".tab-content").forEach(div => div.classList.remove("active"));
+                document.getElementById(tab + "Tab").classList.add("active");
+                updateDisplay();
+            }}
+
+            function toggleMenu() {{
+                const menu = document.getElementById("sideMenu");
+                menu.style.left = (menu.style.left === "0px") ? "-220px" : "0px";
+            }}
+
+            window.onload = updateDisplay;
+        </script>
+    </body>
+    </html>
     """
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=80)
+    app.run(host="0.0.0.0", port=8000)
