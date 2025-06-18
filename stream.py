@@ -75,6 +75,21 @@ def delete_station(category, station_name):
         save_data(STATIONS_FILE, RADIO_STATIONS)
     return redirect("/")
 
+@app.route("/add", methods=["POST"])
+def add_station():
+    category = request.form.get("category", "").strip()
+    name = request.form.get("name", "").strip()
+    url = request.form.get("url", "").strip()
+
+    if not category or not name or not url:
+        return "Missing fields", 400
+
+    if category not in RADIO_STATIONS:
+        RADIO_STATIONS[category] = {}
+    RADIO_STATIONS[category][name] = url
+    save_data(STATIONS_FILE, RADIO_STATIONS)
+    return redirect("/")
+
 @app.route("/")
 def index():
     categories_html = "".join(
@@ -162,6 +177,24 @@ def index():
                 cursor: pointer;
                 color: #4CAF50;
             }}
+            form {{
+                margin-top: 40px;
+            }}
+            input {{
+                width: 100%;
+                padding: 10px;
+                margin-bottom: 10px;
+                border-radius: 5px;
+                border: none;
+            }}
+            .submit-btn {{
+                background: #4CAF50;
+                color: white;
+                border: none;
+                padding: 10px;
+                border-radius: 5px;
+                cursor: pointer;
+            }}
         </style>
     </head>
     <body>
@@ -174,7 +207,13 @@ def index():
             <div id="stations" class="stations"></div>
         </div>
 
-        <audio id="audio-player" controls autoplay style="width:100%; margin-top: 20px;"></audio>
+        <h2>Add New Station</h2>
+        <form method="POST" action="/add">
+            <input name="category" placeholder="Category (e.g. News)" required>
+            <input name="name" placeholder="Station Name" required>
+            <input name="url" placeholder="Stream URL (http://...)" required>
+            <button type="submit" class="submit-btn">Add Station</button>
+        </form>
 
         <script>
             const allStationsHTML = `{stations_html}`;
@@ -196,9 +235,7 @@ def index():
             }}
 
             function playStream(url) {{
-                const player = document.getElementById("audio-player");
-                player.src = url;
-                player.play();
+                window.open(url, '_blank');
             }}
         </script>
     </body>
