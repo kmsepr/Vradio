@@ -16,7 +16,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # 📡 List of radio stations
-RADIO_STATIONS = {
+DEFAULT_STATIONS = {
     "muthnabi_radio": "http://cast4.my-control-panel.com/proxy/muthnabi/stream",
     "radio_keralam": "http://ice31.securenetsystems.net/RADIOKERAL",
     "malayalam_1": "http://167.114.131.90:5412/stream",
