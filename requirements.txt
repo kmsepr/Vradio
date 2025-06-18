@@ -1,4 +1,1 @@
 Flask
-feedparser
-requests
-beautifulsoup4
