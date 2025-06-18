@@ -4,84 +4,54 @@ from flask import Flask, Response, redirect, request, send_from_directory
 import os
 import json
 from pathlib import Path
-from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
 # Configuration
 STATIONS_FILE = "radio_stations.json"
-THUMBNAILS_FILE = "station_thumbnails.json"
 UPLOAD_FOLDER = 'static/logos'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# 📡 List of radio stations
+# Radio stations organized by category
 DEFAULT_STATIONS = {
-    "muthnabi_radio": "http://cast4.my-control-panel.com/proxy/muthnabi/stream",
-    "radio_keralam": "http://ice31.securenetsystems.net/RADIOKERAL",
-    "malayalam_1": "http://167.114.131.90:5412/stream",
-    "radio_digital_malayali": "https://radio.digitalmalayali.in/listen/stream/radio.mp3",
-    "malayalam_90s": "https://stream-159.zeno.fm/gm3g9amzm0hvv?zs-x-7jq8ksTOav9ZhlYHi9xw",
-    "aural_oldies": "https://stream-162.zeno.fm/tksfwb1mgzzuv?zs=SxeQj1-7R0alsZSWJie5eQ",
-    "radio_malayalam": "https://radiomalayalamfm.com/radio/8000/radio.mp3",
-    "swaranjali": "https://stream-161.zeno.fm/x7mve2vt01zuv?zs-D4nK05-7SSK2FZAsvumh2w",
-    "radio_beat_malayalam": "http://live.exertion.in:8050/radio.mp3",
-    "shahul_radio": "https://stream-150.zeno.fm/cynbm5ngx38uv?zs=Ktca5StNRWm-sdIR7GloVg",
-    "raja_radio": "http://159.203.111.241:8026/stream",
-    "nonstop_hindi": "http://s5.voscast.com:8216/stream",
-    "fm_gold": "https://airhlspush.pc.cdn.bitgravity.com/httppush/hispbaudio005/hispbaudio00564kbps.m3u8",
-    "motivational_series": "http://104.7.66.64:8010",
-    "deenagers_radio": "http://104.7.66.64:8003/",
-    "hajj_channel": "http://104.7.66.64:8005",
-    "abc_islam": "http://s10.voscast.com:9276/stream",
-    "eram_fm": "http://icecast2.edisimo.com:8000/eramfm.mp3",
-    "al_sumood_fm": "http://us3.internet-radio.com/proxy/alsumoodfm2020?mp=/stream",
-    "nur_ala_nur": "http://104.7.66.64:8011/",
-    "ruqya_radio": "http://104.7.66.64:8004",
-    "seiyun_radio": "http://s2.radio.co/s26c62011e/listen",
-    "noor_al_eman": "http://edge.mixlr.com/channel/boaht",
-    "sam_yemen": "https://edge.mixlr.com/channel/kijwr",
-    "afaq": "https://edge.mixlr.com/channel/rumps",
-    "alfasi_radio": "https://qurango.net/radio/mishary_alafasi",
-    "tafsir_quran": "https://radio.quranradiotafsir.com/9992/stream",
-    "sirat_al_mustaqim": "http://104.7.66.64:8091/stream",
-    "river_nile_radio": "http://104.7.66.64:8087",
-    "quran_radio_cairo": "http://n02.radiojar.com/8s5u5tpdtwzuv",
-    "quran_radio_nablus": "http://www.quran-radio.org:8002/",
-    "al_nour": "http://audiostreaming.itworkscdn.com:9066/",
-    "allahu_akbar_radio": "http://66.45.232.132:9996/stream",
-    "omar_abdul_kafi_radio": "http://104.7.66.64:8007",
-    "urdu_islamic_lecture": "http://144.91.121.54:27001/channel_02.aac",
-    "hob_nabi": "http://216.245.210.78:8098/stream",
-    "sanaa_radio": "http://dc5.serverse.com/proxy/pbmhbvxs/stream",
-    "rubat_ataq": "http://stream.zeno.fm/5tpfc8d7xqruv",
-    "al_jazeera": "http://live-hls-audio-web-aja.getaj.net/VOICE-AJA/index.m3u8",
-    "asianet_news": "https://vidcdn.vidgyor.com/asianet-origin/audioonly/chunks.m3u8",
-    "air_kavarati": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio189/chunklist.m3u8",
-    "air_calicut": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio082/chunklist.m3u8",
-    "manjeri_fm": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio101/chunklist.m3u8",
-    "real_fm": "http://air.pc.cdn.bitgravity.com/air/live/pbaudio083/playlist.m3u8",
-    "vom_news": "https://psmnews.mv/stream/radio-dhivehi-raajjeyge-adu",
-    "safari_tv": "https://j78dp346yq5r-hls-live.5centscdn.com/safari/live.stream/chunks.m3u8",
-    "victers_tv": "https://932y4x26ljv8-hls-live.5centscdn.com/victers/tv.stream/victers/tv1/chunks.m3u8",
-    "kairali_we": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/wetv_nim_https/050522/wetv/playlist.m3u8",
-    "flowers_tv": "http://103.199.161.254/Content/flowers/Live/Channel(Flowers)/index.m3u8",
-    "dd_malayalam": "https://d3eyhgoylams0m.cloudfront.net/v1/manifest/93ce20f0f52760bf38be911ff4c91ed02aa2fd92/ed7bd2c7-8d10-4051-b397-2f6b90f99acb/562ee8f9-9950-48a0-ba1d-effa00cf0478/2.m3u8",
-    "amrita_tv": "https://dr1zhpsuem5f4.cloudfront.net/master.m3u8",
-    "24_news": "https://segment.yuppcdn.net/110322/channel24/playlist.m3u8",
-    "mazhavil_manorama": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/mazhavilmanorama_nim_https/050522/mazhavilmanorama/playlist.m3u8",
-    "manorama_news": "http://103.199.161.254/Content/manoramanews/Live/Channel(ManoramaNews)/index.m3u8",
-    "aaj_tak": "https://feeds.intoday.in/aajtak/api/aajtakhd/master.m3u8",
-    "bloomberg_tv": "https://bloomberg-bloomberg-3-br.samsung.wurl.tv/manifest/playlist.m3u8",
-    "france_24": "https://live.france24.com/hls/live/2037218/F24_EN_HI_HLS/master_500.m3u8",
-    "n1_news": "https://best-str.umn.cdn.united.cloud/stream?stream=sp1400&sp=n1info&channel=n1bos&u=n1info&p=n1Sh4redSecre7iNf0&player=m3u8",
-    "vom_radio": "https://radio.psm.mv/draair",
-}
-
-DEFAULT_THUMBNAILS = {
-    "muthnabi_radio": "/static/default-radio.png",
-    "radio_keralam": "/static/default-radio.png",
-    # ... (add default thumbnails for other stations) ...
+    "News": {
+        "al_jazeera": "http://live-hls-audio-web-aja.getaj.net/VOICE-AJA/index.m3u8",
+        "asianet_news": "https://vidcdn.vidgyor.com/asianet-origin/audioonly/chunks.m3u8",
+        "24_news": "https://segment.yuppcdn.net/110322/channel24/playlist.m3u8",
+        "manorama_news": "http://103.199.161.254/Content/manoramanews/Live/Channel(ManoramaNews)/index.m3u8",
+        "aaj_tak": "https://feeds.intoday.in/aajtak/api/aajtakhd/master.m3u8",
+        "france_24": "https://live.france24.com/hls/live/2037218/F24_EN_HI_HLS/master_500.m3u8"
+    },
+    "Islamic": {
+        "deenagers_radio": "http://104.7.66.64:8003/",
+        "hajj_channel": "http://104.7.66.64:8005",
+        "abc_islam": "http://s10.voscast.com:9276/stream",
+        "nur_ala_nur": "http://104.7.66.64:8011/",
+        "ruqya_radio": "http://104.7.66.64:8004",
+        "noor_al_eman": "http://edge.mixlr.com/channel/boaht"
+    },
+    "Malayalam": {
+        "muthnabi_radio": "http://cast4.my-control-panel.com/proxy/muthnabi/stream",
+        "radio_keralam": "http://ice31.securenetsystems.net/RADIOKERAL",
+        "malayalam_1": "http://167.114.131.90:5412/stream",
+        "radio_digital_malayali": "https://radio.digitalmalayali.in/listen/stream/radio.mp3",
+        "malayalam_90s": "https://stream-159.zeno.fm/gm3g9amzm0hvv?zs-x-7jq8ksTOav9ZhlYHi9xw",
+        "radio_malayalam": "https://radiomalayalamfm.com/radio/8000/radio.mp3"
+    },
+    "Hindi": {
+        "nonstop_hindi": "http://s5.voscast.com:8216/stream",
+        "fm_gold": "https://airhlspush.pc.cdn.bitgravity.com/httppush/hispbaudio005/hispbaudio00564kbps.m3u8",
+        "aural_oldies": "https://stream-162.zeno.fm/tksfwb1mgzzuv?zs=SxeQj1-7R0alsZSWJie5eQ"
+    },
+    "Arabic": {
+        "eram_fm": "http://icecast2.edisimo.com:8000/eramfm.mp3",
+        "al_sumood_fm": "http://us3.internet-radio.com/proxy/alsumoodfm2020?mp=/stream",
+        "seiyun_radio": "http://s2.radio.co/s26c62011e/listen",
+        "sam_yemen": "https://edge.mixlr.com/channel/kijwr",
+        "alfasi_radio": "https://qurango.net/radio/mishary_alafasi",
+        "tafsir_quran": "https://radio.quranradiotafsir.com/9992/stream"
+    }
 }
 
 def load_data(filename, default_data):
@@ -91,22 +61,20 @@ def load_data(filename, default_data):
             with open(filename, 'r') as f:
                 return json.load(f)
     except Exception as e:
-        print(f"⚠️ Error loading {filename}: {e}")
+        print(f"Error loading {filename}: {e}")
     return default_data
 
 def save_data(filename, data):
     """Save data to file"""
     try:
         with open(filename, 'w') as f:
-            json.dump(data, f)
+            json.dump(data, f, indent=2)
     except Exception as e:
-        print(f"⚠️ Error saving {filename}: {e}")
+        print(f"Error saving {filename}: {e}")
 
 # Load data at startup
 RADIO_STATIONS = load_data(STATIONS_FILE, DEFAULT_STATIONS)
-STATION_THUMBNAILS = load_data(THUMBNAILS_FILE, DEFAULT_THUMBNAILS)
 
-# 🔁 FFmpeg stream generator
 def generate_stream(url):
     process = None
     while True:
@@ -127,428 +95,323 @@ def generate_stream(url):
             process.kill()
             break
         except Exception as e:
-            print(f"⚠️ Stream error: {e}")
-        print("🔄 FFmpeg stopped, restarting stream...")
-        time.sleep(5)
+            print(f"Stream error: {e}")
+            time.sleep(5)
 
-# 🎧 Stream endpoint
-@app.route("/<station_name>")
-def stream(station_name):
-    url = RADIO_STATIONS.get(station_name)
-    if not url:
-        return "⚠️ Station not found", 404
-    return Response(generate_stream(url), mimetype="audio/mpeg")
+@app.route("/<category>/<station_name>")
+def stream(category, station_name):
+    if category in RADIO_STATIONS and station_name in RADIO_STATIONS[category]:
+        url = RADIO_STATIONS[category][station_name]
+        return Response(generate_stream(url), mimetype="audio/mpeg")
+    return "Station not found", 404
 
-# ➕ Add new station
-@app.route("/add", methods=["POST"])
-def add_station():
+@app.route("/add/<category>", methods=["POST"])
+def add_station(category):
     name = request.form.get("name", "").strip().lower().replace(" ", "_")
     url = request.form.get("url", "").strip()
-    
-    # Handle logo upload
-    logo_url = STATION_THUMBNAILS.get(name, "/static/default-radio.png")
-    logo = request.files.get("logo")
-    if logo and logo.filename:
-        filename = secure_filename(f"{name}_{logo.filename}")
-        logo.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-        logo_url = f"/static/logos/{filename}"
-    
+
     if name and url:
-        RADIO_STATIONS[name] = url
-        STATION_THUMBNAILS[name] = logo_url
+        if category not in RADIO_STATIONS:
+            RADIO_STATIONS[category] = {}
+        RADIO_STATIONS[category][name] = url
         save_data(STATIONS_FILE, RADIO_STATIONS)
-        save_data(THUMBNAILS_FILE, STATION_THUMBNAILS)
     return redirect("/")
 
-# ✏️ Edit station
-@app.route("/edit/<old_name>", methods=["POST"])
-def edit_station(old_name):
+@app.route("/edit/<category>/<old_name>", methods=["POST"])
+def edit_station(category, old_name):
     new_name = request.form.get("name", "").strip().lower().replace(" ", "_")
     new_url = request.form.get("url", "").strip()
-    
+    new_category = request.form.get("category", category)
+
     if not new_name or not new_url:
         return redirect("/")
-    
-    # Handle logo update
-    logo = request.files.get("logo")
-    logo_url = STATION_THUMBNAILS.get(old_name, "/static/default-radio.png")
-    if logo and logo.filename:
-        filename = secure_filename(f"{new_name}_{logo.filename}")
-        logo.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-        logo_url = f"/static/logos/{filename}"
-    
-    # Update station data
-    if old_name in RADIO_STATIONS:
-        # Preserve the stream if name didn't change
-        if old_name != new_name:
-            RADIO_STATIONS[new_name] = RADIO_STATIONS.pop(old_name)
+
+    if category in RADIO_STATIONS and old_name in RADIO_STATIONS[category]:
+        # Remove from old category if category changed
+        if new_category != category:
+            RADIO_STATIONS[category].pop(old_name)
+            if new_category not in RADIO_STATIONS:
+                RADIO_STATIONS[new_category] = {}
+            RADIO_STATIONS[new_category][new_name] = new_url
         else:
-            RADIO_STATIONS[new_name] = new_url
-        
-        # Update thumbnail
-        STATION_THUMBNAILS[new_name] = logo_url
-        if old_name != new_name and old_name in STATION_THUMBNAILS:
-            del STATION_THUMBNAILS[old_name]
-        
+            # Just update within same category
+            RADIO_STATIONS[category].pop(old_name)
+            RADIO_STATIONS[category][new_name] = new_url
+
         save_data(STATIONS_FILE, RADIO_STATIONS)
-        save_data(THUMBNAILS_FILE, STATION_THUMBNAILS)
-    
     return redirect("/")
 
-# 🗑️ Delete station
-@app.route("/delete/<station_name>", methods=["POST"])
-def delete_station(station_name):
-    if station_name in RADIO_STATIONS:
-        del RADIO_STATIONS[station_name]
-        if station_name in STATION_THUMBNAILS:
-            del STATION_THUMBNAILS[station_name]
+@app.route("/delete/<category>/<station_name>", methods=["POST"])
+def delete_station(category, station_name):
+    if category in RADIO_STATIONS and station_name in RADIO_STATIONS[category]:
+        del RADIO_STATIONS[category][station_name]
+        # Remove category if empty
+        if not RADIO_STATIONS[category]:
+            del RADIO_STATIONS[category]
         save_data(STATIONS_FILE, RADIO_STATIONS)
-        save_data(THUMBNAILS_FILE, STATION_THUMBNAILS)
     return redirect("/")
 
-# 🏠 Homepage UI
 @app.route("/")
 def index():
-    def pastel_color(i):
-        r = (100 + (i * 40)) % 256
-        g = (150 + (i * 60)) % 256
-        b = (200 + (i * 80)) % 256
-        return f"{r}, {g}, {b}"
-
-    links_html = "".join(
+    categories_html = "".join(
         f"""
-        <div class='card' data-name='{name}' style='background-color: rgba({pastel_color(i)}, 0.85);'>
-            <img src='{STATION_THUMBNAILS.get(name, "/static/default-radio.png")}' class='station-thumbnail'>
+        <div class='category-card' onclick="showStations('{category}')">
+            <h3>{category}</h3>
+            <p>{len(stations)} stations</p>
+        </div>
+        """ for category, stations in RADIO_STATIONS.items()
+    )
+
+    stations_html = "".join(
+        f"""
+        <div class='station-card' data-category='{category}' data-name='{name}'>
             <div class='station-info'>
-                <a href='/{name}' target='_blank' rel='noopener noreferrer'>{name.replace('_', ' ').title()}</a>
-                <div class='card-buttons'>
-                    <button class="edit-btn" onclick="openEditModal('{name}', '{RADIO_STATIONS[name]}')">✏️</button>
-                    <button class="fav-btn" onclick="toggleFavourite('{name}')">⭐</button>
-                    <form method='POST' action='/delete/{name}' style='display:inline;'>
-                        <button type='submit' class='delete-btn'>🗑️</button>
+                <a href='/{category}/{name}' target='_blank'>{name.replace('_', ' ').title()}</a>
+                <div class='station-actions'>
+                    <button onclick="openEditModal('{category}', '{name}', '{url}')">✏️</button>
+                    <form method='POST' action='/delete/{category}/{name}' style='display:inline;'>
+                        <button type='submit'>🗑️</button>
                     </form>
                 </div>
             </div>
         </div>
-        """ for i, name in enumerate(reversed(list(RADIO_STATIONS)))
+        """ for category, stations in RADIO_STATIONS.items() 
+        for name, url in stations.items()
     )
 
     return f"""
     <!DOCTYPE html>
     <html lang="en">
     <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Radio Favourites</title>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Radio Stations</title>
         <style>
             body {{
-                font-family: sans-serif;
-                background: #1e1e2f;
-                color: white;
+                font-family: Arial, sans-serif;
                 margin: 0;
-                padding: 0;
+                padding: 20px;
+                background: #f5f5f5;
             }}
-            .header {{
-                display: flex;
-                align-items: center;
-                background: #2b2b3c;
-                padding: 10px;
-                position: sticky;
-                top: 0;
-                z-index: 100;
-            }}
-            .menu-icon {{
-                font-size: 1.5rem;
-                cursor: pointer;
-                margin-right: 10px;
-            }}
-            .side-menu {{
-                position: fixed;
-                top: 0;
-                left: -220px;
-                width: 200px;
-                height: 100%;
-                background: #2b2b3c;
-                padding-top: 60px;
-                transition: left 0.3s;
-                z-index: 999;
-            }}
-            .side-menu a {{
-                display: block;
-                padding: 12px 20px;
-                color: white;
-                text-decoration: none;
-                border-bottom: 1px solid #444;
-            }}
-            .side-menu a:hover {{
-                background-color: #444;
-            }}
-            h1 {{
-                font-size: 1.2rem;
-                margin: 0;
-            }}
-            .scroll-container {{
-                max-height: 70vh;
-                overflow-y: auto;
-                padding: 10px;
-            }}
-            .grid {{
+            .categories {{
                 display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-                gap: 12px;
+                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+                gap: 15px;
+                margin-bottom: 20px;
             }}
-            .card {{
-                padding: 12px;
-                border-radius: 10px;
-                text-align: center;
-            }}
-            .station-thumbnail {{
-                width: 60px;
-                height: 60px;
-                border-radius: 50%;
-                object-fit: cover;
-                border: 2px solid white;
-                margin-bottom: 8px;
-            }}
-            .station-info {{
-                display: flex;
-                flex-direction: column;
-                gap: 8px;
-            }}
-            .card a {{
-                color: white;
-                text-decoration: none;
-                word-break: break-word;
-            }}
-            .card-buttons {{
-                display: flex;
-                justify-content: center;
-                gap: 5px;
-            }}
-            .fav-btn, .delete-btn, .edit-btn {{
-                background: none;
-                border: none;
-                font-size: 1.2rem;
-                cursor: pointer;
-                padding: 0 5px;
-            }}
-            .fav-btn {{ color: gold; }}
-            .delete-btn {{ color: #ff6b6b; }}
-            .edit-btn {{ color: #4a90e2; }}
-            .tab-content {{
-                display: none;
-            }}
-            .tab-content.active {{
-                display: block;
-            }}
-            .add-form, .edit-form {{
-                max-width: 400px;
-                margin: 20px auto;
-                display: flex;
-                flex-direction: column;
-                gap: 10px;
-                background: #2a2a3a;
+            .category-card {{
+                background: #fff;
                 padding: 15px;
                 border-radius: 8px;
-            }}
-            .add-form input, .edit-form input {{
-                padding: 10px;
-                font-size: 1rem;
-                border-radius: 5px;
-                border: 1px solid #666;
-                background: #1e1e2f;
-                color: white;
-            }}
-            .add-form input[type=submit], .edit-form input[type=submit] {{
-                background: #007acc;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
                 cursor: pointer;
+                transition: transform 0.2s;
+            }}
+            .category-card:hover {{
+                transform: translateY(-3px);
+            }}
+            .category-card h3 {{
+                margin: 0 0 5px 0;
+                color: #333;
+            }}
+            .category-card p {{
+                margin: 0;
+                color: #666;
+                font-size: 0.9em;
+            }}
+            .stations {{
+                display: none;
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                gap: 15px;
+            }}
+            .station-card {{
+                background: #fff;
+                padding: 15px;
+                border-radius: 8px;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            }}
+            .station-info a {{
+                color: #0066cc;
+                text-decoration: none;
+                font-weight: bold;
+            }}
+            .station-actions {{
+                margin-top: 10px;
+                display: flex;
+                gap: 10px;
+            }}
+            .station-actions button {{
+                background: none;
+                border: 1px solid #ddd;
+                padding: 5px 10px;
+                border-radius: 4px;
+                cursor: pointer;
+            }}
+            .add-station-form {{
+                background: #fff;
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                margin-top: 20px;
+                max-width: 500px;
+            }}
+            .add-station-form input, .add-station-form select {{
+                width: 100%;
+                padding: 8px;
+                margin-bottom: 10px;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+            }}
+            .add-station-form button {{
+                background: #4CAF50;
+                color: white;
                 border: none;
+                padding: 10px 15px;
+                border-radius: 4px;
+                cursor: pointer;
             }}
             .modal {{
                 display: none;
                 position: fixed;
-                z-index: 1000;
-                left: 0;
                 top: 0;
+                left: 0;
                 width: 100%;
                 height: 100%;
-                background-color: rgba(0,0,0,0.7);
+                background: rgba(0,0,0,0.5);
+                z-index: 1000;
+                justify-content: center;
+                align-items: center;
             }}
             .modal-content {{
-                background-color: #2a2a3a;
-                margin: 15% auto;
+                background: white;
                 padding: 20px;
                 border-radius: 8px;
                 width: 80%;
                 max-width: 500px;
             }}
             .close {{
-                color: #aaa;
                 float: right;
-                font-size: 28px;
                 cursor: pointer;
+                font-size: 1.5em;
             }}
-            @media (max-width: 600px) {{
-                .grid {{
-                    grid-template-columns: 1fr;
-                }}
-                .card {{
-                    padding: 15px;
-                }}
+            .back-button {{
+                margin-bottom: 15px;
+                cursor: pointer;
+                color: #0066cc;
             }}
         </style>
     </head>
     <body>
-        <div class="header">
-            <span class="menu-icon" onclick="toggleMenu()">☰</span>
-            <h1><i class="fas fa-radio"></i> Radio Favourites</h1>
+        <h1>Radio Stations</h1>
+        
+        <div id="categories" class="categories">
+            {categories_html}
         </div>
-
-        <div class="side-menu" id="sideMenu">
-            <a href="#" onclick="showTab('all'); toggleMenu();">📻 All Stations</a>
-            <a href="#" onclick="showTab('fav'); toggleMenu();">❤️ Favorites</a>
-            <a href="#" onclick="showTab('add'); toggleMenu();">➕ Add Station</a>
+        
+        <div id="stations" class="stations">
+            <div class="back-button" onclick="showCategories()">← Back to Categories</div>
+            <div id="station-list"></div>
         </div>
-
-        <div id="favTab" class="tab-content">
-            <div class="scroll-container">
-                <div class="grid" id="favGrid"></div>
-            </div>
-        </div>
-
-        <div id="allTab" class="tab-content active">
-            <div class="scroll-container">
-                <div class="grid" id="stationGrid">{links_html}</div>
-            </div>
-        </div>
-
-        <div id="addTab" class="tab-content">
-            <form class="add-form" method="POST" action="/add" enctype="multipart/form-data">
-                <input type="text" name="name" placeholder="Station name" required>
+        
+        <div class="add-station-form">
+            <h3>Add New Station</h3>
+            <form method="POST" action="/add/" id="addForm">
+                <select name="category" required>
+                    <option value="">Select Category</option>
+                    {''.join(f'<option value="{category}">{category}</option>' for category in RADIO_STATIONS)}
+                    <option value="new">New Category</option>
+                </select>
+                <input type="text" id="newCategory" name="new_category" placeholder="New Category Name" style="display: none;">
+                <input type="text" name="name" placeholder="Station Name" required>
                 <input type="text" name="url" placeholder="Stream URL" required>
-                <input type="file" name="logo" accept="image/*">
-                <input type="submit" value="Add Station">
+                <button type="submit">Add Station</button>
             </form>
         </div>
-
-        <!-- Edit Modal -->
+        
         <div id="editModal" class="modal">
             <div class="modal-content">
                 <span class="close" onclick="closeModal()">&times;</span>
-                <form class="edit-form" method="POST" enctype="multipart/form-data" id="editForm">
+                <h3>Edit Station</h3>
+                <form method="POST" action="" id="editForm">
                     <input type="hidden" name="old_name" id="editOldName">
-                    <input type="text" name="name" id="editName" placeholder="Station name" required>
+                    <input type="hidden" name="category" id="editCategory">
+                    <select name="new_category" required>
+                        {''.join(f'<option value="{category}">{category}</option>' for category in RADIO_STATIONS)}
+                    </select>
+                    <input type="text" name="name" id="editName" placeholder="Station Name" required>
                     <input type="text" name="url" id="editUrl" placeholder="Stream URL" required>
-                    <input type="file" name="logo" accept="image/*">
-                    <input type="submit" value="Save Changes">
+                    <button type="submit">Save Changes</button>
                 </form>
             </div>
         </div>
-
+        
         <script>
-            let activeTab = "all";
-
-            function toggleFavourite(name) {{
-                let favs = JSON.parse(localStorage.getItem("favourites") || "[]");
-                if (favs.includes(name)) {{
-                    favs = favs.filter(n => n !== name);
-                }} else {{
-                    favs.push(name);
-                }}
-                localStorage.setItem("favourites", JSON.stringify(favs));
-                updateDisplay();
-            }}
-
-            function updateDisplay() {{
-                const favs = JSON.parse(localStorage.getItem("favourites") || "[]");
+            function showStations(category) {{
+                document.getElementById('categories').style.display = 'none';
+                document.getElementById('stations').style.display = 'grid';
                 
-                // Update favorite buttons
-                document.querySelectorAll(".fav-btn").forEach(btn => {{
-                    const card = btn.closest(".card");
-                    const name = card.getAttribute("data-name");
-                    btn.textContent = favs.includes(name) ? "★" : "⭐";
-                }});
+                const stationList = document.getElementById('station-list');
+                stationList.innerHTML = '';
                 
-                // Update favorites tab
-                const favGrid = document.getElementById("favGrid");
-                if (favGrid) {{
-                    favGrid.innerHTML = "";
-                    favs.forEach(name => {{
-                        const originalCard = document.querySelector(`.card[data-name='${{name}}']`);
-                        if (originalCard) {{
-                            const clone = originalCard.cloneNode(true);
-                            favGrid.appendChild(clone);
-                        }}
-                    }});
-                }}
-            }}
-
-            function showTab(tab) {{
-                activeTab = tab;
-                document.querySelectorAll(".tab-content").forEach(div => {{
-                    div.classList.remove("active");
+                const stations = document.querySelectorAll(`.station-card[data-category='${{category}}']`);
+                stations.forEach(station => {{
+                    stationList.appendChild(station.cloneNode(true));
                 }});
-                document.getElementById(tab + "Tab").classList.add("active");
-                updateDisplay();
             }}
-
-            function toggleMenu() {{
-                const menu = document.getElementById("sideMenu");
-                menu.style.left = (menu.style.left === "0px") ? "-220px" : "0px";
+            
+            function showCategories() {{
+                document.getElementById('categories').style.display = 'grid';
+                document.getElementById('stations').style.display = 'none';
             }}
-
-            function openEditModal(name, url) {{
-                document.getElementById('editModal').style.display = 'block';
+            
+            function openEditModal(category, name, url) {{
+                document.getElementById('editModal').style.display = 'flex';
                 document.getElementById('editOldName').value = name;
                 document.getElementById('editName').value = name.replace(/_/g, ' ');
                 document.getElementById('editUrl').value = url;
-                document.getElementById('editForm').action = `/edit/${{name}}`;
+                document.getElementById('editCategory').value = category;
+                document.getElementById('editForm').action = `/edit/${{category}}/${{name}}`;
+                
+                // Set the current category as selected
+                const select = document.querySelector('#editForm select[name="new_category"]');
+                for (let i = 0; i < select.options.length; i++) {{
+                    if (select.options[i].value === category) {{
+                        select.selectedIndex = i;
+                        break;
+                    }}
+                }}
             }}
-
+            
             function closeModal() {{
                 document.getElementById('editModal').style.display = 'none';
             }}
-
-            // Initialize
-            window.onload = function() {{
-                updateDisplay();
-                // Close menu when clicking outside
-                document.addEventListener('click', function(e) {{
-                    const menu = document.getElementById("sideMenu");
-                    if (!e.target.closest('.side-menu') && !e.target.closest('.menu-icon')) {{
-                        menu.style.left = "-220px";
-                    }}
-                }});
+            
+            // Show/hide new category field based on selection
+            document.querySelector('select[name="category"]').addEventListener('change', function() {{
+                const newCategoryField = document.getElementById('newCategory');
+                newCategoryField.style.display = this.value === 'new' ? 'block' : 'none';
+                if (this.value !== 'new') {{
+                    newCategoryField.value = '';
+                }}
+            }});
+            
+            // Update form action with selected category
+            document.querySelector('#addForm').addEventListener('submit', function() {{
+                const categorySelect = this.querySelector('select[name="category"]');
+                let category = categorySelect.value;
                 
-                // Close modal when clicking outside
-                window.onclick = function(event) {{
-                    const modal = document.getElementById('editModal');
-                    if (event.target == modal) {{
-                        closeModal();
-                    }}
-                }};
-            }};
+                if (category === 'new') {{
+                    category = this.querySelector('input[name="new_category"]').value.trim();
+                }}
+                
+                this.action = `/add/${{encodeURIComponent(category)}}`;
+            }});
         </script>
     </body>
     </html>
     """
 
-@app.route('/static/<path:path>')
-def send_static(path):
-    return send_from_directory('static', path)
-
 if __name__ == "__main__":
-    # Create storage files if they don't exist
     if not Path(STATIONS_FILE).exists():
         save_data(STATIONS_FILE, DEFAULT_STATIONS)
-    if not Path(THUMBNAILS_FILE).exists():
-        save_data(THUMBNAILS_FILE, DEFAULT_THUMBNAILS)
-    
-    # Create default radio image if missing
-    default_logo_path = Path('static/default-radio.png')
-    if not default_logo_path.exists():
-        os.makedirs('static', exist_ok=True)
-        # You should add a real default image here
-    
     app.run(host="0.0.0.0", port=8000)
