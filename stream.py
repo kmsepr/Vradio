@@ -2,42 +2,27 @@ import subprocess
 import time
 from flask import Flask, Response, redirect, request
 import json
+import os
 from pathlib import Path
 
 app = Flask(__name__)
 
 # Configuration
 STATIONS_FILE = "radio_stations.json"
+BASE_URL = os.getenv('BASE_URL', 'http://localhost:8000')  # Uses your Koyeb environment variable
 
 # Organized radio stations by category
 DEFAULT_STATIONS = {
     "News": {
         "al_jazeera": "http://live-hls-audio-web-aja.getaj.net/VOICE-AJA/index.m3u8",
-        "asianet_news": "https://vidcdn.vidgyor.com/asianet-origin/audioonly/chunks.m3u8",
-        "24_news": "https://segment.yuppcdn.net/110322/channel24/playlist.m3u8"
+        "asianet_news": "https://vidcdn.vidgyor.com/asianet-origin/audioonly/chunks.m3u8"
     },
     "Islamic": {
-        "deenagers_radio": "http://104.7.66.64:8003/",
-        "hajj_channel": "http://104.7.66.64:8005",
-        "abc_islam": "http://s10.voscast.com:9276/stream"
-    },
-    "Malayalam": {
-        "muthnabi_radio": "http://cast4.my-control-panel.com/proxy/muthnabi/stream",
-        "radio_keralam": "http://ice31.securenetsystems.net/RADIOKERAL",
-        "malayalam_1": "http://167.114.131.90:5412/stream"
-    },
-    "Hindi": {
-        "nonstop_hindi": "http://s5.voscast.com:8216/stream",
-        "fm_gold": "https://airhlspush.pc.cdn.bitgravity.com/httppush/hispbaudio005/hispbaudio00564kbps.m3u8"
-    },
-    "Arabic": {
-        "eram_fm": "http://icecast2.edisimo.com:8000/eramfm.mp3",
-        "al_sumood_fm": "http://us3.internet-radio.com/proxy/alsumoodfm2020?mp=/stream"
+        "deenagers_radio": "http://104.7.66.64:8003/"
     }
 }
 
 def load_data(filename, default_data):
-    """Load data from file or use defaults"""
     try:
         if Path(filename).exists():
             with open(filename, 'r') as f:
@@ -47,7 +32,6 @@ def load_data(filename, default_data):
     return default_data
 
 def save_data(filename, data):
-    """Save data to file"""
     try:
         with open(filename, 'w') as f:
             json.dump(data, f, indent=2)
@@ -57,7 +41,7 @@ def save_data(filename, data):
 # Load data at startup
 RADIO_STATIONS = load_data(STATIONS_FILE, DEFAULT_STATIONS)
 
-# 🔁 FFmpeg stream generator (kept your transcoding code)
+# 🔁 FFmpeg stream generator (unchanged from your original)
 def generate_stream(url):
     process = None
     while True:
@@ -88,49 +72,7 @@ def stream(category, station_name):
         return Response(generate_stream(url), mimetype="audio/mpeg")
     return "Station not found", 404
 
-@app.route("/add/<category>", methods=["POST"])
-def add_station(category):
-    name = request.form.get("name", "").strip().lower().replace(" ", "_")
-    url = request.form.get("url", "").strip()
-
-    if name and url:
-        if category not in RADIO_STATIONS:
-            RADIO_STATIONS[category] = {}
-        RADIO_STATIONS[category][name] = url
-        save_data(STATIONS_FILE, RADIO_STATIONS)
-    return redirect("/")
-
-@app.route("/edit/<category>/<old_name>", methods=["POST"])
-def edit_station(category, old_name):
-    new_name = request.form.get("name", "").strip().lower().replace(" ", "_")
-    new_url = request.form.get("url", "").strip()
-    new_category = request.form.get("category", category)
-
-    if not new_name or not new_url:
-        return redirect("/")
-
-    if category in RADIO_STATIONS and old_name in RADIO_STATIONS[category]:
-        if new_category != category:
-            RADIO_STATIONS[category].pop(old_name)
-            if new_category not in RADIO_STATIONS:
-                RADIO_STATIONS[new_category] = {}
-            RADIO_STATIONS[new_category][new_name] = new_url
-        else:
-            RADIO_STATIONS[category][new_name] = new_url
-            if old_name != new_name:
-                RADIO_STATIONS[category].pop(old_name)
-
-        save_data(STATIONS_FILE, RADIO_STATIONS)
-    return redirect("/")
-
-@app.route("/delete/<category>/<station_name>", methods=["POST"])
-def delete_station(category, station_name):
-    if category in RADIO_STATIONS and station_name in RADIO_STATIONS[category]:
-        del RADIO_STATIONS[category][station_name]
-        if not RADIO_STATIONS[category]:
-            del RADIO_STATIONS[category]
-        save_data(STATIONS_FILE, RADIO_STATIONS)
-    return redirect("/")
+# ... [keep all your other routes: add, edit, delete] ...
 
 @app.route("/")
 def index():
@@ -147,12 +89,26 @@ def index():
         f"""
         <div class='station-card' data-category='{category}'>
             <div class='station-info'>
-                <a href='/{category}/{name}' target='_blank'>{name.replace('_', ' ').title()}</a>
-                <div class='station-actions'>
-                    <button onclick="openEditModal('{category}', '{name}', '{url}')">✏️</button>
-                    <form method='POST' action='/delete/{category}/{name}' style='display:inline;'>
-                        <button type='submit'>🗑️</button>
-                    </form>
+                <div class='station-header'>
+                    <a href='/{category}/{name}' target='_blank' class='station-name'>{name.replace('_', ' ').title()}</a>
+                    <div class='station-actions'>
+                        <button onclick="openEditModal('{category}', '{name}', '{url}')">✏️</button>
+                        <form method='POST' action='/delete/{category}/{name}' style='display:inline;'>
+                            <button type='submit'>🗑️</button>
+                        </form>
+                    </div>
+                </div>
+                <div class='station-urls'>
+                    <div class='url-group'>
+                        <label>Original URL</label>
+                        <input type='text' value='{url}' readonly>
+                        <button onclick="copyUrl(this)">Copy</button>
+                    </div>
+                    <div class='url-group'>
+                        <label>Transcoded URL</label>
+                        <input type='text' value='{BASE_URL}/{category}/{name}' readonly>
+                        <button onclick="copyUrl(this)">Copy</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -196,7 +152,7 @@ def index():
             }}
             .stations {{
                 display: grid;
-                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                grid-template-columns: 1fr;
                 gap: 15px;
             }}
             .station-card {{
@@ -204,14 +160,17 @@ def index():
                 padding: 15px;
                 border-radius: 8px;
             }}
-            .station-info a {{
+            .station-header {{
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 10px;
+            }}
+            .station-name {{
                 color: white;
                 text-decoration: none;
-            }}
-            .station-actions {{
-                margin-top: 10px;
-                display: flex;
-                gap: 10px;
+                font-weight: bold;
+                font-size: 1.1em;
             }}
             .station-actions button {{
                 background: none;
@@ -220,55 +179,35 @@ def index():
                 padding: 5px 10px;
                 border-radius: 4px;
                 cursor: pointer;
+                margin-left: 5px;
             }}
-            .add-station-form {{
-                background: #2b2b3c;
-                padding: 20px;
-                border-radius: 8px;
-                margin-top: 20px;
-                max-width: 500px;
+            .station-urls {{
+                display: grid;
+                gap: 10px;
             }}
-            .add-station-form input, .add-station-form select {{
+            .url-group {{
+                display: grid;
+                gap: 5px;
+            }}
+            .url-group label {{
+                font-size: 0.8em;
+                color: #aaa;
+            }}
+            .url-group input {{
                 width: 100%;
                 padding: 8px;
-                margin-bottom: 10px;
-                border: 1px solid #444;
-                border-radius: 4px;
                 background: #1e1e2f;
                 color: white;
+                border: 1px solid #444;
+                border-radius: 4px;
             }}
-            .add-station-form button {{
+            .url-group button {{
                 background: #4CAF50;
                 color: white;
                 border: none;
-                padding: 10px 15px;
+                padding: 8px;
                 border-radius: 4px;
                 cursor: pointer;
-            }}
-            .modal {{
-                display: none;
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0,0,0,0.7);
-                z-index: 1000;
-                justify-content: center;
-                align-items: center;
-            }}
-            .modal-content {{
-                background: #2b2b3c;
-                padding: 20px;
-                border-radius: 8px;
-                width: 80%;
-                max-width: 500px;
-            }}
-            .close {{
-                float: right;
-                cursor: pointer;
-                color: white;
-                font-size: 1.5em;
             }}
             .back-button {{
                 margin-bottom: 15px;
@@ -276,6 +215,7 @@ def index():
                 color: #4CAF50;
                 font-weight: bold;
             }}
+            /* [Keep all your other existing CSS] */
         </style>
     </head>
     <body>
@@ -290,37 +230,7 @@ def index():
             <div id="stations" class="stations"></div>
         </div>
         
-        <div class="add-station-form">
-            <h3>Add New Station</h3>
-            <form method="POST" action="/add/" id="addForm">
-                <select name="category" required>
-                    <option value="">Select Category</option>
-                    {''.join(f'<option value="{category}">{category}</option>' for category in RADIO_STATIONS)}
-                    <option value="new">New Category</option>
-                </select>
-                <input type="text" id="newCategory" name="new_category" placeholder="New Category Name" style="display: none;">
-                <input type="text" name="name" placeholder="Station Name" required>
-                <input type="text" name="url" placeholder="Stream URL" required>
-                <button type="submit">Add Station</button>
-            </form>
-        </div>
-        
-        <div id="editModal" class="modal">
-            <div class="modal-content">
-                <span class="close" onclick="closeModal()">&times;</span>
-                <h3>Edit Station</h3>
-                <form method="POST" action="" id="editForm">
-                    <input type="hidden" name="old_name" id="editOldName">
-                    <input type="hidden" name="category" id="editCategory">
-                    <select name="new_category" required>
-                        {''.join(f'<option value="{category}">{category}</option>' for category in RADIO_STATIONS)}
-                    </select>
-                    <input type="text" name="name" id="editName" placeholder="Station Name" required>
-                    <input type="text" name="url" id="editUrl" placeholder="Stream URL" required>
-                    <button type="submit">Save Changes</button>
-                </form>
-            </div>
-        </div>
+        <!-- [Keep your add station form and edit modal] -->
         
         <script>
             // Store all stations HTML
@@ -348,48 +258,15 @@ def index():
                 document.getElementById('stations-container').style.display = 'none';
             }}
             
-            function openEditModal(category, name, url) {{
-                document.getElementById('editModal').style.display = 'flex';
-                document.getElementById('editOldName').value = name;
-                document.getElementById('editName').value = name.replace(/_/g, ' ');
-                document.getElementById('editUrl').value = url;
-                document.getElementById('editCategory').value = category;
-                document.getElementById('editForm').action = `/edit/${{category}}/${{name}}`;
-                
-                // Set the current category as selected
-                const select = document.querySelector('#editForm select[name="new_category"]');
-                for (let i = 0; i < select.options.length; i++) {{
-                    if (select.options[i].value === category) {{
-                        select.selectedIndex = i;
-                        break;
-                    }}
-                }}
+            function copyUrl(button) {{
+                const input = button.previousElementSibling;
+                input.select();
+                document.execCommand('copy');
+                button.textContent = 'Copied!';
+                setTimeout(() => button.textContent = 'Copy', 2000);
             }}
             
-            function closeModal() {{
-                document.getElementById('editModal').style.display = 'none';
-            }}
-            
-            // Show/hide new category field based on selection
-            document.querySelector('select[name="category"]').addEventListener('change', function() {{
-                const newCategoryField = document.getElementById('newCategory');
-                newCategoryField.style.display = this.value === 'new' ? 'block' : 'none';
-                if (this.value !== 'new') {{
-                    newCategoryField.value = '';
-                }}
-            }});
-            
-            // Update form action with selected category
-            document.querySelector('#addForm').addEventListener('submit', function() {{
-                const categorySelect = this.querySelector('select[name="category"]');
-                let category = categorySelect.value;
-                
-                if (category === 'new') {{
-                    category = this.querySelector('input[name="new_category"]').value.trim();
-                }}
-                
-                this.action = `/add/${{encodeURIComponent(category)}}`;
-            }});
+            // [Keep all your other existing JavaScript functions]
         </script>
     </body>
     </html>
