@@ -38,6 +38,68 @@ DEFAULT_STATIONS = {
             "url": "https://best-str.umn.cdn.united.cloud/stream?stream=sp1400&sp=n1info&channel=n1bos&u=n1info&p=n1Sh4redSecre7iNf0&player=m3u8"
         }
     },
+
+"AIR": {
+    "fm_gold": {
+        "name": "FM Gold",
+        "url": "https://airhlspush.pc.cdn.bitgravity.com/httppush/hispbaudio005/hispbaudio00564kbps.m3u8"
+    },
+    "air_kavarati": {
+        "name": "AIR Kavarati",
+        "url": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio189/chunklist.m3u8"
+    },
+    "air_calicut": {
+        "name": "AIR Calicut",
+        "url": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio082/chunklist.m3u8"
+    },
+    "manjeri_fm": {
+        "name": "Manjeri FM",
+        "url": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio101/chunklist.m3u8"
+    },
+    "real_fm": {
+        "name": "Real FM",
+        "url": "http://air.pc.cdn.bitgravity.com/air/live/pbaudio083/playlist.m3u8"
+    },
+    "air_malayalam": {
+        "name": "AIR Malayalam",
+        "url": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio075/chunklist.m3u8"
+    },
+    "air_urdu": {
+        "name": "AIR Urdu",
+        "url": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio026/chunklist.m3u8"
+    },
+    "air_tamil": {
+        "name": "AIR Tamil",
+        "url": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio022/chunklist.m3u8"
+    },
+    "air_mangalore": {
+        "name": "AIR Mangalore",
+        "url": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio087/chunklist.m3u8"
+    },
+    "air_kannur": {
+        "name": "AIR Kannur",
+        "url": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio130/chunklist.m3u8"
+    },
+    "air_thiruvananthapuram": {
+        "name": "AIR Thiruvananthapuram",
+        "url": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio078/chunklist.m3u8"
+    },
+    "air_kochi": {
+        "name": "AIR Kochi FM",
+        "url": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio084/chunklist.m3u8"
+    },
+    "air_fm_rainbow": {
+        "name": "FM Rainbow",
+        "url": "https://airhlspush.pc.cdn.bitgravity.com/httppush/hispbaudio003/hispbaudio00364kbps.m3u8"
+    },
+    "air_news_24x7": {
+        "name": "AIR News 24x7",
+        "url": "https://airhlspush.pc.cdn.bitgravity.com/httppush/hispbaudio001/hispbaudio00164kbps.m3u8"
+    },
+
+
+
+
     "Islamic": {
         "muthnabi_radio": {
             "name": "Muthnabi Radio",
