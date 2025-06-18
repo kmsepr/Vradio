@@ -1,14 +1,19 @@
 import subprocess
 import time
-from flask import Flask, Response, redirect, request
+from flask import Flask, Response, redirect, request, send_from_directory
 import os
 import json
 from pathlib import Path
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
-# 📡 Persistent radio stations storage
+# Configuration
 STATIONS_FILE = "radio_stations.json"
+THUMBNAILS_FILE = "station_thumbnails.json"
+UPLOAD_FOLDER = 'static/logos'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # Initialize with default stations
 DEFAULT_STATIONS = {
@@ -17,28 +22,35 @@ DEFAULT_STATIONS = {
     # ... (include all your other default stations here) ...
 }
 
-def load_stations():
-    """Load stations from file or use defaults"""
+DEFAULT_THUMBNAILS = {
+    "muthnabi_radio": "/static/default-radio.png",
+    "radio_keralam": "/static/default-radio.png",
+    # ... (add default thumbnails for other stations) ...
+}
+
+def load_data(filename, default_data):
+    """Load data from file or use defaults"""
     try:
-        if Path(STATIONS_FILE).exists():
-            with open(STATIONS_FILE, 'r') as f:
+        if Path(filename).exists():
+            with open(filename, 'r') as f:
                 return json.load(f)
     except Exception as e:
-        print(f"⚠️ Error loading stations: {e}")
-    return DEFAULT_STATIONS
+        print(f"⚠️ Error loading {filename}: {e}")
+    return default_data
 
-def save_stations(stations):
-    """Save stations to file"""
+def save_data(filename, data):
+    """Save data to file"""
     try:
-        with open(STATIONS_FILE, 'w') as f:
-            json.dump(stations, f)
+        with open(filename, 'w') as f:
+            json.dump(data, f)
     except Exception as e:
-        print(f"⚠️ Error saving stations: {e}")
+        print(f"⚠️ Error saving {filename}: {e}")
 
-# Load stations at startup
-RADIO_STATIONS = load_stations()
+# Load data at startup
+RADIO_STATIONS = load_data(STATIONS_FILE, DEFAULT_STATIONS)
+STATION_THUMBNAILS = load_data(THUMBNAILS_FILE, DEFAULT_THUMBNAILS)
 
-# 🔁 FFmpeg stream generator (unchanged)
+# 🔁 FFmpeg stream generator
 def generate_stream(url):
     process = None
     while True:
@@ -63,7 +75,7 @@ def generate_stream(url):
         print("🔄 FFmpeg stopped, restarting stream...")
         time.sleep(5)
 
-# 🎧 Stream endpoint (unchanged)
+# 🎧 Stream endpoint
 @app.route("/<station_name>")
 def stream(station_name):
     url = RADIO_STATIONS.get(station_name)
@@ -71,25 +83,74 @@ def stream(station_name):
         return "⚠️ Station not found", 404
     return Response(generate_stream(url), mimetype="audio/mpeg")
 
-# ➕ Add new station (with persistence)
+# ➕ Add new station
 @app.route("/add", methods=["POST"])
 def add_station():
     name = request.form.get("name", "").strip().lower().replace(" ", "_")
     url = request.form.get("url", "").strip()
+    
+    # Handle logo upload
+    logo_url = STATION_THUMBNAILS.get(name, "/static/default-radio.png")
+    logo = request.files.get("logo")
+    if logo and logo.filename:
+        filename = secure_filename(f"{name}_{logo.filename}")
+        logo.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        logo_url = f"/static/logos/{filename}"
+    
     if name and url:
         RADIO_STATIONS[name] = url
-        save_stations(RADIO_STATIONS)
+        STATION_THUMBNAILS[name] = logo_url
+        save_data(STATIONS_FILE, RADIO_STATIONS)
+        save_data(THUMBNAILS_FILE, STATION_THUMBNAILS)
     return redirect("/")
 
-# 🗑️ Delete station endpoint
+# ✏️ Edit station
+@app.route("/edit/<old_name>", methods=["POST"])
+def edit_station(old_name):
+    new_name = request.form.get("name", "").strip().lower().replace(" ", "_")
+    new_url = request.form.get("url", "").strip()
+    
+    if not new_name or not new_url:
+        return redirect("/")
+    
+    # Handle logo update
+    logo = request.files.get("logo")
+    logo_url = STATION_THUMBNAILS.get(old_name, "/static/default-radio.png")
+    if logo and logo.filename:
+        filename = secure_filename(f"{new_name}_{logo.filename}")
+        logo.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        logo_url = f"/static/logos/{filename}"
+    
+    # Update station data
+    if old_name in RADIO_STATIONS:
+        # Preserve the stream if name didn't change
+        if old_name != new_name:
+            RADIO_STATIONS[new_name] = RADIO_STATIONS.pop(old_name)
+        else:
+            RADIO_STATIONS[new_name] = new_url
+        
+        # Update thumbnail
+        STATION_THUMBNAILS[new_name] = logo_url
+        if old_name != new_name and old_name in STATION_THUMBNAILS:
+            del STATION_THUMBNAILS[old_name]
+        
+        save_data(STATIONS_FILE, RADIO_STATIONS)
+        save_data(THUMBNAILS_FILE, STATION_THUMBNAILS)
+    
+    return redirect("/")
+
+# 🗑️ Delete station
 @app.route("/delete/<station_name>", methods=["POST"])
 def delete_station(station_name):
     if station_name in RADIO_STATIONS:
         del RADIO_STATIONS[station_name]
-        save_stations(RADIO_STATIONS)
+        if station_name in STATION_THUMBNAILS:
+            del STATION_THUMBNAILS[station_name]
+        save_data(STATIONS_FILE, RADIO_STATIONS)
+        save_data(THUMBNAILS_FILE, STATION_THUMBNAILS)
     return redirect("/")
 
-# 🏠 Homepage UI with delete buttons
+# 🏠 Homepage UI
 @app.route("/")
 def index():
     def pastel_color(i):
@@ -101,12 +162,16 @@ def index():
     links_html = "".join(
         f"""
         <div class='card' data-name='{name}' style='background-color: rgba({pastel_color(i)}, 0.85);'>
-            <a href='/{name}' target='_blank' rel='noopener noreferrer'>{name}</a>
-            <div class='card-buttons'>
-                <button class="fav-btn" onclick="toggleFavourite('{name}')">⭐</button>
-                <form method='POST' action='/delete/{name}' style='display:inline;'>
-                    <button type='submit' class='delete-btn'>🗑️</button>
-                </form>
+            <img src='{STATION_THUMBNAILS.get(name, "/static/default-radio.png")}' class='station-thumbnail'>
+            <div class='station-info'>
+                <a href='/{name}' target='_blank' rel='noopener noreferrer'>{name.replace('_', ' ').title()}</a>
+                <div class='card-buttons'>
+                    <button class="edit-btn" onclick="openEditModal('{name}', '{RADIO_STATIONS[name]}')">✏️</button>
+                    <button class="fav-btn" onclick="toggleFavourite('{name}')">⭐</button>
+                    <form method='POST' action='/delete/{name}' style='display:inline;'>
+                        <button type='submit' class='delete-btn'>🗑️</button>
+                    </form>
+                </div>
             </div>
         </div>
         """ for i, name in enumerate(reversed(list(RADIO_STATIONS)))
@@ -119,6 +184,7 @@ def index():
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>Radio Favourites</title>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
         <style>
             body {{
                 font-family: sans-serif;
@@ -180,39 +246,47 @@ def index():
                 padding: 12px;
                 border-radius: 10px;
                 text-align: center;
-                position: relative;
+            }}
+            .station-thumbnail {{
+                width: 60px;
+                height: 60px;
+                border-radius: 50%;
+                object-fit: cover;
+                border: 2px solid white;
+                margin-bottom: 8px;
+            }}
+            .station-info {{
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
             }}
             .card a {{
                 color: white;
                 text-decoration: none;
-                display: block;
-                margin-bottom: 10px;
+                word-break: break-word;
             }}
             .card-buttons {{
                 display: flex;
                 justify-content: center;
                 gap: 5px;
             }}
-            .fav-btn, .delete-btn {{
+            .fav-btn, .delete-btn, .edit-btn {{
                 background: none;
                 border: none;
                 font-size: 1.2rem;
                 cursor: pointer;
                 padding: 0 5px;
             }}
-            .fav-btn {{
-                color: gold;
-            }}
-            .delete-btn {{
-                color: #ff6b6b;
-            }}
+            .fav-btn {{ color: gold; }}
+            .delete-btn {{ color: #ff6b6b; }}
+            .edit-btn {{ color: #4a90e2; }}
             .tab-content {{
                 display: none;
             }}
             .tab-content.active {{
                 display: block;
             }}
-            .add-form {{
+            .add-form, .edit-form {{
                 max-width: 400px;
                 margin: 20px auto;
                 display: flex;
@@ -222,7 +296,7 @@ def index():
                 padding: 15px;
                 border-radius: 8px;
             }}
-            .add-form input {{
+            .add-form input, .edit-form input {{
                 padding: 10px;
                 font-size: 1rem;
                 border-radius: 5px;
@@ -230,10 +304,34 @@ def index():
                 background: #1e1e2f;
                 color: white;
             }}
-            .add-form input[type=submit] {{
+            .add-form input[type=submit], .edit-form input[type=submit] {{
                 background: #007acc;
                 cursor: pointer;
                 border: none;
+            }}
+            .modal {{
+                display: none;
+                position: fixed;
+                z-index: 1000;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0,0,0,0.7);
+            }}
+            .modal-content {{
+                background-color: #2a2a3a;
+                margin: 15% auto;
+                padding: 20px;
+                border-radius: 8px;
+                width: 80%;
+                max-width: 500px;
+            }}
+            .close {{
+                color: #aaa;
+                float: right;
+                font-size: 28px;
+                cursor: pointer;
             }}
             @media (max-width: 600px) {{
                 .grid {{
@@ -248,7 +346,7 @@ def index():
     <body>
         <div class="header">
             <span class="menu-icon" onclick="toggleMenu()">☰</span>
-            <h1>⭐ Favourite Radios</h1>
+            <h1><i class="fas fa-radio"></i> Radio Favourites</h1>
         </div>
 
         <div class="side-menu" id="sideMenu">
@@ -270,11 +368,26 @@ def index():
         </div>
 
         <div id="addTab" class="tab-content">
-            <form class="add-form" method="POST" action="/add">
-                <input type="text" name="name" placeholder="Station name (no space)" required />
-                <input type="text" name="url" placeholder="Stream URL" required />
-                <input type="submit" value="Add Station" />
+            <form class="add-form" method="POST" action="/add" enctype="multipart/form-data">
+                <input type="text" name="name" placeholder="Station name" required>
+                <input type="text" name="url" placeholder="Stream URL" required>
+                <input type="file" name="logo" accept="image/*">
+                <input type="submit" value="Add Station">
             </form>
+        </div>
+
+        <!-- Edit Modal -->
+        <div id="editModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeModal()">&times;</span>
+                <form class="edit-form" method="POST" enctype="multipart/form-data" id="editForm">
+                    <input type="hidden" name="old_name" id="editOldName">
+                    <input type="text" name="name" id="editName" placeholder="Station name" required>
+                    <input type="text" name="url" id="editUrl" placeholder="Stream URL" required>
+                    <input type="file" name="logo" accept="image/*">
+                    <input type="submit" value="Save Changes">
+                </form>
+            </div>
         </div>
 
         <script>
@@ -329,6 +442,18 @@ def index():
                 menu.style.left = (menu.style.left === "0px") ? "-220px" : "0px";
             }}
 
+            function openEditModal(name, url) {{
+                document.getElementById('editModal').style.display = 'block';
+                document.getElementById('editOldName').value = name;
+                document.getElementById('editName').value = name.replace(/_/g, ' ');
+                document.getElementById('editUrl').value = url;
+                document.getElementById('editForm').action = `/edit/${{name}}`;
+            }}
+
+            function closeModal() {{
+                document.getElementById('editModal').style.display = 'none';
+            }}
+
             // Initialize
             window.onload = function() {{
                 updateDisplay();
@@ -339,15 +464,35 @@ def index():
                         menu.style.left = "-220px";
                     }}
                 }});
+                
+                // Close modal when clicking outside
+                window.onclick = function(event) {{
+                    const modal = document.getElementById('editModal');
+                    if (event.target == modal) {{
+                        closeModal();
+                    }}
+                }};
             }};
         </script>
     </body>
     </html>
     """
 
+@app.route('/static/<path:path>')
+def send_static(path):
+    return send_from_directory('static', path)
+
 if __name__ == "__main__":
-    # Create storage file if it doesn't exist
+    # Create storage files if they don't exist
     if not Path(STATIONS_FILE).exists():
-        save_stations(DEFAULT_STATIONS)
+        save_data(STATIONS_FILE, DEFAULT_STATIONS)
+    if not Path(THUMBNAILS_FILE).exists():
+        save_data(THUMBNAILS_FILE, DEFAULT_THUMBNAILS)
+    
+    # Create default radio image if missing
+    default_logo_path = Path('static/default-radio.png')
+    if not default_logo_path.exists():
+        os.makedirs('static', exist_ok=True)
+        # You should add a real default image here
     
     app.run(host="0.0.0.0", port=8000)
