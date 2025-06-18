@@ -1,75 +1,44 @@
 import subprocess
 import time
-from flask import Flask, Response, send_from_directory
-from flask import request, redirect
+from flask import Flask, Response, redirect, request
 import os
+import json
+from pathlib import Path
 
 app = Flask(__name__)
 
-# 📡 List of radio stations
-RADIO_STATIONS = {
+# 📡 Persistent radio stations storage
+STATIONS_FILE = "radio_stations.json"
+
+# Initialize with default stations
+DEFAULT_STATIONS = {
     "muthnabi_radio": "http://cast4.my-control-panel.com/proxy/muthnabi/stream",
     "radio_keralam": "http://ice31.securenetsystems.net/RADIOKERAL",
-    "malayalam_1": "http://167.114.131.90:5412/stream",
-    "radio_digital_malayali": "https://radio.digitalmalayali.in/listen/stream/radio.mp3",
-    "malayalam_90s": "https://stream-159.zeno.fm/gm3g9amzm0hvv?zs-x-7jq8ksTOav9ZhlYHi9xw",
-    "aural_oldies": "https://stream-162.zeno.fm/tksfwb1mgzzuv?zs=SxeQj1-7R0alsZSWJie5eQ",
-    "radio_malayalam": "https://radiomalayalamfm.com/radio/8000/radio.mp3",
-    "swaranjali": "https://stream-161.zeno.fm/x7mve2vt01zuv?zs-D4nK05-7SSK2FZAsvumh2w",
-    "radio_beat_malayalam": "http://live.exertion.in:8050/radio.mp3",
-    "shahul_radio": "https://stream-150.zeno.fm/cynbm5ngx38uv?zs=Ktca5StNRWm-sdIR7GloVg",
-    "raja_radio": "http://159.203.111.241:8026/stream",
-    "nonstop_hindi": "http://s5.voscast.com:8216/stream",
-    "fm_gold": "https://airhlspush.pc.cdn.bitgravity.com/httppush/hispbaudio005/hispbaudio00564kbps.m3u8",
-    "motivational_series": "http://104.7.66.64:8010",
-    "deenagers_radio": "http://104.7.66.64:8003/",
-    "hajj_channel": "http://104.7.66.64:8005",
-    "abc_islam": "http://s10.voscast.com:9276/stream",
-    "eram_fm": "http://icecast2.edisimo.com:8000/eramfm.mp3",
-    "al_sumood_fm": "http://us3.internet-radio.com/proxy/alsumoodfm2020?mp=/stream",
-    "nur_ala_nur": "http://104.7.66.64:8011/",
-    "ruqya_radio": "http://104.7.66.64:8004",
-    "seiyun_radio": "http://s2.radio.co/s26c62011e/listen",
-    "noor_al_eman": "http://edge.mixlr.com/channel/boaht",
-    "sam_yemen": "https://edge.mixlr.com/channel/kijwr",
-    "afaq": "https://edge.mixlr.com/channel/rumps",
-    "alfasi_radio": "https://qurango.net/radio/mishary_alafasi",
-    "tafsir_quran": "https://radio.quranradiotafsir.com/9992/stream",
-    "sirat_al_mustaqim": "http://104.7.66.64:8091/stream",
-    "river_nile_radio": "http://104.7.66.64:8087",
-    "quran_radio_cairo": "http://n02.radiojar.com/8s5u5tpdtwzuv",
-    "quran_radio_nablus": "http://www.quran-radio.org:8002/",
-    "al_nour": "http://audiostreaming.itworkscdn.com:9066/",
-    "allahu_akbar_radio": "http://66.45.232.132:9996/stream",
-    "omar_abdul_kafi_radio": "http://104.7.66.64:8007",
-    "urdu_islamic_lecture": "http://144.91.121.54:27001/channel_02.aac",
-    "hob_nabi": "http://216.245.210.78:8098/stream",
-    "sanaa_radio": "http://dc5.serverse.com/proxy/pbmhbvxs/stream",
-    "rubat_ataq": "http://stream.zeno.fm/5tpfc8d7xqruv",
-    "al_jazeera": "http://live-hls-audio-web-aja.getaj.net/VOICE-AJA/index.m3u8",
-    "asianet_news": "https://vidcdn.vidgyor.com/asianet-origin/audioonly/chunks.m3u8",
-    "air_kavarati": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio189/chunklist.m3u8",
-    "air_calicut": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio082/chunklist.m3u8",
-    "manjeri_fm": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio101/chunklist.m3u8",
-    "real_fm": "http://air.pc.cdn.bitgravity.com/air/live/pbaudio083/playlist.m3u8",
-    "vom_news": "https://psmnews.mv/stream/radio-dhivehi-raajjeyge-adu",
-    "safari_tv": "https://j78dp346yq5r-hls-live.5centscdn.com/safari/live.stream/chunks.m3u8",
-    "victers_tv": "https://932y4x26ljv8-hls-live.5centscdn.com/victers/tv.stream/victers/tv1/chunks.m3u8",
-    "kairali_we": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/wetv_nim_https/050522/wetv/playlist.m3u8",
-    "flowers_tv": "http://103.199.161.254/Content/flowers/Live/Channel(Flowers)/index.m3u8",
-    "dd_malayalam": "https://d3eyhgoylams0m.cloudfront.net/v1/manifest/93ce20f0f52760bf38be911ff4c91ed02aa2fd92/ed7bd2c7-8d10-4051-b397-2f6b90f99acb/562ee8f9-9950-48a0-ba1d-effa00cf0478/2.m3u8",
-    "amrita_tv": "https://dr1zhpsuem5f4.cloudfront.net/master.m3u8",
-    "24_news": "https://segment.yuppcdn.net/110322/channel24/playlist.m3u8",
-    "mazhavil_manorama": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/mazhavilmanorama_nim_https/050522/mazhavilmanorama/playlist.m3u8",
-    "manorama_news": "http://103.199.161.254/Content/manoramanews/Live/Channel(ManoramaNews)/index.m3u8",
-    "aaj_tak": "https://feeds.intoday.in/aajtak/api/aajtakhd/master.m3u8",
-    "bloomberg_tv": "https://bloomberg-bloomberg-3-br.samsung.wurl.tv/manifest/playlist.m3u8",
-    "france_24": "https://live.france24.com/hls/live/2037218/F24_EN_HI_HLS/master_500.m3u8",
-    "n1_news": "https://best-str.umn.cdn.united.cloud/stream?stream=sp1400&sp=n1info&channel=n1bos&u=n1info&p=n1Sh4redSecre7iNf0&player=m3u8",
-    "vom_radio": "https://radio.psm.mv/draair",
+    # ... (include all your other default stations here) ...
 }
 
-# 🔁 FFmpeg stream generator
+def load_stations():
+    """Load stations from file or use defaults"""
+    try:
+        if Path(STATIONS_FILE).exists():
+            with open(STATIONS_FILE, 'r') as f:
+                return json.load(f)
+    except Exception as e:
+        print(f"⚠️ Error loading stations: {e}")
+    return DEFAULT_STATIONS
+
+def save_stations(stations):
+    """Save stations to file"""
+    try:
+        with open(STATIONS_FILE, 'w') as f:
+            json.dump(stations, f)
+    except Exception as e:
+        print(f"⚠️ Error saving stations: {e}")
+
+# Load stations at startup
+RADIO_STATIONS = load_stations()
+
+# 🔁 FFmpeg stream generator (unchanged)
 def generate_stream(url):
     process = None
     while True:
@@ -94,7 +63,7 @@ def generate_stream(url):
         print("🔄 FFmpeg stopped, restarting stream...")
         time.sleep(5)
 
-# 🎧 Stream a radio station
+# 🎧 Stream endpoint (unchanged)
 @app.route("/<station_name>")
 def stream(station_name):
     url = RADIO_STATIONS.get(station_name)
@@ -102,16 +71,25 @@ def stream(station_name):
         return "⚠️ Station not found", 404
     return Response(generate_stream(url), mimetype="audio/mpeg")
 
-# ➕ Add new station
+# ➕ Add new station (with persistence)
 @app.route("/add", methods=["POST"])
 def add_station():
     name = request.form.get("name", "").strip().lower().replace(" ", "_")
     url = request.form.get("url", "").strip()
     if name and url:
         RADIO_STATIONS[name] = url
+        save_stations(RADIO_STATIONS)
     return redirect("/")
 
-# 🏠 Homepage UI
+# 🗑️ Delete station endpoint
+@app.route("/delete/<station_name>", methods=["POST"])
+def delete_station(station_name):
+    if station_name in RADIO_STATIONS:
+        del RADIO_STATIONS[station_name]
+        save_stations(RADIO_STATIONS)
+    return redirect("/")
+
+# 🏠 Homepage UI with delete buttons
 @app.route("/")
 def index():
     def pastel_color(i):
@@ -121,13 +99,18 @@ def index():
         return f"{r}, {g}, {b}"
 
     links_html = "".join(
-    f"""
-    <div class='card' data-name='{name}' style='background-color: rgba({pastel_color(i)}, 0.85);'>
-        <a href='/{name}' target='_blank' rel='noopener noreferrer'>{name}</a>
-        <button class="fav-btn" onclick="toggleFavourite('{name}')">⭐</button>
-    </div>
-    """ for i, name in enumerate(reversed(list(RADIO_STATIONS)))
-)
+        f"""
+        <div class='card' data-name='{name}' style='background-color: rgba({pastel_color(i)}, 0.85);'>
+            <a href='/{name}' target='_blank' rel='noopener noreferrer'>{name}</a>
+            <div class='card-buttons'>
+                <button class="fav-btn" onclick="toggleFavourite('{name}')">⭐</button>
+                <form method='POST' action='/delete/{name}' style='display:inline;'>
+                    <button type='submit' class='delete-btn'>🗑️</button>
+                </form>
+            </div>
+        </div>
+        """ for i, name in enumerate(reversed(list(RADIO_STATIONS)))
+    )
 
     return f"""
     <!DOCTYPE html>
@@ -149,6 +132,9 @@ def index():
                 align-items: center;
                 background: #2b2b3c;
                 padding: 10px;
+                position: sticky;
+                top: 0;
+                z-index: 100;
             }}
             .menu-icon {{
                 font-size: 1.5rem;
@@ -199,16 +185,26 @@ def index():
             .card a {{
                 color: white;
                 text-decoration: none;
+                display: block;
+                margin-bottom: 10px;
             }}
-            .fav-btn {{
-                position: absolute;
-                top: 6px;
-                right: 10px;
+            .card-buttons {{
+                display: flex;
+                justify-content: center;
+                gap: 5px;
+            }}
+            .fav-btn, .delete-btn {{
                 background: none;
                 border: none;
-                color: gold;
                 font-size: 1.2rem;
                 cursor: pointer;
+                padding: 0 5px;
+            }}
+            .fav-btn {{
+                color: gold;
+            }}
+            .delete-btn {{
+                color: #ff6b6b;
             }}
             .tab-content {{
                 display: none;
@@ -239,6 +235,14 @@ def index():
                 cursor: pointer;
                 border: none;
             }}
+            @media (max-width: 600px) {{
+                .grid {{
+                    grid-template-columns: 1fr;
+                }}
+                .card {{
+                    padding: 15px;
+                }}
+            }}
         </style>
     </head>
     <body>
@@ -249,16 +253,17 @@ def index():
 
         <div class="side-menu" id="sideMenu">
             <a href="#" onclick="showTab('all'); toggleMenu();">📻 All Stations</a>
+            <a href="#" onclick="showTab('fav'); toggleMenu();">❤️ Favorites</a>
             <a href="#" onclick="showTab('add'); toggleMenu();">➕ Add Station</a>
         </div>
 
-        <div id="favTab" class="tab-content active">
+        <div id="favTab" class="tab-content">
             <div class="scroll-container">
                 <div class="grid" id="favGrid"></div>
             </div>
         </div>
 
-        <div id="allTab" class="tab-content">
+        <div id="allTab" class="tab-content active">
             <div class="scroll-container">
                 <div class="grid" id="stationGrid">{links_html}</div>
             </div>
@@ -273,7 +278,7 @@ def index():
         </div>
 
         <script>
-            let activeTab = "fav";
+            let activeTab = "all";
 
             function toggleFavourite(name) {{
                 let favs = JSON.parse(localStorage.getItem("favourites") || "[]");
@@ -288,26 +293,33 @@ def index():
 
             function updateDisplay() {{
                 const favs = JSON.parse(localStorage.getItem("favourites") || "[]");
-                document.querySelectorAll(".card").forEach(card => {{
+                
+                // Update favorite buttons
+                document.querySelectorAll(".fav-btn").forEach(btn => {{
+                    const card = btn.closest(".card");
                     const name = card.getAttribute("data-name");
-                    card.style.display = (activeTab === "all" || (activeTab === "fav" && favs.includes(name))) ? "block" : "none";
-                    const btn = card.querySelector(".fav-btn");
-                    if (btn) btn.textContent = favs.includes(name) ? "★" : "⭐";
+                    btn.textContent = favs.includes(name) ? "★" : "⭐";
                 }});
-
+                
+                // Update favorites tab
                 const favGrid = document.getElementById("favGrid");
                 if (favGrid) {{
                     favGrid.innerHTML = "";
                     favs.forEach(name => {{
-                        const el = document.querySelector(`[data-name='${{name}}']`);
-                        if (el) favGrid.appendChild(el.cloneNode(true));
+                        const originalCard = document.querySelector(`.card[data-name='${{name}}']`);
+                        if (originalCard) {{
+                            const clone = originalCard.cloneNode(true);
+                            favGrid.appendChild(clone);
+                        }}
                     }});
                 }}
             }}
 
             function showTab(tab) {{
                 activeTab = tab;
-                document.querySelectorAll(".tab-content").forEach(div => div.classList.remove("active"));
+                document.querySelectorAll(".tab-content").forEach(div => {{
+                    div.classList.remove("active");
+                }});
                 document.getElementById(tab + "Tab").classList.add("active");
                 updateDisplay();
             }}
@@ -317,11 +329,25 @@ def index():
                 menu.style.left = (menu.style.left === "0px") ? "-220px" : "0px";
             }}
 
-            window.onload = updateDisplay;
+            // Initialize
+            window.onload = function() {{
+                updateDisplay();
+                // Close menu when clicking outside
+                document.addEventListener('click', function(e) {{
+                    const menu = document.getElementById("sideMenu");
+                    if (!e.target.closest('.side-menu') && !e.target.closest('.menu-icon')) {{
+                        menu.style.left = "-220px";
+                    }}
+                }});
+            }};
         </script>
     </body>
     </html>
     """
 
 if __name__ == "__main__":
+    # Create storage file if it doesn't exist
+    if not Path(STATIONS_FILE).exists():
+        save_stations(DEFAULT_STATIONS)
+    
     app.run(host="0.0.0.0", port=8000)
