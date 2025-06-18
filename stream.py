@@ -121,13 +121,13 @@ def index():
         return f"{r}, {g}, {b}"
 
     links_html = "".join(
-        f"""
-        <div class='card' data-name='{name}' style='background-color: rgba({pastel_color(i)}, 0.85);'>
-            <a href='/{name}' target='_blank' rel='noopener noreferrer'>{name}</a>
-            <button class="fav-btn" onclick="toggleFavourite('{name}')">⭐</button>
-        </div>
-        """ for i, name in enumerate(RADIO_STATIONS)
-    )
+    f"""
+    <div class='card' data-name='{name}' style='background-color: rgba({pastel_color(i)}, 0.85);'>
+        <a href='/{name}' target='_blank' rel='noopener noreferrer'>{name}</a>
+        <button class="fav-btn" onclick="toggleFavourite('{name}')">⭐</button>
+    </div>
+    """ for i, name in enumerate(reversed(list(RADIO_STATIONS)))
+)
 
     return f"""
     <!DOCTYPE html>
