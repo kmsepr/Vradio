@@ -25,6 +25,16 @@ DEFAULT_STATIONS = {
             "name": "Muthnabi Radio",
             "url": "http://cast4.my-control-panel.com/proxy/muthnabi/stream"
         }
+    },
+    "YouTube": {
+        "shajahan_rahmani": {
+            "name": "Shajahan Rahmani",
+            "url": "http://capitalist-anthe-pscj-4a28f285.koyeb.app/shajahan_rahmani"
+        },
+        "media_one": {
+            "name": "Mediaone",
+            "url": "http://capitalist-anthe-pscj-4a28f285.koyeb.app/media_one"
+        }
     }
 }
 
