@@ -8,83 +8,34 @@ from pathlib import Path
 app = Flask(__name__)
 
 STATIONS_FILE = "radio_stations.json"
+
+# ------------------------------
+# 📻 Default categorized stations
+# ------------------------------
 DEFAULT_STATIONS = {
     "News": {
         "al_jazeera": "http://live-hls-audio-web-aja.getaj.net/VOICE-AJA/index.m3u8",
         "asianet_news": "https://vidcdn.vidgyor.com/asianet-origin/audioonly/chunks.m3u8",
         "manorama_news": "http://103.199.161.254/Content/manoramanews/Live/Channel(ManoramaNews)/index.m3u8",
-        "aaj_tak": "https://feeds.intoday.in/aajtak/api/aajtakhd/master.m3u8",
-        "bloomberg_tv": "https://bloomberg-bloomberg-3-br.samsung.wurl.tv/manifest/playlist.m3u8",
-        "france_24": "https://live.france24.com/hls/live/2037218/F24_EN_HI_HLS/master_500.m3u8",
-        "n1_news": "https://best-str.umn.cdn.united.cloud/stream?stream=sp1400&sp=n1info&channel=n1bos&u=n1info&p=n1Sh4redSecre7iNf0&player=m3u8",
-        "vom_news": "https://psmnews.mv/stream/radio-dhivehi-raajjeyge-adu",
-        "vom_radio": "https://radio.psm.mv/draair"
     },
     "Islamic": {
         "deenagers_radio": "http://104.7.66.64:8003/",
-        "muthnabi_radio": "http://cast4.my-control-panel.com/proxy/muthnabi/stream",
-        "hajj_channel": "http://104.7.66.64:8005",
-        "abc_islam": "http://s10.voscast.com:9276/stream",
-        "al_sumood_fm": "http://us3.internet-radio.com/proxy/alsumoodfm2020?mp=/stream",
-        "nur_ala_nur": "http://104.7.66.64:8011/",
-        "ruqya_radio": "http://104.7.66.64:8004",
-        "seiyun_radio": "http://s2.radio.co/s26c62011e/listen",
-        "noor_al_eman": "http://edge.mixlr.com/channel/boaht",
-        "sam_yemen": "https://edge.mixlr.com/channel/kijwr",
-        "afaq": "https://edge.mixlr.com/channel/rumps",
-        "alfasi_radio": "https://qurango.net/radio/mishary_alafasi",
-        "tafsir_quran": "https://radio.quranradiotafsir.com/9992/stream",
-        "sirat_al_mustaqim": "http://104.7.66.64:8091/stream",
-        "river_nile_radio": "http://104.7.66.64:8087",
-        "quran_radio_cairo": "http://n02.radiojar.com/8s5u5tpdtwzuv",
-        "quran_radio_nablus": "http://www.quran-radio.org:8002/",
-        "al_nour": "http://audiostreaming.itworkscdn.com:9066/",
-        "allahu_akbar_radio": "http://66.45.232.132:9996/stream",
-        "omar_abdul_kafi_radio": "http://104.7.66.64:8007",
-        "urdu_islamic_lecture": "http://144.91.121.54:27001/channel_02.aac",
-        "hob_nabi": "http://216.245.210.78:8098/stream",
-        "sanaa_radio": "http://dc5.serverse.com/proxy/pbmhbvxs/stream",
-        "rubat_ataq": "http://stream.zeno.fm/5tpfc8d7xqruv"
+        "muthnabi_radio": "http://cast4.my-control-panel.com/proxy/muthnabi/stream"
     },
     "Malayalam": {
-        "radio_keralam": "http://ice31.securenetsystems.net/RADIOKERAL",
-        "malayalam_1": "http://167.114.131.90:5412/stream",
-        "radio_digital_malayali": "https://radio.digitalmalayali.in/listen/stream/radio.mp3",
-        "malayalam_90s": "https://stream-159.zeno.fm/gm3g9amzm0hvv?zs-x-7jq8ksTOav9ZhlYHi9xw",
-        "aural_oldies": "https://stream-162.zeno.fm/tksfwb1mgzzuv?zs=SxeQj1-7R0alsZSWJie5eQ",
-        "radio_malayalam": "https://radiomalayalamfm.com/radio/8000/radio.mp3",
-        "swaranjali": "https://stream-161.zeno.fm/x7mve2vt01zuv?zs-D4nK05-7SSK2FZAsvumh2w",
-        "radio_beat_malayalam": "http://live.exertion.in:8050/radio.mp3",
-        "shahul_radio": "https://stream-150.zeno.fm/cynbm5ngx38uv?zs=Ktca5StNRWm-sdIR7GloVg",
-        "raja_radio": "http://159.203.111.241:8026/stream",
-        "air_kavarati": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio189/chunklist.m3u8",
-        "air_calicut": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio082/chunklist.m3u8",
-        "manjeri_fm": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio101/chunklist.m3u8",
-        "real_fm": "http://air.pc.cdn.bitgravity.com/air/live/pbaudio083/playlist.m3u8"
+        "radio_keralam": "http://ice31.securenetsystems.net/RADIOKERAL"
     },
     "Hindi": {
-        "nonstop_hindi": "http://s5.voscast.com:8216/stream",
-        "motivational_series": "http://104.7.66.64:8010"
-    },
-    "Tamil": {
-        # Add Tamil stations here if you have any
+        "nonstop_hindi": "http://s5.voscast.com:8216/stream"
     },
     "English": {
-        "bloomberg_tv": "https://bloomberg-bloomberg-3-br.samsung.wurl.tv/manifest/playlist.m3u8",
-        "france_24": "https://live.france24.com/hls/live/2037218/F24_EN_HI_HLS/master_500.m3u8"
-    },
-    "TV Channels": {
-        "safari_tv": "https://j78dp346yq5r-hls-live.5centscdn.com/safari/live.stream/chunks.m3u8",
-        "victers_tv": "https://932y4x26ljv8-hls-live.5centscdn.com/victers/tv.stream/victers/tv1/chunks.m3u8",
-        "kairali_we": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/wetv_nim_https/050522/wetv/playlist.m3u8",
-        "flowers_tv": "http://103.199.161.254/Content/flowers/Live/Channel(Flowers)/index.m3u8",
-        "dd_malayalam": "https://d3eyhgoylams0m.cloudfront.net/v1/manifest/93ce20f0f52760bf38be911ff4c91ed02aa2fd92/ed7bd2c7-8d10-4051-b397-2f6b90f99acb/562ee8f9-9950-48a0-ba1d-effa00cf0478/2.m3u8",
-        "amrita_tv": "https://dr1zhpsuem5f4.cloudfront.net/master.m3u8",
-        "24_news": "https://segment.yuppcdn.net/110322/channel24/playlist.m3u8",
-        "mazhavil_manorama": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/mazhavilmanorama_nim_https/050522/mazhavilmanorama/playlist.m3u8"
+        "bloomberg_tv": "https://bloomberg-bloomberg-3-br.samsung.wurl.tv/manifest/playlist.m3u8"
     }
 }
 
+# ------------------------------
+# 📦 Load or initialize data
+# ------------------------------
 def load_data(filename, default_data):
     try:
         if Path(filename).exists():
@@ -103,6 +54,16 @@ def save_data(filename, data):
 
 RADIO_STATIONS = load_data(STATIONS_FILE, DEFAULT_STATIONS)
 
+# Flatten all stations into a single dict for direct access
+FLAT_STATION_MAP = {
+    station_id: url
+    for category in RADIO_STATIONS.values()
+    for station_id, url in category.items()
+}
+
+# ------------------------------
+# 🔊 FFmpeg stream generator
+# ------------------------------
 def generate_stream(url):
     process = None
     while True:
@@ -126,13 +87,18 @@ def generate_stream(url):
             print(f"Stream error: {e}")
             time.sleep(5)
 
-@app.route("/<category>/<station_name>")
-def stream(category, station_name):
-    if category in RADIO_STATIONS and station_name in RADIO_STATIONS[category]:
-        url = RADIO_STATIONS[category][station_name]
-        return Response(generate_stream(url), mimetype="audio/mpeg")
+# ------------------------------
+# 🎯 Direct flat route: /station_id
+# ------------------------------
+@app.route("/<station_id>")
+def direct_stream(station_id):
+    if station_id in FLAT_STATION_MAP:
+        return Response(generate_stream(FLAT_STATION_MAP[station_id]), mimetype="audio/mpeg")
     return "Station not found", 404
 
+# ------------------------------
+# 🗑 Delete station by category
+# ------------------------------
 @app.route("/delete/<category>/<station_name>", methods=["POST"])
 def delete_station(category, station_name):
     if category in RADIO_STATIONS and station_name in RADIO_STATIONS[category]:
@@ -142,6 +108,9 @@ def delete_station(category, station_name):
         save_data(STATIONS_FILE, RADIO_STATIONS)
     return redirect("/")
 
+# ------------------------------
+# ➕ Add new station
+# ------------------------------
 @app.route("/add", methods=["POST"])
 def add_station():
     category = request.form.get("category", "").strip()
@@ -157,6 +126,9 @@ def add_station():
     save_data(STATIONS_FILE, RADIO_STATIONS)
     return redirect("/")
 
+# ------------------------------
+# 🖥 Web UI
+# ------------------------------
 @app.route("/")
 def index():
     categories_html = "".join(
@@ -172,7 +144,7 @@ def index():
         f"""
         <div class='station-card' data-category='{category}'>
             <div class='station-header'>
-                <span class='station-name' onclick="playStream('/{category}/{name}')">{name.replace('_', ' ').title()}</span>
+                <span class='station-name' onclick="playStream('/{name}')">{name.replace('_', ' ').title()}</span>
                 <form method='POST' action='/delete/{category}/{name}' style='display:inline;'>
                     <button type='submit'>🗑️</button>
                 </form>
@@ -191,119 +163,101 @@ def index():
         <title>Radio</title>
         <style>
             body {{
-                font-family: Arial, sans-serif;
-                margin: 0;
-                padding: 20px;
-                background: #1e1e2f;
+                font-family: sans-serif;
+                background: #111;
                 color: white;
+                padding: 20px;
             }}
             .categories {{
                 display: grid;
-                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-                gap: 15px;
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                gap: 10px;
                 margin-bottom: 20px;
             }}
             .category-card {{
-                background: #2b2b3c;
-                padding: 15px;
+                background: #222;
+                padding: 10px;
                 border-radius: 8px;
                 cursor: pointer;
             }}
-            .stations-container {{
-                display: none;
-            }}
-            .stations {{
-                display: grid;
-                gap: 10px;
-            }}
             .station-card {{
-                background: #2b2b3c;
-                padding: 15px;
+                background: #222;
+                padding: 10px;
+                margin-bottom: 10px;
                 border-radius: 8px;
-            }}
-            .station-header {{
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
             }}
             .station-name {{
                 color: #4CAF50;
                 font-weight: bold;
                 cursor: pointer;
             }}
+            .station-header {{
+                display: flex;
+                justify-content: space-between;
+            }}
             button {{
                 background: none;
-                border: 1px solid #444;
                 color: white;
-                padding: 5px 10px;
+                border: 1px solid #555;
                 border-radius: 4px;
                 cursor: pointer;
             }}
             .back-button {{
-                margin-bottom: 10px;
                 cursor: pointer;
                 color: #4CAF50;
-            }}
-            form {{
-                margin-top: 40px;
-                max-width: 400px;
+                margin-bottom: 10px;
             }}
             input {{
                 width: 100%;
                 padding: 10px;
                 margin-bottom: 10px;
-                border-radius: 5px;
+                border-radius: 4px;
                 border: none;
             }}
             .submit-btn {{
                 background: #4CAF50;
                 color: white;
-                border: none;
                 padding: 10px;
-                border-radius: 5px;
+                border: none;
+                border-radius: 4px;
                 cursor: pointer;
             }}
         </style>
     </head>
     <body>
-        <h1>Radio</h1>
+        <h1>📻 Radio Stations</h1>
 
         <div id="categories" class="categories">{categories_html}</div>
 
-        <div id="stations-container" class="stations-container">
+        <div id="stations-container" style="display:none;">
             <div class="back-button" onclick="showCategories()">← Back</div>
-            <div id="stations" class="stations"></div>
+            <div id="stations"></div>
         </div>
 
-        <div id="add-form">
-            <h2>Add New Station</h2>
-            <form method="POST" action="/add">
-                <input name="category" placeholder="Category (e.g. News)" required>
-                <input name="name" placeholder="Station Name" required>
-                <input name="url" placeholder="Stream URL (http://...)" required>
-                <button type="submit" class="submit-btn">Add Station</button>
-            </form>
-        </div>
+        <h2>Add New Station</h2>
+        <form method="POST" action="/add">
+            <input name="category" placeholder="Category (e.g. News)" required>
+            <input name="name" placeholder="Station ID (e.g. al_jazeera)" required>
+            <input name="url" placeholder="Stream URL" required>
+            <button type="submit" class="submit-btn">Add</button>
+        </form>
 
         <script>
-            const allStationsHTML = `{stations_html}`;
+            const allHTML = `{stations_html}`
 
             function showStations(category) {{
                 document.getElementById('categories').style.display = 'none';
                 document.getElementById('stations-container').style.display = 'block';
-                document.getElementById('add-form').style.display = 'none';
                 const container = document.getElementById('stations');
                 container.innerHTML = '';
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = allStationsHTML;
-                const items = tempDiv.querySelectorAll(`.station-card[data-category='${{category}}']`);
-                items.forEach(el => container.appendChild(el.cloneNode(true)));
+                const temp = document.createElement('div');
+                temp.innerHTML = allHTML;
+                temp.querySelectorAll(`[data-category="${{category}}"]`).forEach(el => container.appendChild(el));
             }}
 
             function showCategories() {{
                 document.getElementById('categories').style.display = 'grid';
                 document.getElementById('stations-container').style.display = 'none';
-                document.getElementById('add-form').style.display = 'block';
             }}
 
             function playStream(url) {{
@@ -314,6 +268,9 @@ def index():
     </html>
     """
 
+# ------------------------------
+# 🏁 Run the app
+# ------------------------------
 if __name__ == "__main__":
     if not Path(STATIONS_FILE).exists():
         save_data(STATIONS_FILE, DEFAULT_STATIONS)
