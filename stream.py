@@ -18,39 +18,17 @@ DEFAULT_STATIONS = {
     "News": {
         "al_jazeera": "http://live-hls-audio-web-aja.getaj.net/VOICE-AJA/index.m3u8",
         "asianet_news": "https://vidcdn.vidgyor.com/asianet-origin/audioonly/chunks.m3u8",
-        "24_news": "https://segment.yuppcdn.net/110322/channel24/playlist.m3u8",
-        "manorama_news": "http://103.199.161.254/Content/manoramanews/Live/Channel(ManoramaNews)/index.m3u8",
-        "aaj_tak": "https://feeds.intoday.in/aajtak/api/aajtakhd/master.m3u8",
-        "france_24": "https://live.france24.com/hls/live/2037218/F24_EN_HI_HLS/master_500.m3u8"
+        "24_news": "https://segment.yuppcdn.net/110322/channel24/playlist.m3u8"
     },
     "Islamic": {
         "deenagers_radio": "http://104.7.66.64:8003/",
         "hajj_channel": "http://104.7.66.64:8005",
-        "abc_islam": "http://s10.voscast.com:9276/stream",
-        "nur_ala_nur": "http://104.7.66.64:8011/",
-        "ruqya_radio": "http://104.7.66.64:8004",
-        "noor_al_eman": "http://edge.mixlr.com/channel/boaht"
+        "abc_islam": "http://s10.voscast.com:9276/stream"
     },
     "Malayalam": {
         "muthnabi_radio": "http://cast4.my-control-panel.com/proxy/muthnabi/stream",
         "radio_keralam": "http://ice31.securenetsystems.net/RADIOKERAL",
-        "malayalam_1": "http://167.114.131.90:5412/stream",
-        "radio_digital_malayali": "https://radio.digitalmalayali.in/listen/stream/radio.mp3",
-        "malayalam_90s": "https://stream-159.zeno.fm/gm3g9amzm0hvv?zs-x-7jq8ksTOav9ZhlYHi9xw",
-        "radio_malayalam": "https://radiomalayalamfm.com/radio/8000/radio.mp3"
-    },
-    "Hindi": {
-        "nonstop_hindi": "http://s5.voscast.com:8216/stream",
-        "fm_gold": "https://airhlspush.pc.cdn.bitgravity.com/httppush/hispbaudio005/hispbaudio00564kbps.m3u8",
-        "aural_oldies": "https://stream-162.zeno.fm/tksfwb1mgzzuv?zs=SxeQj1-7R0alsZSWJie5eQ"
-    },
-    "Arabic": {
-        "eram_fm": "http://icecast2.edisimo.com:8000/eramfm.mp3",
-        "al_sumood_fm": "http://us3.internet-radio.com/proxy/alsumoodfm2020?mp=/stream",
-        "seiyun_radio": "http://s2.radio.co/s26c62011e/listen",
-        "sam_yemen": "https://edge.mixlr.com/channel/kijwr",
-        "alfasi_radio": "https://qurango.net/radio/mishary_alafasi",
-        "tafsir_quran": "https://radio.quranradiotafsir.com/9992/stream"
+        "malayalam_1": "http://167.114.131.90:5412/stream"
     }
 }
 
@@ -164,7 +142,7 @@ def index():
 
     stations_html = "".join(
         f"""
-        <div class='station-card' data-category='{category}' data-name='{name}'>
+        <div class='station-card' data-category='{category}'>
             <div class='station-info'>
                 <a href='/{category}/{name}' target='_blank'>{name.replace('_', ' ').title()}</a>
                 <div class='station-actions'>
@@ -219,8 +197,11 @@ def index():
                 color: #666;
                 font-size: 0.9em;
             }}
-            .stations {{
+            .stations-container {{
                 display: none;
+            }}
+            .stations {{
+                display: grid;
                 grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
                 gap: 15px;
             }}
@@ -298,6 +279,7 @@ def index():
                 margin-bottom: 15px;
                 cursor: pointer;
                 color: #0066cc;
+                font-weight: bold;
             }}
         </style>
     </head>
@@ -308,9 +290,9 @@ def index():
             {categories_html}
         </div>
         
-        <div id="stations" class="stations">
+        <div id="stations-container" class="stations-container">
             <div class="back-button" onclick="showCategories()">← Back to Categories</div>
-            <div id="station-list"></div>
+            <div id="stations" class="stations"></div>
         </div>
         
         <div class="add-station-form">
@@ -346,22 +328,29 @@ def index():
         </div>
         
         <script>
+            // Store all stations HTML
+            const allStationsHTML = `{stations_html}`;
+            
             function showStations(category) {{
                 document.getElementById('categories').style.display = 'none';
-                document.getElementById('stations').style.display = 'grid';
+                document.getElementById('stations-container').style.display = 'block';
                 
-                const stationList = document.getElementById('station-list');
-                stationList.innerHTML = '';
+                const stationsContainer = document.getElementById('stations');
+                stationsContainer.innerHTML = '';
                 
-                const stations = document.querySelectorAll(`.station-card[data-category='${{category}}']`);
-                stations.forEach(station => {{
-                    stationList.appendChild(station.cloneNode(true));
+                // Filter stations by category and add to container
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = allStationsHTML;
+                
+                const stationsInCategory = tempDiv.querySelectorAll(`.station-card[data-category='${{category}}']`);
+                stationsInCategory.forEach(station => {{
+                    stationsContainer.appendChild(station.cloneNode(true));
                 }});
             }}
             
             function showCategories() {{
                 document.getElementById('categories').style.display = 'grid';
-                document.getElementById('stations').style.display = 'none';
+                document.getElementById('stations-container').style.display = 'none';
             }}
             
             function openEditModal(category, name, url) {{
