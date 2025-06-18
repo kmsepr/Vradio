@@ -135,34 +135,55 @@ def index():
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Radio Streams</title>
+        <title>Radio Favourites</title>
         <style>
             body {{
                 font-family: sans-serif;
                 background: #1e1e2f;
                 color: white;
                 margin: 0;
+                padding: 0;
+            }}
+            .header {{
+                display: flex;
+                align-items: center;
+                background: #2b2b3c;
                 padding: 10px;
             }}
-            h1 {{
-                text-align: center;
+            .menu-icon {{
                 font-size: 1.5rem;
-            }}
-            .tabs {{
-                text-align: center;
-                margin: 10px 0;
-            }}
-            .tabs button {{
-                background: #444;
-                color: #fff;
-                border: none;
-                padding: 8px 16px;
-                margin: 0 5px;
-                border-radius: 6px;
                 cursor: pointer;
+                margin-right: 10px;
             }}
-            .tabs button.active {{
-                background: #007acc;
+            .side-menu {{
+                position: fixed;
+                top: 0;
+                left: -220px;
+                width: 200px;
+                height: 100%;
+                background: #2b2b3c;
+                padding-top: 60px;
+                transition: left 0.3s;
+                z-index: 999;
+            }}
+            .side-menu a {{
+                display: block;
+                padding: 12px 20px;
+                color: white;
+                text-decoration: none;
+                border-bottom: 1px solid #444;
+            }}
+            .side-menu a:hover {{
+                background-color: #444;
+            }}
+            h1 {{
+                font-size: 1.2rem;
+                margin: 0;
+            }}
+            .scroll-container {{
+                max-height: 70vh;
+                overflow-y: auto;
+                padding: 10px;
             }}
             .grid {{
                 display: grid;
@@ -221,19 +242,26 @@ def index():
         </style>
     </head>
     <body>
-        <h1>📻 Radio Streams</h1>
-        <div class="tabs">
-            <button id="allBtn" class="active" onclick="showTab('all')">All</button>
-            <button id="favBtn" onclick="showTab('fav')">Favourites</button>
-            <button id="addBtn" onclick="showTab('add')">Add</button>
+        <div class="header">
+            <span class="menu-icon" onclick="toggleMenu()">☰</span>
+            <h1>⭐ Favourite Radios</h1>
         </div>
 
-        <div id="allTab" class="tab-content active">
-            <div class="grid" id="stationGrid">{links_html}</div>
+        <div class="side-menu" id="sideMenu">
+            <a href="#" onclick="showTab('all'); toggleMenu();">📻 All Stations</a>
+            <a href="#" onclick="showTab('add'); toggleMenu();">➕ Add Station</a>
         </div>
 
-        <div id="favTab" class="tab-content">
-            <div class="grid" id="favGrid"></div>
+        <div id="favTab" class="tab-content active">
+            <div class="scroll-container">
+                <div class="grid" id="favGrid"></div>
+            </div>
+        </div>
+
+        <div id="allTab" class="tab-content">
+            <div class="scroll-container">
+                <div class="grid" id="stationGrid">{links_html}</div>
+            </div>
         </div>
 
         <div id="addTab" class="tab-content">
@@ -245,7 +273,7 @@ def index():
         </div>
 
         <script>
-            let activeTab = "all";
+            let activeTab = "fav";
 
             function toggleFavourite(name) {{
                 let favs = JSON.parse(localStorage.getItem("favourites") || "[]");
@@ -280,10 +308,13 @@ def index():
             function showTab(tab) {{
                 activeTab = tab;
                 document.querySelectorAll(".tab-content").forEach(div => div.classList.remove("active"));
-                document.querySelectorAll(".tabs button").forEach(btn => btn.classList.remove("active"));
                 document.getElementById(tab + "Tab").classList.add("active");
-                document.getElementById(tab + "Btn").classList.add("active");
                 updateDisplay();
+            }}
+
+            function toggleMenu() {{
+                const menu = document.getElementById("sideMenu");
+                menu.style.left = (menu.style.left === "0px") ? "-220px" : "0px";
             }}
 
             window.onload = updateDisplay;
