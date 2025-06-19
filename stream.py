@@ -74,7 +74,8 @@ RADIO_STATIONS = {
 
 
 
-BOOKMARKS = []
+BOOKMARKS = [{"name": "Add", "url": "/add"}]
+
 # 🔁 FFmpeg stream generator
 def generate_stream(url):
     process = None
