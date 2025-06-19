@@ -1,8 +1,6 @@
 import subprocess
 import time
-from flask import Flask, Response, send_from_directory
-from flask import request, redirect
-import os
+from flask import Flask, Response, request, redirect
 
 app = Flask(__name__)
 
@@ -91,6 +89,8 @@ RADIO_STATIONS = {
 
 }
 
+
+
 # 🔁 FFmpeg stream generator
 def generate_stream(url):
     process = None
@@ -124,7 +124,7 @@ def stream(station_name):
         return "⚠️ Station not found", 404
     return Response(generate_stream(url), mimetype="audio/mpeg")
 
-# ➕ Add new station
+# ➕ Add new station (if needed)
 @app.route("/add", methods=["POST"])
 def add_station():
     name = request.form.get("name", "").strip().lower().replace(" ", "_")
@@ -133,6 +133,7 @@ def add_station():
         RADIO_STATIONS[name] = url
     return redirect("/")
 
+# 🏠 Homepage with sidebar
 @app.route("/")
 def index():
     def pastel_color(i):
@@ -169,11 +170,42 @@ def index():
                 background: #222;
                 margin: 0;
             }}
+            .menu-icon {{
+                position: absolute;
+                top: 10px;
+                left: 10px;
+                font-size: 1.5rem;
+                cursor: pointer;
+                z-index: 1001;
+            }}
+            .sidebar {{
+                position: fixed;
+                left: -250px;
+                top: 0;
+                width: 220px;
+                height: 100%;
+                background: #222;
+                padding: 15px;
+                overflow-y: auto;
+                transition: left 0.3s;
+                z-index: 1000;
+            }}
+            .sidebar.open {{
+                left: 0;
+            }}
+            .sidebar a {{
+                display: block;
+                padding: 8px 0;
+                color: white;
+                text-decoration: none;
+                border-bottom: 1px solid #333;
+            }}
             .grid {{
                 display: grid;
                 grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
                 gap: 10px;
                 padding: 10px;
+                margin-top: 50px;
             }}
             .card {{
                 padding: 10px;
@@ -188,8 +220,22 @@ def index():
                 display: block;
             }}
         </style>
+        <script>
+            function toggleSidebar() {{
+                document.getElementById('sidebar').classList.toggle('open');
+            }}
+        </script>
     </head>
     <body>
+        <div class="menu-icon" onclick="toggleSidebar()">☰</div>
+        <div class="sidebar" id="sidebar">
+            <a href="/">🏠 Home</a>
+            <a href="/add">➕ Add</a>
+            <a href="/downloads">⬇️ Downloads</a>
+            <a href="/prayer">🕌 Prayer Times</a>
+            <a href="/podcasts">🎧 Podcasts</a>
+        </div>
+
         <h1>📻 Radio Stations</h1>
         <div class="grid">{links_html}</div>
     </body>
