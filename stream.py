@@ -68,6 +68,27 @@ RADIO_STATIONS = {
     "n1_news": "https://best-str.umn.cdn.united.cloud/stream?stream=sp1400&sp=n1info&channel=n1bos&u=n1info&p=n1Sh4redSecre7iNf0&player=m3u8",
     "vom_radio": "https://radio.psm.mv/draair",
 "radio_nellikka": "https://usa20.fastcast4u.com:2130/stream",
+
+ "media_one": "http://capitalist-anthe-pscj-4a28f285.koyeb.app/media_one",
+    "shajahan_rahmani": "http://capitalist-anthe-pscj-4a28f285.koyeb.app/shajahan_rahmani",
+    "qsc_mukkam": "http://capitalist-anthe-pscj-4a28f285.koyeb.app/qsc_mukkam",
+    "valiyudheen_faizy": "http://capitalist-anthe-pscj-4a28f285.koyeb.app/valiyudheen_faizy",
+    "skicr_tv": "http://capitalist-anthe-pscj-4a28f285.koyeb.app/skicr_tv",
+    "yaqeen_institute": "http://capitalist-anthe-pscj-4a28f285.koyeb.app/yaqeen_institute",
+    "bayyinah_tv": "http://capitalist-anthe-pscj-4a28f285.koyeb.app/bayyinah_tv",
+    "eft_guru": "http://capitalist-anthe-pscj-4a28f285.koyeb.app/eft_guru",
+    "unacademy_ias": "http://capitalist-anthe-pscj-4a28f285.koyeb.app/unacademy_ias",
+    "studyiq_hindi": "http://capitalist-anthe-pscj-4a28f285.koyeb.app/studyiq_hindi",
+    "aljazeera_arabic": "http://capitalist-anthe-pscj-4a28f285.koyeb.app/aljazeera_arabic",
+    "aljazeera_english": "http://capitalist-anthe-pscj-4a28f285.koyeb.app/aljazeera_english",
+    "entri_degree": "http://capitalist-anthe-pscj-4a28f285.koyeb.app/entri_degree",
+    "xylem_psc": "http://capitalist-anthe-pscj-4a28f285.koyeb.app/xylem_psc",
+    "xylem_sslc": "http://capitalist-anthe-pscj-4a28f285.koyeb.app/xylem_sslc",
+    "entri_app": "http://capitalist-anthe-pscj-4a28f285.koyeb.app/entri_app",
+    "entri_ias": "http://capitalist-anthe-pscj-4a28f285.koyeb.app/entri_ias",
+    "studyiq_english": "http://capitalist-anthe-pscj-4a28f285.koyeb.app/studyiq_english",
+    "voice_rahmani": "http://capitalist-anthe-pscj-4a28f285.koyeb.app/voice_rahmani"
+
 }
 
 # 🔁 FFmpeg stream generator
