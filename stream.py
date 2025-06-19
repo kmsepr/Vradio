@@ -16,104 +16,30 @@ DEFAULT_STATIONS = {
         "asianet_news": {
             "name": "Asianet News",
             "url": "https://vidcdn.vidgyor.com/asianet-origin/audioonly/chunks.m3u8"
-        },
-        "vom_news": {
-            "name": "VOM News",
-            "url": "https://psmnews.mv/stream/radio-dhivehi-raajjeyge-adu"
-        },
-        "aaj_tak": {
-            "name": "Aaj Tak",
-            "url": "https://feeds.intoday.in/aajtak/api/aajtakhd/master.m3u8"
-        },
-        "bloomberg_tv": {
-            "name": "Bloomberg TV",
-            "url": "https://bloomberg-bloomberg-3-br.samsung.wurl.tv/manifest/playlist.m3u8"
-        },
-        "france_24": {
-            "name": "France 24",
-            "url": "https://live.france24.com/hls/live/2037218/F24_EN_HI_HLS/master_500.m3u8"
-        },
-        "n1_news": {
-            "name": "N1 News",
-            "url": "https://best-str.umn.cdn.united.cloud/stream?stream=sp1400&sp=n1info&channel=n1bos&u=n1info&p=n1Sh4redSecre7iNf0&player=m3u8"
         }
     },
     "AIR": {
         "fm_gold": {"name": "FM Gold", "url": "https://airhlspush.pc.cdn.bitgravity.com/httppush/hispbaudio005/hispbaudio00564kbps.m3u8"},
-        "air_kavarati": {"name": "AIR Kavarati", "url": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio189/chunklist.m3u8"},
-        "air_calicut": {"name": "AIR Calicut", "url": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio082/chunklist.m3u8"},
-        "manjeri_fm": {"name": "Manjeri FM", "url": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio101/chunklist.m3u8"},
-        "real_fm": {"name": "Real FM", "url": "http://air.pc.cdn.bitgravity.com/air/live/pbaudio083/playlist.m3u8"},
-        "air_malayalam": {"name": "AIR Malayalam", "url": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio075/chunklist.m3u8"},
-        "air_urdu": {"name": "AIR Urdu", "url": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio026/chunklist.m3u8"},
-        "air_tamil": {"name": "AIR Tamil", "url": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio022/chunklist.m3u8"},
-        "air_mangalore": {"name": "AIR Mangalore", "url": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio087/chunklist.m3u8"},
-        "air_kannur": {"name": "AIR Kannur", "url": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio130/chunklist.m3u8"},
-        "air_thiruvananthapuram": {"name": "AIR Thiruvananthapuram", "url": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio078/chunklist.m3u8"},
-        "air_kochi": {"name": "AIR Kochi FM", "url": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio084/chunklist.m3u8"},
-        "air_fm_rainbow": {"name": "FM Rainbow", "url": "https://airhlspush.pc.cdn.bitgravity.com/httppush/hispbaudio003/hispbaudio00364kbps.m3u8"},
-        "air_news_24x7": {"name": "AIR News 24x7", "url": "https://airhlspush.pc.cdn.bitgravity.com/httppush/hispbaudio001/hispbaudio00164kbps.m3u8"}
+        "air_kavarati": {"name": "AIR Kavarati", "url": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio189/chunklist.m3u8"}
     },
     "Islamic": {
         "muthnabi_radio": {"name": "Muthnabi Radio", "url": "http://cast4.my-control-panel.com/proxy/muthnabi/stream"},
-        "deenagers_radio": {"name": "Deenagers Radio", "url": "http://104.7.66.64:8003/"},
-        "hajj_channel": {"name": "Hajj Channel", "url": "http://104.7.66.64:8005"},
-        "abc_islam": {"name": "ABC Islam", "url": "http://s10.voscast.com:9276/stream"},
-        "eram_fm": {"name": "Eram FM", "url": "http://icecast2.edisimo.com:8000/eramfm.mp3"},
-        "al_sumood_fm": {"name": "Al Sumood FM", "url": "http://us3.internet-radio.com/proxy/alsumoodfm2020?mp=/stream"},
-        "nur_ala_nur": {"name": "Nur Ala Nur", "url": "http://104.7.66.64:8011/"},
-        "ruqya_radio": {"name": "Ruqya Radio", "url": "http://104.7.66.64:8004"},
-        "sirat_al_mustaqim": {"name": "Sirat Al Mustaqim", "url": "http://104.7.66.64:8091/stream"},
-        "quran_radio_cairo": {"name": "Quran Radio Cairo", "url": "http://n02.radiojar.com/8s5u5tpdtwzuv"},
-        "quran_radio_nablus": {"name": "Quran Radio Nablus", "url": "http://www.quran-radio.org:8002/"},
-        "al_nour": {"name": "Al Nour", "url": "http://audiostreaming.itworkscdn.com:9066/"},
-        "allahu_akbar_radio": {"name": "Allahu Akbar Radio", "url": "http://66.45.232.132:9996/stream"},
-        "omar_abdul_kafi_radio": {"name": "Omar Abdul Kafi Radio", "url": "http://104.7.66.64:8007"},
-        "urdu_islamic_lecture": {"name": "Urdu Islamic Lecture", "url": "http://144.91.121.54:27001/channel_02.aac"},
-        "hob_nabi": {"name": "Hub Nabi", "url": "http://216.245.210.78:8098/stream"},
-        "tafsir_quran": {"name": "Tafsir Quran", "url": "https://radio.quranradiotafsir.com/9992/stream"},
-        "alfasi_radio": {"name": "Alfasi Radio", "url": "https://qurango.net/radio/mishary_alafasi"}
+        "deenagers_radio": {"name": "Deenagers Radio", "url": "http://104.7.66.64:8003/"}
     },
     "Malayalam": {
         "radio_nellikka": {"name": "Radio Nellikka", "url": "https://usa20.fastcast4u.com:2130/stream"},
-        "radio_keralam": {"name": "Radio Keralam", "url": "http://ice31.securenetsystems.net/RADIOKERAL"},
-        "malayalam_1": {"name": "Malayalam 1", "url": "http://167.114.131.90:5412/stream"},
-        "radio_digital_malayali": {"name": "Digital Malayali", "url": "https://radio.digitalmalayali.in/listen/stream/radio.mp3"},
-        "malayalam_90s": {"name": "Malayalam 90s", "url": "https://stream-159.zeno.fm/gm3g9amzm0hvv?zs-x-7jq8ksTOav9ZhlYHi9xw"},
-        "aural_oldies": {"name": "Aural Oldies", "url": "https://stream-162.zeno.fm/tksfwb1mgzzuv?zs=SxeQj1-7R0alsZSWJie5eQ"},
-        "radio_malayalam": {"name": "Radio Malayalam", "url": "https://radiomalayalamfm.com/radio/8000/radio.mp3"},
-        "swaranjali": {"name": "Swaranjali", "url": "https://stream-161.zeno.fm/x7mve2vt01zuv?zs-D4nK05-7SSK2FZAsvumh2w"},
-        "radio_beat_malayalam": {"name": "Radio Beat Malayalam", "url": "http://live.exertion.in:8050/radio.mp3"},
-        "shahul_radio": {"name": "Shahul Radio", "url": "https://stream-150.zeno.fm/cynbm5ngx38uv?zs=Ktca5StNRWm-sdIR7GloVg"},
-        "raja_radio": {"name": "Raja Radio", "url": "http://159.203.111.241:8026/stream"}
+        "radio_keralam": {"name": "Radio Keralam", "url": "http://ice31.securenetsystems.net/RADIOKERAL"}
     },
     "Others": {
-        "nonstop_hindi": {"name": "Nonstop Hindi", "url": "http://s5.voscast.com:8216/stream"},
-        "motivational_series": {"name": "Motivational Series", "url": "http://104.7.66.64:8010"},
-        "seiyun_radio": {"name": "Seiyun Radio", "url": "http://s2.radio.co/s26c62011e/listen"},
-        "noor_al_eman": {"name": "Noor Al Eman", "url": "http://edge.mixlr.com/channel/boaht"},
-        "sam_yemen": {"name": "SAM Yemen", "url": "https://edge.mixlr.com/channel/kijwr"},
-        "afaq": {"name": "Afaq", "url": "https://edge.mixlr.com/channel/rumps"},
-        "sanaa_radio": {"name": "Sanaa Radio", "url": "http://dc5.serverse.com/proxy/pbmhbvxs/stream"},
-        "rubat_ataq": {"name": "Rubat Ataq", "url": "http://stream.zeno.fm/5tpfc8d7xqruv"}
+        "nonstop_hindi": {"name": "Nonstop Hindi", "url": "http://s5.voscast.com:8216/stream"}
     },
     "TV": {
-        "safari_tv": {"name": "Safari TV", "url": "https://j78dp346yq5r-hls-live.5centscdn.com/safari/live.stream/chunks.m3u8"},
-        "victers_tv": {"name": "Victers TV", "url": "https://932y4x26ljv8-hls-live.5centscdn.com/victers/tv.stream/victers/tv1/chunks.m3u8"},
-        "kairali_we": {"name": "Kairali WE", "url": "https://yuppmedtaorire.akamaized.net/.../wetv/playlist.m3u8"},
-        "flowers_tv": {"name": "Flowers TV", "url": "http://103.199.161.254/Content/flowers/Live/Channel(Flowers)/index.m3u8"},
-        "dd_malayalam": {"name": "DD Malayalam", "url": "https://d3eyhgoylams0m.cloudfront.net/.../2.m3u8"},
-        "amrita_tv": {"name": "Amrita TV", "url": "https://dr1zhpsuem5f4.cloudfront.net/master.m3u8"},
-        "24_news": {"name": "24 News", "url": "https://segment.yuppcdn.net/110322/channel24/playlist.m3u8"},
-        "mazhavil_manorama": {"name": "Mazhavil Manorama", "url": "https://yuppmedtaorire.akamaized.net/.../mazhavilmanorama/playlist.m3u8"},
-        "manorama_news": {"name": "Manorama News", "url": "http://103.199.161.254/Content/manoramanews/Live/Channel(ManoramaNews)/index.m3u8"}
+        "safari_tv": {"name": "Safari TV", "url": "https://j78dp346yq5r-hls-live.5centscdn.com/safari/live.stream/chunks.m3u8"}
     },
     "YouTube": {
-        "shajahan_rahmani": {"name": "Shajahan Rahmani", "url": "http://capitalist-anthe-pscj-4a28f285.koyeb.app/shajahan_rahmani"},
-        "media_one": {"name": "Mediaone", "url": "http://capitalist-anthe-pscj-4a28f285.koyeb.app/media_one"}
+        "shajahan_rahmani": {"name": "Shajahan Rahmani", "url": "http://capitalist-anthe-pscj-4a28f285.koyeb.app/shajahan_rahmani"}
     }
 }
-
 
 def load_data(filename):
     if Path(filename).exists():
@@ -126,6 +52,11 @@ def save_data(filename, data):
         json.dump(data, f, indent=2)
 
 RADIO_STATIONS = load_data(STATIONS_FILE)
+
+# Auto-populate if empty or missing
+if not RADIO_STATIONS:
+    RADIO_STATIONS = DEFAULT_STATIONS
+    save_data(STATIONS_FILE, RADIO_STATIONS)
 
 @app.route("/<station_id>")
 def redirect_stream(station_id):
@@ -216,6 +147,4 @@ def index():
     """
 
 if __name__ == "__main__":
-    if not Path(STATIONS_FILE).exists():
-        save_data(STATIONS_FILE, {})  # Start with empty
     app.run(host="0.0.0.0", port=8000, threaded=True)
