@@ -72,8 +72,9 @@ RADIO_STATIONS = {
 
 }
 
-BOOKMARKS = []
 
+
+BOOKMARKS = []
 # 🔁 FFmpeg stream generator
 def generate_stream(url):
     process = None
@@ -114,7 +115,6 @@ def add_station_or_bookmark():
         name = request.form.get("name", "").strip()
         url = request.form.get("url", "").strip()
         if name and url:
-            # If it's an audio stream URL, treat as radio station
             if url.startswith("http") and "stream" in url:
                 key = name.lower().replace(" ", "_")
                 RADIO_STATIONS[key] = url
@@ -157,17 +157,14 @@ def index():
         """ for i, name in enumerate(reversed(list(RADIO_STATIONS)))
     )
 
-    # Sidebar bookmarks rendering
     bookmarks_html = ""
     for b in BOOKMARKS:
         name_lower = b['name'].lower()
         if name_lower == "add":
-            # Add button (no delete)
             bookmarks_html += f"""
             <a href="{b['url']}" style="color:white;text-decoration:none;border-bottom:1px solid #333;padding:8px 0;display:block;">➕ {b['name']}</a>
             """
         else:
-            # Deletable bookmarks
             bookmarks_html += f"""
             <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #333;">
                 <a href="{b['url']}" style="flex:1;color:white;text-decoration:none;padding:8px 0;">{b['name']}</a>
@@ -248,18 +245,17 @@ def index():
                 display: block;
             }}
         </style>
-       <script>
-    function toggleSidebar() {
-        document.getElementById('sidebar').classList.toggle('open');
-    }
+        <script>
+            function toggleSidebar() {{
+                document.getElementById('sidebar').classList.toggle('open');
+            }}
 
-    document.addEventListener('keydown', function(e) {
-        // Listen for keypad 1 (numpad or main keyboard)
-        if (e.key === '1') {
-            toggleSidebar();
-        }
-    });
-</script>
+            document.addEventListener('keydown', function(e) {{
+                if (e.key === '1') {{
+                    toggleSidebar();
+                }}
+            }});
+        </script>
     </head>
     <body>
         <div class="menu-icon" onclick="toggleSidebar()">☰</div>
