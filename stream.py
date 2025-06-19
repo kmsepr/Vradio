@@ -263,7 +263,6 @@ def index():
         <div class="menu-icon" onclick="toggleSidebar()">☰</div>
         <div class="sidebar" id="sidebar">
             {bookmarks_html}
-            <a href="http://obedient-paolina-kmsepr-3a5910c1.koyeb.app/">🎧 Podcasts</a>
         </div>
 
         <h1>📻 Radio Stations</h1>
