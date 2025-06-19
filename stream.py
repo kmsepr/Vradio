@@ -4,6 +4,7 @@ from flask import Flask, Response, request, redirect
 
 app = Flask(__name__)
 
+
 # 📡 List of radio stations
 RADIO_STATIONS = {
     "muthnabi_radio": "http://cast4.my-control-panel.com/proxy/muthnabi/stream",
@@ -89,7 +90,12 @@ RADIO_STATIONS = {
 
 }
 
-
+# 🔖 Editable bookmarks (excluding fixed Podcasts link)
+BOOKMARKS = [
+    {"name": "Add", "url": "/add"},
+    {"name": "Downloads", "url": "/downloads"},
+    {"name": "Prayer", "url": "/prayer"}
+]
 
 # 🔁 FFmpeg stream generator
 def generate_stream(url):
@@ -124,16 +130,40 @@ def stream(station_name):
         return "⚠️ Station not found", 404
     return Response(generate_stream(url), mimetype="audio/mpeg")
 
-# ➕ Add new station (if needed)
-@app.route("/add", methods=["POST"])
-def add_station():
-    name = request.form.get("name", "").strip().lower().replace(" ", "_")
-    url = request.form.get("url", "").strip()
-    if name and url:
-        RADIO_STATIONS[name] = url
+# ➕ Add new station (via form)
+@app.route("/add", methods=["GET", "POST"])
+def add_station_or_bookmark():
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        url = request.form.get("url", "").strip()
+        if name and url:
+            # If it's an audio stream URL, treat as radio station
+            if url.startswith("http") and "stream" in url:
+                key = name.lower().replace(" ", "_")
+                RADIO_STATIONS[key] = url
+            else:
+                BOOKMARKS.append({"name": name, "url": url})
+        return redirect("/")
+    return """
+    <html><body style='background:#111;color:white;padding:20px;font-family:sans-serif;'>
+    <h2>Add Bookmark or Station</h2>
+    <form method='post'>
+        <input name='name' placeholder='Name' required style='width:100%;padding:10px;background:#333;color:white;border:none;margin:10px 0;' />
+        <input name='url' placeholder='URL (bookmark or stream)' required style='width:100%;padding:10px;background:#333;color:white;border:none;margin:10px 0;' />
+        <button type='submit' style='padding:10px;background:green;color:white;border:none;width:100%'>Add</button>
+    </form>
+    </body></html>
+    """
+
+# ❌ Delete a bookmark
+@app.route("/delete_bookmark", methods=["POST"])
+def delete_bookmark():
+    name = request.form.get("name", "")
+    global BOOKMARKS
+    BOOKMARKS = [b for b in BOOKMARKS if b["name"] != name]
     return redirect("/")
 
-# 🏠 Homepage with sidebar
+# 🏠 Homepage with sidebar and radio grid
 @app.route("/")
 def index():
     def pastel_color(i):
@@ -148,6 +178,18 @@ def index():
             <a href='/{name}' target='_blank'>{name}</a>
         </div>
         """ for i, name in enumerate(reversed(list(RADIO_STATIONS)))
+    )
+
+    bookmarks_html = "".join(
+        f"""
+        <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #333;">
+            <a href="{b['url']}" style="flex:1;color:white;text-decoration:none;padding:8px 0;">{b['name']}</a>
+            <form method="post" action="/delete_bookmark" style="margin:0;padding:0;">
+                <input type="hidden" name="name" value="{b['name']}">
+                <button style="background:none;border:none;color:#f44;font-size:1rem;cursor:pointer;">🗑️</button>
+            </form>
+        </div>
+        """ for b in BOOKMARKS
     )
 
     return f"""
@@ -230,10 +272,8 @@ def index():
         <div class="menu-icon" onclick="toggleSidebar()">☰</div>
         <div class="sidebar" id="sidebar">
             <a href="/">🏠 Home</a>
-            <a href="/add">➕ Add</a>
-            <a href="/downloads">⬇️ Downloads</a>
-            <a href="/prayer">🕌 Prayer Times</a>
-            <a href="/podcasts">🎧 Podcasts</a>
+            {bookmarks_html}
+            <a href="http://obedient-paolina-kmsepr-3a5910c1.koyeb.app/">🎧 Podcasts</a>
         </div>
 
         <h1>📻 Radio Stations</h1>
