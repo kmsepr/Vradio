@@ -248,11 +248,18 @@ def index():
                 display: block;
             }}
         </style>
-        <script>
-            function toggleSidebar() {{
-                document.getElementById('sidebar').classList.toggle('open');
-            }}
-        </script>
+       <script>
+    function toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('open');
+    }
+
+    document.addEventListener('keydown', function(e) {
+        // Listen for keypad 1 (numpad or main keyboard)
+        if (e.key === '1') {
+            toggleSidebar();
+        }
+    });
+</script>
     </head>
     <body>
         <div class="menu-icon" onclick="toggleSidebar()">☰</div>
