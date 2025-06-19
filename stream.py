@@ -115,59 +115,23 @@ DEFAULT_STATIONS = {
 }
 
 
-
-def load_data(filename, default_data):
-    try:
-        if Path(filename).exists():
-            with open(filename, 'r') as f:
-                return json.load(f)
-    except Exception as e:
-        print(f"Error loading {filename}: {e}")
-    return default_data
+def load_data(filename):
+    if Path(filename).exists():
+        with open(filename, 'r') as f:
+            return json.load(f)
+    return {}
 
 def save_data(filename, data):
-    try:
-        with open(filename, 'w') as f:
-            json.dump(data, f, indent=2)
-    except Exception as e:
-        print(f"Error saving {filename}: {e}")
+    with open(filename, 'w') as f:
+        json.dump(data, f, indent=2)
 
-RADIO_STATIONS = load_data(STATIONS_FILE, DEFAULT_STATIONS)
-
-FLAT_STATION_MAP = {
-    sid: station["url"]
-    for category in RADIO_STATIONS.values()
-    for sid, station in category.items()
-    if not station["url"].startswith("http://capitalist-anthe")
-}
-
-def generate_stream(url):
-    process = None
-    while True:
-        if process:
-            process.kill()
-        process = subprocess.Popen(
-            [
-                "ffmpeg", "-reconnect", "1", "-reconnect_streamed", "1",
-                "-reconnect_delay_max", "10", "-fflags", "nobuffer", "-flags", "low_delay",
-                "-i", url, "-vn", "-ac", "1", "-b:a", "40k", "-f", "mp3", "-"
-            ],
-            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=8192
-        )
-        try:
-            for chunk in iter(lambda: process.stdout.read(8192), b""):
-                yield chunk
-        except GeneratorExit:
-            process.kill()
-            break
-        except Exception as e:
-            print(f"Stream error: {e}")
-            time.sleep(5)
+RADIO_STATIONS = load_data(STATIONS_FILE)
 
 @app.route("/<station_id>")
-def direct_stream(station_id):
-    if station_id in FLAT_STATION_MAP:
-        return Response(generate_stream(FLAT_STATION_MAP[station_id]), mimetype="audio/mpeg")
+def redirect_stream(station_id):
+    for category in RADIO_STATIONS.values():
+        if station_id in category:
+            return redirect(category[station_id]["url"])
     return "Station not found", 404
 
 @app.route("/delete/<category>/<station_id>", methods=["POST"])
@@ -185,13 +149,10 @@ def index():
     for category, stations in RADIO_STATIONS.items():
         for sid, station in stations.items():
             display_name = station.get("name", sid.replace("_", " ").title())
-            url = station.get("url", "")
-            is_direct = url.startswith("http://capitalist-anthe") or sid.startswith("http")
-            play_link = url if is_direct else f"/{sid}"
             html_stations += f"""
             <div class='station-card' data-category="{category}">
                 <div class='station-header'>
-                    <span class='station-name' onclick="playStream('{play_link}', '{display_name}')">{display_name}</span>
+                    <span class='station-name' onclick="playStream('/{sid}')">{display_name}</span>
                     <form method='POST' action='/delete/{category}/{sid}' style='display:inline;'>
                         <button type='submit'>🗑️</button>
                     </form>
@@ -222,7 +183,6 @@ def index():
             .station-name {{ color:#4CAF50; font-weight:bold; cursor:pointer; }}
             button {{ background:none; border:1px solid #555; color:white; padding:4px 8px; border-radius:4px; cursor:pointer; }}
             .back-button {{ color:#4CAF50; margin-bottom:10px; cursor:pointer; }}
-            #player {{ margin:10px 0; display:none; }}
         </style>
     </head>
     <body>
@@ -232,11 +192,6 @@ def index():
         <div id="stations-container" style="display:none;">
             <div class="back-button" onclick="showCategories()">← Back</div>
             <div id="stations">{html_stations}</div>
-        </div>
-
-        <div id="player">
-            <p id="now-playing"></p>
-            <audio id="audio-player" controls style="width:100%;"></audio>
         </div>
 
         <script>
@@ -251,16 +206,9 @@ def index():
             function showCategories() {{
                 document.getElementById('categories').style.display = 'grid';
                 document.getElementById('stations-container').style.display = 'none';
-                document.getElementById('player').style.display = 'none';
             }}
-            function playStream(url, name) {{
-                const audio = document.getElementById('audio-player');
-                const player = document.getElementById('player');
-                const nowPlaying = document.getElementById('now-playing');
-                audio.src = url;
-                audio.play();
-                nowPlaying.innerText = "🎶 Now Playing: " + name;
-                player.style.display = 'block';
+            function playStream(url) {{
+                window.open(url, '_blank');
             }}
         </script>
     </body>
@@ -269,5 +217,5 @@ def index():
 
 if __name__ == "__main__":
     if not Path(STATIONS_FILE).exists():
-        save_data(STATIONS_FILE, DEFAULT_STATIONS)
+        save_data(STATIONS_FILE, {})  # Start with empty
     app.run(host="0.0.0.0", port=8000, threaded=True)
