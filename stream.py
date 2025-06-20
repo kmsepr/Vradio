@@ -4,13 +4,34 @@ from flask import Flask, Response
 
 app = Flask(__name__)
 
-# 🎯 Hardcoded bookmarks
+# 🎯 Sidebar Bookmarks (Main)
 BOOKMARKS = [
     {"name": "🎥 YouTube", "url": "http://capitalist-anthe-pscj-4a28f285.koyeb.app/"},
-    {"name": "📻 Radio Keralam", "url": "http://ice31.securenetsystems.net/RADIOKERAL"},
+    {"name": "📚 Others", "url": "/bookmarks"},
 ]
 
+# 📚 Additional Bookmarks (accessible via /bookmarks)
+OTHER_BOOKMARKS = [
+    {"name": "📻 Radio Keralam", "url": "http://ice31.securenetsystems.net/RADIOKERAL"},
+    {"name": "📻 Radio Nellikka", "url": "https://usa20.fastcast4u.com:2130/stream"},
+    {"name": "📺 Bloomberg TV", "url": "https://bloomberg-bloomberg-3-br.samsung.wurl.tv/manifest/playlist.m3u8"},
+    {"name": "📺 Mazhavil Manorama", "url": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/mazhavilmanorama_nim_https/050522/mazhavilmanorama/playlist.m3u8"},
+    {"name": "📺 Kairali WE", "url": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/wetv_nim_https/050522/wetv/playlist.m3u8"},
+    {"name": "📺 Safari TV", "url": "https://j78dp346yq5r-hls-live.5centscdn.com/safari/live.stream/chunks.m3u8"},
+    {"name": "📺 Victers TV", "url": "https://932y4x26ljv8-hls-live.5centscdn.com/victers/tv.stream/victers/tv1/chunks.m3u8"},
+    {"name": "📻 Al Jazeera", "url": "http://live-hls-audio-web-aja.getaj.net/VOICE-AJA/index.m3u8"},
+    {"name": "📻 Asianet News", "url": "https://vidcdn.vidgyor.com/asianet-origin/audioonly/chunks.m3u8"},
+    {"name": "📻 AIR Kavarati", "url": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio189/chunklist.m3u8"},
+    {"name": "📻 AIR Calicut", "url": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio082/chunklist.m3u8"},
+    {"name": "📻 Manjeri FM", "url": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio101/chunklist.m3u8"},
+    {"name": "📻 Real FM", "url": "http://air.pc.cdn.bitgravity.com/air/live/pbaudio083/playlist.m3u8"},
+    {"name": "📻 Quran Radio Nablus", "url": "http://www.quran-radio.org:8002/"},
+    {"name": "📻 Al Nour", "url": "http://audiostreaming.itworkscdn.com:9066/"},
+]
 
+# 📡 All Stations (trimmed for brevity — you can paste your full list here)
+RADIO_STATIONS = {
+    "radi
 # 📡 List of radio stations
 RADIO_STATIONS = {
     "muthnabi_radio": "http://cast4.my-control-panel.com/proxy/muthnabi/stream",
@@ -74,11 +95,12 @@ RADIO_STATIONS = {
     "vom_radio": "https://radio.psm.mv/draair",
 "radio_nellikka": "https://usa20.fastcast4u.com:2130/stream",
 
+ o_nellikka": "https://usa20.fastcast4u.com:2130/stream",
+    "radio_keralam": "http://ice31.securenetsystems.net/RADIOKERAL",
+    # ... [paste rest of your RADIO_STATIONS here] ...
 }
 
-
-
-# 🔁 Proxy stream with FFmpeg
+# 🔁 Proxy stream via FFmpeg
 def generate_stream(url):
     process = None
     while True:
@@ -101,7 +123,7 @@ def generate_stream(url):
         print("🔁 Restarting...")
         time.sleep(5)
 
-# 🎧 Radio stream route
+# 🎧 Route for stream
 @app.route("/<station_name>")
 def stream(station_name):
     url = RADIO_STATIONS.get(station_name)
@@ -109,7 +131,7 @@ def stream(station_name):
         return "Station not found", 404
     return Response(generate_stream(url), mimetype="audio/mpeg")
 
-# 🏠 Homepage
+# 🏠 Main Page
 @app.route("/")
 def index():
     def pastel_color(i):
@@ -208,6 +230,40 @@ def index():
         </div>
         <h1>📻 Radio Stations</h1>
         <div class="grid">{links_html}</div>
+    </body>
+    </html>
+    """
+
+# 📚 Others Page
+@app.route("/bookmarks")
+def show_bookmarks():
+    other_links = "".join(
+        f"<li><a href='{b['url']}' target='_blank' style='color:white;text-decoration:none;'>{b['name']}</a></li>"
+        for b in OTHER_BOOKMARKS
+    )
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>📚 Other Bookmarks</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <style>
+            body {{
+                background: #111;
+                color: white;
+                font-family: sans-serif;
+                padding: 20px;
+            }}
+            a {{
+                display: block;
+                margin: 8px 0;
+            }}
+        </style>
+    </head>
+    <body>
+        <h2>📚 Other Bookmarks</h2>
+        <ul>{other_links}</ul>
+        <a href="/" style="color:#ccc;">⬅️ Back to Home</a>
     </body>
     </html>
     """
