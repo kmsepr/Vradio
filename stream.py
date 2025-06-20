@@ -1,12 +1,10 @@
 import subprocess
 import time
-import json
-import os
-from flask import Flask, Response, request
+from flask import Flask, Response
 
 app = Flask(__name__)
 
-# 📁 Persistent bookmarks disabled, hardcoded list used instead
+# 🎯 Hardcoded bookmarks
 BOOKMARKS = [
     {"name": "🎥 YouTube", "url": "http://capitalist-anthe-pscj-4a28f285.koyeb.app/"},
     {"name": "📻 Radio Keralam", "url": "http://ice31.securenetsystems.net/RADIOKERAL"},
@@ -78,7 +76,9 @@ RADIO_STATIONS = {
 
 }
 
-# 🔁 FFmpeg stream proxy
+
+
+# 🔁 Proxy stream with FFmpeg
 def generate_stream(url):
     process = None
     while True:
@@ -98,15 +98,15 @@ def generate_stream(url):
             break
         except Exception as e:
             print(f"⚠️ Stream error: {e}")
-        print("🔄 Restarting stream...")
+        print("🔁 Restarting...")
         time.sleep(5)
 
-# 🎧 Stream route
+# 🎧 Radio stream route
 @app.route("/<station_name>")
 def stream(station_name):
     url = RADIO_STATIONS.get(station_name)
     if not url:
-        return "⚠️ Station not found", 404
+        return "Station not found", 404
     return Response(generate_stream(url), mimetype="audio/mpeg")
 
 # 🏠 Homepage
@@ -118,14 +118,15 @@ def index():
         b = (200 + (i * 80)) % 256
         return f"{r}, {g}, {b}"
 
-    links_html = "".join(
-        f"<div class='card' data-name='{name}' style='background-color: rgba({pastel_color(i)}, 0.85);'><a href='/{name}' target='_blank'>{name}</a></div>"
-        for i, name in enumerate(reversed(list(RADIO_STATIONS)))
+    bookmarks_html = "".join(
+        f"<a href='{b['url']}' style='color:white;text-decoration:none;border-bottom:1px solid #333;padding:8px 0;display:block;'>{b['name']}</a>"
+        for b in BOOKMARKS
     )
 
-    bookmarks_html = ""
-    for b in BOOKMARKS:
-        bookmarks_html += f"<a href='{b['url']}' style='color:white;text-decoration:none;border-bottom:1px solid #333;padding:8px 0;display:block;'>{b['name']}</a>"
+    links_html = "".join(
+        f"<div class='card' style='background-color: rgba({pastel_color(i)}, 0.85);'><a href='/{name}' target='_blank'>{name}</a></div>"
+        for i, name in enumerate(RADIO_STATIONS)
+    )
 
     return f"""
     <!DOCTYPE html>
@@ -136,15 +137,8 @@ def index():
         <style>
             body {{
                 font-family: sans-serif;
-                margin: 0;
                 background: #111;
                 color: white;
-            }}
-            h1 {{
-                font-size: 1.2rem;
-                text-align: center;
-                padding: 10px;
-                background: #222;
                 margin: 0;
             }}
             .menu-icon {{
@@ -170,6 +164,13 @@ def index():
             .sidebar.open {{
                 left: 0;
             }}
+            h1 {{
+                font-size: 1.2rem;
+                text-align: center;
+                padding: 10px;
+                background: #222;
+                margin: 0;
+            }}
             .grid {{
                 display: grid;
                 grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
@@ -184,10 +185,9 @@ def index():
                 background: #333;
             }}
             .card a {{
-                text-decoration: none;
                 color: white;
+                text-decoration: none;
                 font-size: 0.95rem;
-                display: block;
             }}
         </style>
         <script>
