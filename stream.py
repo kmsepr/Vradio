@@ -29,9 +29,7 @@ OTHER_BOOKMARKS = [
     {"name": "📻 Al Nour", "url": "http://audiostreaming.itworkscdn.com:9066/"},
 ]
 
-# 📡 All Stations (trimmed for brevity — you can paste your full list here)
-RADIO_STATIONS = {
-    "radi
+
 # 📡 List of radio stations
 RADIO_STATIONS = {
     "muthnabi_radio": "http://cast4.my-control-panel.com/proxy/muthnabi/stream",
