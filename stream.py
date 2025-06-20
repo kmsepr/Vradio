@@ -6,6 +6,9 @@ from flask import Flask, Response, request, redirect
 
 app = Flask(__name__)
 
+# Ensure bookmarks directory exists
+os.makedirs("/mnt/data", exist_ok=True)
+
 # 📁 Persistent bookmarks file inside volume
 BOOKMARKS_FILE = os.path.join("/mnt/data", "bookmarks.json")
 
