@@ -2,22 +2,16 @@ import subprocess
 import time
 import json
 import os
-from flask import Flask, Response, request, redirect
+from flask import Flask, Response, request
 
 app = Flask(__name__)
 
-# Ensure bookmarks directory exists
-os.makedirs("/mnt/data", exist_ok=True)
+# 📁 Persistent bookmarks disabled, hardcoded list used instead
+BOOKMARKS = [
+    {"name": "🎥 YouTube", "url": "http://capitalist-anthe-pscj-4a28f285.koyeb.app/"},
+    {"name": "📻 Radio Keralam", "url": "http://ice31.securenetsystems.net/RADIOKERAL"},
+]
 
-# 📁 Persistent bookmarks file inside volume
-BOOKMARKS_FILE = os.path.join("/mnt/data", "bookmarks.json")
-
-# 🔖 Load bookmarks
-try:
-    with open(BOOKMARKS_FILE, "r") as f:
-        BOOKMARKS = json.load(f)
-except:
-    BOOKMARKS = [{"name": "Add", "url": "/add"}]
 
 # 📡 List of radio stations
 RADIO_STATIONS = {
@@ -81,6 +75,7 @@ RADIO_STATIONS = {
     "n1_news": "https://best-str.umn.cdn.united.cloud/stream?stream=sp1400&sp=n1info&channel=n1bos&u=n1info&p=n1Sh4redSecre7iNf0&player=m3u8",
     "vom_radio": "https://radio.psm.mv/draair",
 "radio_nellikka": "https://usa20.fastcast4u.com:2130/stream",
+
 }
 
 # 🔁 FFmpeg stream proxy
@@ -114,42 +109,6 @@ def stream(station_name):
         return "⚠️ Station not found", 404
     return Response(generate_stream(url), mimetype="audio/mpeg")
 
-# ➕ Add bookmark/station
-@app.route("/add", methods=["GET", "POST"])
-def add():
-    if request.method == "POST":
-        name = request.form.get("name", "").strip()
-        url = request.form.get("url", "").strip()
-        if name and url:
-            if url.startswith("http") and "stream" in url:
-                key = name.lower().replace(" ", "_")
-                RADIO_STATIONS[key] = url
-            else:
-                BOOKMARKS.append({"name": name, "url": url})
-                with open(BOOKMARKS_FILE, "w") as f:
-                    json.dump(BOOKMARKS, f)
-        return redirect("/")
-    return """
-    <html><body style='background:#111;color:white;padding:20px;font-family:sans-serif;'>
-    <h2>Add Bookmark or Station</h2>
-    <form method='post'>
-        <input name='name' placeholder='Name' required style='width:100%;padding:10px;background:#333;color:white;border:none;margin:10px 0;' />
-        <input name='url' placeholder='URL (bookmark or stream)' required style='width:100%;padding:10px;background:#333;color:white;border:none;margin:10px 0;' />
-        <button type='submit' style='padding:10px;background:green;color:white;border:none;width:100%'>Add</button>
-    </form>
-    </body></html>
-    """
-
-# ❌ Delete bookmark
-@app.route("/delete_bookmark", methods=["POST"])
-def delete_bookmark():
-    name = request.form.get("name", "")
-    global BOOKMARKS
-    BOOKMARKS = [b for b in BOOKMARKS if b["name"] != name]
-    with open(BOOKMARKS_FILE, "w") as f:
-        json.dump(BOOKMARKS, f)
-    return redirect("/")
-
 # 🏠 Homepage
 @app.route("/")
 def index():
@@ -166,18 +125,7 @@ def index():
 
     bookmarks_html = ""
     for b in BOOKMARKS:
-        if b["name"].lower() == "add":
-            bookmarks_html += f"<a href='{b['url']}' style='color:white;text-decoration:none;border-bottom:1px solid #333;padding:8px 0;display:block;'>➕ {b['name']}</a>"
-        else:
-            bookmarks_html += f"""
-            <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #333;">
-                <a href="{b['url']}" style="flex:1;color:white;text-decoration:none;padding:8px 0;">{b['name']}</a>
-                <form method="post" action="/delete_bookmark" style="margin:0;padding:0;">
-                    <input type="hidden" name="name" value="{b['name']}">
-                    <button style="background:none;border:none;color:#f44;font-size:1rem;cursor:pointer;">🗑️</button>
-                </form>
-            </div>
-            """
+        bookmarks_html += f"<a href='{b['url']}' style='color:white;text-decoration:none;border-bottom:1px solid #333;padding:8px 0;display:block;'>{b['name']}</a>"
 
     return f"""
     <!DOCTYPE html>
