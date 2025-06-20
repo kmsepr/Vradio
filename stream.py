@@ -1,9 +1,19 @@
 import subprocess
 import time
+import json
 from flask import Flask, Response, request, redirect
 
 app = Flask(__name__)
 
+# 📁 JSON file for bookmarks
+BOOKMARKS_FILE = "bookmarks.json"
+
+# 🔖 Load bookmarks from JSON
+try:
+    with open(BOOKMARKS_FILE, "r") as f:
+        BOOKMARKS = json.load(f)
+except:
+    BOOKMARKS = [{"name": "Add", "url": "/add"}]
 
 # 📡 List of radio stations
 RADIO_STATIONS = {
@@ -51,30 +61,24 @@ RADIO_STATIONS = {
     "air_calicut": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio082/chunklist.m3u8",
     "manjeri_fm": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio101/chunklist.m3u8",
     "real_fm": "http://air.pc.cdn.bitgravity.com/air/live/pbaudio083/playlist.m3u8",
-    
+    "vom_news": "https://psmnews.mv/stream/radio-dhivehi-raajjeyge-adu",
     "safari_tv": "https://j78dp346yq5r-hls-live.5centscdn.com/safari/live.stream/chunks.m3u8",
     "victers_tv": "https://932y4x26ljv8-hls-live.5centscdn.com/victers/tv.stream/victers/tv1/chunks.m3u8",
     "kairali_we": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/wetv_nim_https/050522/wetv/playlist.m3u8",
-    
+    "flowers_tv": "http://103.199.161.254/Content/flowers/Live/Channel(Flowers)/index.m3u8",
     "dd_malayalam": "https://d3eyhgoylams0m.cloudfront.net/v1/manifest/93ce20f0f52760bf38be911ff4c91ed02aa2fd92/ed7bd2c7-8d10-4051-b397-2f6b90f99acb/562ee8f9-9950-48a0-ba1d-effa00cf0478/2.m3u8",
-    
+    "amrita_tv": "https://dr1zhpsuem5f4.cloudfront.net/master.m3u8",
     "24_news": "https://segment.yuppcdn.net/110322/channel24/playlist.m3u8",
     "mazhavil_manorama": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/mazhavilmanorama_nim_https/050522/mazhavilmanorama/playlist.m3u8",
     "manorama_news": "http://103.199.161.254/Content/manoramanews/Live/Channel(ManoramaNews)/index.m3u8",
-    
+    "aaj_tak": "https://feeds.intoday.in/aajtak/api/aajtakhd/master.m3u8",
     "bloomberg_tv": "https://bloomberg-bloomberg-3-br.samsung.wurl.tv/manifest/playlist.m3u8",
     "france_24": "https://live.france24.com/hls/live/2037218/F24_EN_HI_HLS/master_500.m3u8",
     "n1_news": "https://best-str.umn.cdn.united.cloud/stream?stream=sp1400&sp=n1info&channel=n1bos&u=n1info&p=n1Sh4redSecre7iNf0&player=m3u8",
     "vom_radio": "https://radio.psm.mv/draair",
 "radio_nellikka": "https://usa20.fastcast4u.com:2130/stream",
 
- 
-
 }
-
-
-
-BOOKMARKS = [{"name": "Add", "url": "/add"}]
 
 # 🔁 FFmpeg stream generator
 def generate_stream(url):
@@ -83,11 +87,9 @@ def generate_stream(url):
         if process:
             process.kill()
         process = subprocess.Popen(
-            [
-                "ffmpeg", "-reconnect", "1", "-reconnect_streamed", "1",
-                "-reconnect_delay_max", "10", "-fflags", "nobuffer", "-flags", "low_delay",
-                "-i", url, "-vn", "-ac", "1", "-b:a", "40k", "-buffer_size", "1024k", "-f", "mp3", "-"
-            ],
+            ["ffmpeg", "-reconnect", "1", "-reconnect_streamed", "1",
+             "-reconnect_delay_max", "10", "-fflags", "nobuffer", "-flags", "low_delay",
+             "-i", url, "-vn", "-ac", "1", "-b:a", "40k", "-buffer_size", "1024k", "-f", "mp3", "-"],
             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=8192
         )
         try:
@@ -98,7 +100,7 @@ def generate_stream(url):
             break
         except Exception as e:
             print(f"⚠️ Stream error: {e}")
-        print("🔄 FFmpeg stopped, restarting stream...")
+        print("🔄 Restarting stream...")
         time.sleep(5)
 
 # 🎧 Stream a radio station
@@ -109,7 +111,7 @@ def stream(station_name):
         return "⚠️ Station not found", 404
     return Response(generate_stream(url), mimetype="audio/mpeg")
 
-# ➕ Add new station (via form)
+# ➕ Add station or bookmark
 @app.route("/add", methods=["GET", "POST"])
 def add_station_or_bookmark():
     if request.method == "POST":
@@ -121,6 +123,8 @@ def add_station_or_bookmark():
                 RADIO_STATIONS[key] = url
             else:
                 BOOKMARKS.append({"name": name, "url": url})
+                with open(BOOKMARKS_FILE, "w") as f:
+                    json.dump(BOOKMARKS, f)
         return redirect("/")
     return """
     <html><body style='background:#111;color:white;padding:20px;font-family:sans-serif;'>
@@ -139,9 +143,11 @@ def delete_bookmark():
     name = request.form.get("name", "")
     global BOOKMARKS
     BOOKMARKS = [b for b in BOOKMARKS if b["name"] != name]
+    with open(BOOKMARKS_FILE, "w") as f:
+        json.dump(BOOKMARKS, f)
     return redirect("/")
 
-# 🏠 Homepage with sidebar and radio grid
+# 🏠 Homepage
 @app.route("/")
 def index():
     def pastel_color(i):
@@ -151,20 +157,14 @@ def index():
         return f"{r}, {g}, {b}"
 
     links_html = "".join(
-        f"""
-        <div class='card' data-name='{name}' style='background-color: rgba({pastel_color(i)}, 0.85);'>
-            <a href='/{name}' target='_blank'>{name}</a>
-        </div>
-        """ for i, name in enumerate(reversed(list(RADIO_STATIONS)))
+        f"<div class='card' data-name='{name}' style='background-color: rgba({pastel_color(i)}, 0.85);'><a href='/{name}' target='_blank'>{name}</a></div>"
+        for i, name in enumerate(reversed(list(RADIO_STATIONS)))
     )
 
     bookmarks_html = ""
     for b in BOOKMARKS:
-        name_lower = b['name'].lower()
-        if name_lower == "add":
-            bookmarks_html += f"""
-            <a href="{b['url']}" style="color:white;text-decoration:none;border-bottom:1px solid #333;padding:8px 0;display:block;">➕ {b['name']}</a>
-            """
+        if b["name"].lower() == "add":
+            bookmarks_html += f"<a href='{b['url']}' style='color:white;text-decoration:none;border-bottom:1px solid #333;padding:8px 0;display:block;'>➕ {b['name']}</a>"
         else:
             bookmarks_html += f"""
             <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #333;">
@@ -219,13 +219,6 @@ def index():
             .sidebar.open {{
                 left: 0;
             }}
-            .sidebar a {{
-                display: block;
-                padding: 8px 0;
-                color: white;
-                text-decoration: none;
-                border-bottom: 1px solid #333;
-            }}
             .grid {{
                 display: grid;
                 grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
@@ -250,7 +243,6 @@ def index():
             function toggleSidebar() {{
                 document.getElementById('sidebar').classList.toggle('open');
             }}
-
             document.addEventListener('keydown', function(e) {{
                 if (e.key === '1') {{
                     toggleSidebar();
@@ -263,7 +255,6 @@ def index():
         <div class="sidebar" id="sidebar">
             {bookmarks_html}
         </div>
-
         <h1>📻 Radio Stations</h1>
         <div class="grid">{links_html}</div>
     </body>
