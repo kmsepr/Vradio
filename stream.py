@@ -12,7 +12,7 @@ BOOKMARKS = [
 
 # 📚 Additional Bookmarks (accessible via /bookmarks)
 OTHER_BOOKMARKS = [
-    {"name": "📻 Radio Keralam", "url": "http://surviving-audy-sadiqkm-fb03800f.koyeb.app/radio_keralam"},
+    {"name": "📻 Radio Keralam", "url": "http://ice31.securenetsystems.net/RADIOKERAL"},
     {"name": "📻 Radio Nellikka", "url": "http://surviving-audy-sadiqkm-fb03800f.koyeb.app/radio_nellikka"},
     {"name": "📺 Bloomberg TV", "url": "http://surviving-audy-sadiqkm-fb03800f.koyeb.app/bloomberg_tv"},
     {"name": "📺 Mazhavil Manorama", "url": "http://surviving-audy-sadiqkm-fb03800f.koyeb.app/mazhavil_manorama"},
