@@ -178,49 +178,91 @@ def index():
         <audio id="audio" controls style="width:100%; display:none;"></audio>
         <div class='grid'>{links_html}</div>
 
-        <script>
-            const stations = {station_names};
-            let current = -1;
-            const audio = document.getElementById('audio');
-            const nowPlaying = document.getElementById('nowPlaying');
+       <script>
+    const stations = {{station_names}};
+    let current = -1;
+    const audio = document.getElementById('audio');
+    const nowPlaying = document.getElementById('nowPlaying');
 
-            function toggleSidebar() {{
-                document.getElementById('sidebar').classList.toggle('open');
-            }}
+    function toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('open');
+    }
 
-            function playStation(index) {{
-                current = index;
-                const name = stations[current];
-                audio.src = '/' + name;
+    function playStation(index) {
+        current = index;
+        const name = stations[current];
+        audio.src = '/' + name;
+        audio.play();
+        nowPlaying.innerText = '▶️ Playing: ' + name;
+        audio.style.display = 'block';
+        localStorage.setItem('lastStationIndex', current);
+    }
+
+    function togglePlay() {
+        if (audio.src) {
+            if (audio.paused) {
                 audio.play();
-                nowPlaying.innerText = '▶️ Playing: ' + name;
-                audio.style.display = 'block';
-            }}
+            } else {
+                audio.pause();
+            }
+        } else if (current === -1 && stations.length > 0) {
+            const saved = localStorage.getItem('lastStationIndex');
+            playStation(saved ? parseInt(saved) : 0);
+        }
+    }
 
-            function togglePlay() {{
-                if (audio.paused) {{
-                    audio.play();
-                }} else {{
-                    audio.pause();
-                }}
-            }}
+    function prev() {
+        if (current > 0) {
+            playStation(current - 1);
+        }
+    }
 
-            function prev() {{
-                if (current > 0) {{
-                    playStation(current - 1);
-                }}
-            }}
+    function next() {
+        if (current < stations.length - 1) {
+            playStation(current + 1);
+        }
+    }
 
-            function next() {{
-                if (current < stations.length - 1) {{
-                    playStation(current + 1);
-                }}
-            }}
+    function volumeUp() {
+        audio.volume = Math.min(1, audio.volume + 0.1);
+        localStorage.setItem('volume', audio.volume.toFixed(2));
+        showVolume();
+    }
 
-            document.addEventListener('keydown', function(e) {{
-                if (e.key === '1') toggleSidebar();
-            }});
-        </script>
+    function volumeDown() {
+        audio.volume = Math.max(0, audio.volume - 0.1);
+        localStorage.setItem('volume', audio.volume.toFixed(2));
+        showVolume();
+    }
+
+    function showVolume() {
+        nowPlaying.innerText = `🔊 Volume: ${(audio.volume * 100).toFixed(0)}%` +
+            (current !== -1 ? ` • 🎶 ${stations[current]}` : '');
+    }
+
+    document.addEventListener('keydown', function(e) {
+        switch (e.key) {
+            case 'ArrowLeft': prev(); break;
+            case 'ArrowRight': next(); break;
+            case 'Enter': togglePlay(); break;
+            case 'ArrowUp': volumeUp(); break;
+            case 'ArrowDown': volumeDown(); break;
+            case '1': toggleSidebar(); break;
+        }
+    });
+
+    // ✅ Auto-play last played station on load
+    window.onload = function() {
+        const savedIndex = parseInt(localStorage.getItem('lastStationIndex'));
+        const savedVolume = parseFloat(localStorage.getItem('volume'));
+        if (!isNaN(savedVolume)) audio.volume = savedVolume;
+        if (!isNaN(savedIndex) && savedIndex >= 0 && savedIndex < stations.length) {
+            playStation(savedIndex);
+        } else if (stations.length > 0) {
+            playStation(0);  // fallback
+        }
+    };
+</script>
     </body>
     </html>
     """
