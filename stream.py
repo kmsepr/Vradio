@@ -50,19 +50,6 @@ def stream(station_name):
 @app.route("/")
 def index():
     station_names = list(RADIO_STATIONS.keys())
-
-    def pastel_color(i):
-        r = (100 + (i * 40)) % 256
-        g = (150 + (i * 60)) % 256
-        b = (200 + (i * 80)) % 256
-        return f"{r}, {g}, {b}"
-
-    links_html = "".join(
-        f"<div class='card' style='background-color: rgba({pastel_color(i)}, 0.85);' onclick='playStation({i})'>"
-        f"{name} <span style='float:right;' onclick=\"toggleFav(event, '{name}')\">❤️</span></div>"
-        for i, name in enumerate(station_names)
-    )
-
     return render_template_string("""
 <!DOCTYPE html>
 <html>
@@ -113,8 +100,8 @@ def index():
     </div>
     <h1>📻 Radio Stations</h1>
     <div class='grid'>
-        {% for i, name in station_names|enumerate %}
-        <div class='card' style='background-color: rgba({{ 100 + (i * 40) % 256 }}, {{ 150 + (i * 60) % 256 }}, {{ 200 + (i * 80) % 256 }}, 0.85);' onclick='playStation({{ i }})'>
+        {% for name in station_names %}
+        <div class='card' style='background-color: rgba({{ 100 + (loop.index0 * 40) % 256 }}, {{ 150 + (loop.index0 * 60) % 256 }}, {{ 200 + (loop.index0 * 80) % 256 }}, 0.85);' onclick='playStation({{ loop.index0 }})'>
             {{ name }} <span style='float:right;' onclick="toggleFav(event, '{{ name }}')">❤️</span>
         </div>
         {% endfor %}
@@ -258,7 +245,7 @@ def index():
 </script>
 </body>
 </html>
-""", station_names=station_names) 
+""", station_names=station_names)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000)
