@@ -71,15 +71,38 @@ def index():
     <title>Radio</title>
     <style>
         body { background: #111; color: white; font-family: sans-serif; margin: 0; }
-        .menu-icon { position: absolute; top: 10px; left: 10px; font-size: 1.5rem; cursor: pointer; }
-        .sidebar { position: fixed; left: -250px; top: 0; width: 220px; height: 100%; background: #222; padding: 15px; overflow-y: auto; transition: left 0.3s; }
+        .menu-icon { position: absolute; top: 10px; left: 10px; font-size: 1.5rem; cursor: pointer; z-index: 10; }
+        .sidebar { position: fixed; left: -250px; top: 0; width: 220px; height: 100%; background: #222; padding: 15px; overflow-y: auto; transition: left 0.3s; z-index: 10; }
         .sidebar.open { left: 0; }
         h1 { font-size: 1.2rem; text-align: center; padding: 10px; background: #222; margin: 0; }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; padding: 10px; margin-top: 50px; }
         .card { padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; }
         .card:hover { opacity: 0.8; }
-        .controls { text-align: center; margin-top: 10px; font-size: 1.5rem; }
-        .now-playing { text-align: center; margin-top: 10px; font-size: 1rem; }
+
+        #playerModal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: #000;
+            color: white;
+            z-index: 999;
+            padding: 20px;
+            text-align: center;
+        }
+
+        #playerModal h2 { margin-top: 40px; font-size: 1.2rem; }
+        #playerModal .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        .controls {
+            font-size: 2rem;
+            margin: 20px;
+        }
     </style>
 </head>
 <body>
@@ -89,20 +112,35 @@ def index():
         <div id="favList"></div>
     </div>
     <h1>📻 Radio Stations</h1>
-    <div class='controls'>
-        <span onclick="prev()">⏮️</span>
-        <span onclick="togglePlay()">⏯️</span>
-        <span onclick="next()">⏭️</span>
+    <div class='grid'>
+        {% for i, name in station_names|enumerate %}
+        <div class='card' style='background-color: rgba({{ 100 + (i * 40) % 256 }}, {{ 150 + (i * 60) % 256 }}, {{ 200 + (i * 80) % 256 }}, 0.85);' onclick='playStation({{ i }})'>
+            {{ name }} <span style='float:right;' onclick="toggleFav(event, '{{ name }}')">❤️</span>
+        </div>
+        {% endfor %}
     </div>
-    <div class='now-playing' id='nowPlaying'>No station playing</div>
-    <audio id="audio" controls style="width:100%; display:none;"></audio>
-    <div class='grid'>{{ links_html|safe }}</div>
+
+    <div id="playerModal">
+        <div class="close-btn" onclick="closePlayer()">❌</div>
+        <h2 id="playerTitle">🎶 Now Playing</h2>
+        <div class="controls">
+            <span onclick="prev()">⏮️</span>
+            <span onclick="togglePlay()">⏯️</span>
+            <span onclick="next()">⏭️</span>
+        </div>
+        <audio id="modalAudio" controls style="width:100%; margin-top:20px;"></audio>
+        <div style="margin-top:10px;">
+            <button onclick="volumeDown()">🔉</button>
+            <button onclick="volumeUp()">🔊</button>
+            <div id="volText" style="margin-top:5px;"></div>
+        </div>
+    </div>
 
 <script>
     const stations = {{ station_names|tojson }};
     let current = -1;
-    const audio = document.getElementById('audio');
-    const nowPlaying = document.getElementById('nowPlaying');
+    const audio = document.getElementById('modalAudio');
+    const volText = document.getElementById('volText');
 
     function toggleSidebar() {
         document.getElementById('sidebar').classList.toggle('open');
@@ -113,19 +151,24 @@ def index():
         const name = stations[current];
         audio.src = '/' + name;
         audio.play();
-        nowPlaying.innerText = '▶️ Playing: ' + name;
-        audio.style.display = 'block';
+        document.getElementById("playerTitle").innerText = '🎶 Playing: ' + name;
+        document.getElementById("playerModal").style.display = 'block';
         localStorage.setItem('lastStationIndex', current);
     }
 
     function togglePlay() {
-        if (audio.src) {
-            if (audio.paused) audio.play();
-            else audio.pause();
-        } else if (current === -1 && stations.length > 0) {
+        if (!audio.src) {
             const saved = localStorage.getItem('lastStationIndex');
             playStation(saved ? parseInt(saved) : 0);
+        } else {
+            if (audio.paused) audio.play();
+            else audio.pause();
         }
+    }
+
+    function closePlayer() {
+        document.getElementById("playerModal").style.display = 'none';
+        audio.pause();
     }
 
     function prev() {
@@ -182,11 +225,14 @@ def index():
     }
 
     function showVolume() {
-        nowPlaying.innerText = `🔊 Volume: ${(audio.volume * 100).toFixed(0)}%` +
-            (current !== -1 ? ` • 🎶 ${stations[current]}` : '');
+        volText.innerText = `🔊 Volume: ${(audio.volume * 100).toFixed(0)}%`;
     }
 
     document.addEventListener('keydown', function(e) {
+        if (document.activeElement !== document.body) return;
+
+        if (e.key === 'ArrowUp' || e.key === 'ArrowDown') e.preventDefault();
+
         switch (e.key) {
             case 'ArrowLeft': prev(); break;
             case 'ArrowRight': next(); break;
@@ -207,11 +253,12 @@ def index():
             playStation(0);
         }
         updateFavList();
+        showVolume();
     };
 </script>
 </body>
 </html>
-""", station_names=station_names, links_html=links_html)
+""", station_names=station_names) 
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000)
