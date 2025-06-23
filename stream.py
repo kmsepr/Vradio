@@ -4,32 +4,95 @@ import time
 
 app = Flask(__name__)
 
+
+# 📡 List of radio stations
 RADIO_STATIONS = {
-    "air_calicut": "http://air.pc.cdn.bitgravity.com/air/live/pbaudio044/playlist.m3u8",
-    "radio_nellikka": "https://usa20.fastcast4u.com:2130/stream",
     "muthnabi_radio": "http://cast4.my-control-panel.com/proxy/muthnabi/stream",
+    
     "malayalam_1": "http://167.114.131.90:5412/stream",
     "radio_digital_malayali": "https://radio.digitalmalayali.in/listen/stream/radio.mp3",
     "malayalam_90s": "https://stream-159.zeno.fm/gm3g9amzm0hvv?zs-x-7jq8ksTOav9ZhlYHi9xw",
-}
+    "aural_oldies": "https://stream-162.zeno.fm/tksfwb1mgzzuv?zs=SxeQj1-7R0alsZSWJie5eQ",
+    "radio_malayalam": "https://radiomalayalamfm.com/radio/8000/radio.mp3",
+    "swaranjali": "https://stream-161.zeno.fm/x7mve2vt01zuv?zs-D4nK05-7SSK2FZAsvumh2w",
+    "radio_beat_malayalam": "http://live.exertion.in:8050/radio.mp3",
+    "shahul_radio": "https://stream-150.zeno.fm/cynbm5ngx38uv?zs=Ktca5StNRWm-sdIR7GloVg",
+    "raja_radio": "http://159.203.111.241:8026/stream",
+    "nonstop_hindi": "http://s5.voscast.com:8216/stream",
+    "fm_gold": "https://airhlspush.pc.cdn.bitgravity.com/httppush/hispbaudio005/hispbaudio00564kbps.m3u8",
+    "motivational_series": "http://104.7.66.64:8010",
+    "deenagers_radio": "http://104.7.66.64:8003/",
+    "hajj_channel": "http://104.7.66.64:8005",
+    "abc_islam": "http://s10.voscast.com:9276/stream",
+    "eram_fm": "http://icecast2.edisimo.com:8000/eramfm.mp3",
+    "al_sumood_fm": "http://us3.internet-radio.com/proxy/alsumoodfm2020?mp=/stream",
+    "nur_ala_nur": "http://104.7.66.64:8011/",
+    "ruqya_radio": "http://104.7.66.64:8004",
+    "seiyun_radio": "http://s2.radio.co/s26c62011e/listen",
+    "noor_al_eman": "http://edge.mixlr.com/channel/boaht",
+    "sam_yemen": "https://edge.mixlr.com/channel/kijwr",
+    "afaq": "https://edge.mixlr.com/channel/rumps",
+    "alfasi_radio": "https://qurango.net/radio/mishary_alafasi",
+    "tafsir_quran": "https://radio.quranradiotafsir.com/9992/stream",
+    "sirat_al_mustaqim": "http://104.7.66.64:8091/stream",
+    "river_nile_radio": "http://104.7.66.64:8087",
+    "quran_radio_cairo": "http://n02.radiojar.com/8s5u5tpdtwzuv",
+    "quran_radio_nablus": "http://www.quran-radio.org:8002/",
+    "al_nour": "http://audiostreaming.itworkscdn.com:9066/",
+    "allahu_akbar_radio": "http://66.45.232.132:9996/stream",
+    "omar_abdul_kafi_radio": "http://104.7.66.64:8007",
+    "urdu_islamic_lecture": "http://144.91.121.54:27001/channel_02.aac",
+    "hob_nabi": "http://216.245.210.78:8098/stream",
+    "sanaa_radio": "http://dc5.serverse.com/proxy/pbmhbvxs/stream",
+    "rubat_ataq": "http://stream.zeno.fm/5tpfc8d7xqruv",
+    "al_jazeera": "http://live-hls-audio-web-aja.getaj.net/VOICE-AJA/index.m3u8",
+    "asianet_news": "https://vidcdn.vidgyor.com/asianet-origin/audioonly/chunks.m3u8",
+    "air_kavarati": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio189/chunklist.m3u8",
+    "air_calicut": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio082/chunklist.m3u8",
+    "manjeri_fm": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio101/chunklist.m3u8",
+    "real_fm": "http://air.pc.cdn.bitgravity.com/air/live/pbaudio083/playlist.m3u8",
+    "vom_news": "https://psmnews.mv/stream/radio-dhivehi-raajjeyge-adu",
+    "safari_tv": "https://j78dp346yq5r-hls-live.5centscdn.com/safari/live.stream/chunks.m3u8",
+    "victers_tv": "https://932y4x26ljv8-hls-live.5centscdn.com/victers/tv.stream/victers/tv1/chunks.m3u8",
+    "kairali_we": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/wetv_nim_https/050522/wetv/playlist.m3u8",
+    
+    "dd_malayalam": "https://d3eyhgoylams0m.cloudfront.net/v1/manifest/93ce20f0f52760bf38be911ff4c91ed02aa2fd92/ed7bd2c7-8d10-4051-b397-2f6b90f99acb/562ee8f9-9950-48a0-ba1d-effa00cf0478/2.m3u8",
+   
+    "24_news": "https://segment.yuppcdn.net/110322/channel24/playlist.m3u8",
+    "mazhavil_manorama": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/mazhavilmanorama_nim_https/050522/mazhavilmanorama/playlist.m3u8",
+    
+    "bloomberg_tv": "https://bloomberg-bloomberg-3-br.samsung.wurl.tv/manifest/playlist.m3u8",
+    "france_24": "https://live.france24.com/hls/live/2037218/F24_EN_HI_HLS/master_500.m3u8",
+    "n1_news": "https://best-str.umn.cdn.united.cloud/stream?stream=sp1400&sp=n1info&channel=n1bos&u=n1info&p=n1Sh4redSecre7iNf0&player=m3u8",
+    "vom_radio": "https://radio.psm.mv/draair",
+"radio_nellikka": "https://usa20.fastcast4u.com:2130/stream",
+
+ 
 
 def generate_stream(url):
+    process = None
     while True:
-        process = subprocess.Popen([
-            "ffmpeg", "-reconnect", "1", "-reconnect_streamed", "1",
-            "-reconnect_delay_max", "10", "-fflags", "nobuffer",
-            "-flags", "low_delay", "-i", url, "-vn", "-ac", "1",
-            "-b:a", "40k", "-buffer_size", "1024k", "-f", "mp3", "-"
-        ], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
-
+        if process:
+            process.kill()
+        process = subprocess.Popen(
+            [
+                "ffmpeg", "-reconnect", "1", "-reconnect_streamed", "1",
+                "-reconnect_delay_max", "10", "-fflags", "nobuffer",
+                "-flags", "low_delay", "-i", url, "-vn", "-ac", "1",
+                "-b:a", "40k", "-buffer_size", "1024k", "-f", "mp3", "-"
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            bufsize=8192
+        )
         try:
             for chunk in iter(lambda: process.stdout.read(8192), b""):
                 yield chunk
         except GeneratorExit:
             process.kill()
             break
-        except Exception:
-            process.kill()
+        except Exception as e:
+            print(f"Stream error: {e}")
             time.sleep(5)
 
 @app.route("/<station_name>")
@@ -42,170 +105,155 @@ def stream(station_name):
 @app.route("/")
 def index():
     station_names = list(RADIO_STATIONS.keys())
-    display_names = {
-        "air_calicut": "AIR Calicut 684 AM",
-        "radio_nellikka": "Radio Nellikka",
-        "muthnabi_radio": "Muthnabi Radio",
-        "malayalam_1": "Malayalam Radio 1",
-        "radio_digital_malayali": "Digital Malayali",
-        "malayalam_90s": "Malayalam 90s Hits"
-    }
     return render_template_string("""
 <!DOCTYPE html>
 <html>
 <head>
-  <meta name='viewport' content='width=device-width, initial-scale=1'>
-  <title>Malayalam Radio</title>
-  <style>
-    body {
-        background: #111; color: white; font-family: sans-serif; margin: 0;
-    }
-    h1 {
-        text-align: center; padding: 1rem; font-size: 1.5rem;
-        background: linear-gradient(to right, #1a2a6c, #b21f1f, #fdbb2d);
-    }
-    .grid {
-        display: grid; gap: 1rem; padding: 1rem;
-        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    }
-    .card {
-        background: #333; border-radius: 8px; padding: 1rem;
-        text-align: center; cursor: pointer; transition: 0.2s;
-    }
-    .card:hover, .card:focus {
-        background: #555;
-        outline: none;
-    }
-    audio {
-        width: 100%; margin: 1rem 0;
-    }
-    .controls {
-        display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;
-    }
-    .controls button {
-        padding: 1rem; font-size: 1.5rem; border: none;
-        border-radius: 50%; background: #4caf50; color: white;
-    }
-    .label, #volText {
-        text-align: center; margin: 0.5rem 0;
-    }
-  </style>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+    <title>Radio</title>
+    <style>
+        body { background: #111; color: white; font-family: sans-serif; margin: 0; }
+        h1 { text-align: center; font-size: 1.2rem; padding: 10px; background: #222; margin: 0; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; padding: 10px; }
+        .card { padding: 10px; border-radius: 8px; text-align: center; background: #333; cursor: pointer; }
+        .card:hover { background: #555; }
+        #miniPlayer {
+            position: fixed; top: 0; left: 0; width: 100%;
+            background: #222; color: white; padding: 8px;
+            text-align: center; display: none; z-index: 1000;
+        }
+        #playerModal {
+            display: none; position: fixed; top: 40px; left: 0;
+            width: 100%; height: calc(100% - 40px); background: #000;
+            z-index: 999; text-align: center;
+            padding: 15px; box-sizing: border-box;
+        }
+        button {
+            background: #444; border: none; color: white;
+            padding: 10px 14px; font-size: 1.2rem;
+            margin: 4px; border-radius: 8px;
+        }
+        button:active { background: #666; }
+    </style>
 </head>
 <body>
-  <h1>📻 Malayalam Radio Stations</h1>
-  <div class="grid">
-    {% for id, name in display_names.items() %}
-    <div class="card" tabindex="0" onclick="playStation('{{ loop.index0 }}')">
-      {{ name }}
+    <h1>📻 Radio Stations</h1>
+    <div class="grid">
+        {% for name in station_names %}
+        <div class="card" onclick="playStation('{{ loop.index0 }}')">{{ name }}</div>
+        {% endfor %}
     </div>
-    {% endfor %}
-  </div>
 
-  <div class="label" id="nowPlaying">Now Playing: Loading…</div>
-  <audio id="modalAudio" controls autoplay></audio>
+    <div id="miniPlayer" onclick="togglePlayer()">
+        🎶 <span id="miniTitle">Now Playing</span> ⬇️
+    </div>
 
-  <div class="controls">
-    <button onclick="prev()">⏮</button>
-    <button onclick="togglePlay()" id="playBtn">⏯</button>
-    <button onclick="next()">⏭</button>
-  </div>
-
-  <div class="controls">
-    <button onclick="volumeDown()">−</button>
-    <button onclick="volumeUp()">+</button>
-  </div>
-  <div id="volText">Volume: 70%</div>
- <div style="text-align:center; font-size: 0.9rem; color: #aaa; margin-top: 1rem;">
-  HMD D-Pad: 4⏮ | 5⏯ | 6⏭ | ↑↓ Scroll
-</div>
+    <div id="playerModal">
+        <h2 id="playerTitle">🎶 Now Playing</h2>
+        <audio id="modalAudio" controls style="width:100%; margin-top:20px;"></audio>
+        <div class="controls">
+            <button onclick="prev()">⏮️</button>
+            <button onclick="togglePlay()">⏯️</button>
+            <button onclick="next()">⏭️</button>
+        </div>
+        <div>
+            <button onclick="volumeDown()">🔉</button>
+            <button onclick="volumeUp()">🔊</button>
+            <div id="volText"></div>
+        </div>
+    </div>
 
 <script>
-const stations = {{ station_names|tojson }};
-const displayNames = {{ display_names|tojson }};
-let current = stations.indexOf("muthnabi_radio");
-const audio = document.getElementById("modalAudio");
-const nowPlaying = document.getElementById("nowPlaying");
-const playBtn = document.getElementById("playBtn");
-const volText = document.getElementById("volText");
+    const stations = {{ station_names|tojson }};
+    let current = -1;
+    let isOpen = false;
+    const audio = document.getElementById('modalAudio');
+    const volText = document.getElementById('volText');
+    const miniPlayer = document.getElementById("miniPlayer");
+    const playerModal = document.getElementById("playerModal");
 
-function togglePlay() {
-    if (audio.paused) {
+    function playStation(index) {
+        current = parseInt(index);
+        const name = stations[current];
+        audio.src = '/' + name;
         audio.play();
-        playBtn.innerHTML = "⏸";
-    } else {
-        audio.pause();
-        playBtn.innerHTML = "▶";
+        document.getElementById("playerTitle").innerText = '🎶 Playing: ' + name;
+        document.getElementById("miniTitle").innerText = name;
+        miniPlayer.style.display = 'block';
+        openPlayer();
+        localStorage.setItem('lastStationIndex', current);
     }
-}
-function prev() {
-    current = (current > 0) ? current - 1 : stations.length - 1;
-    playStation(current);
-}
-function next() {
-    current = (current + 1) % stations.length;
-    playStation(current);
-}
-function playStation(index) {
-    current = index;
-    const id = stations[current];
-    const name = displayNames[id] || id;
-    audio.src = "/" + id;
-    nowPlaying.innerText = "Now Playing: " + name;
-    playBtn.innerHTML = "⏸";
 
-    // Highlight current card (optional)
-    const cards = document.querySelectorAll(".card");
-    cards.forEach((el, i) => {
-        el.style.background = (i === current) ? "#4caf50" : "#333";
+    function togglePlay() {
+        if (!audio.src) {
+            const saved = localStorage.getItem('lastStationIndex');
+            if (saved) playStation(saved);
+        } else {
+            if (audio.paused) audio.play(); else audio.pause();
+        }
+    }
+
+    function prev() {
+        if (current > 0) playStation(current - 1);
+    }
+
+    function next() {
+        if (current < stations.length - 1) playStation(current + 1);
+    }
+
+    function openPlayer() {
+        playerModal.style.display = 'block';
+        isOpen = true;
+    }
+
+    function closePlayer() {
+        playerModal.style.display = 'none';
+        isOpen = false;
+    }
+
+    function togglePlayer() {
+        isOpen ? closePlayer() : openPlayer();
+    }
+
+    function volumeUp() {
+        audio.volume = Math.min(1, audio.volume + 0.1);
+        localStorage.setItem('volume', audio.volume.toFixed(2));
+        showVolume();
+    }
+
+    function volumeDown() {
+        audio.volume = Math.max(0, audio.volume - 0.1);
+        localStorage.setItem('volume', audio.volume.toFixed(2));
+        showVolume();
+    }
+
+    function showVolume() {
+        volText.innerText = `🔊 Volume: ${(audio.volume * 100).toFixed(0)}%`;
+    }
+
+    // Keypad mapping
+    document.addEventListener('keydown', function(e) {
+        switch (e.key) {
+            case '1': togglePlayer(); break;      // Mini player toggle
+            case '2': volumeUp(); break;          // Volume up
+            case '8': volumeDown(); break;        // Volume down
+            case '4': prev(); break;              // Previous
+            case '6': next(); break;              // Next
+            case '5': togglePlay(); break;        // Play/Pause
+        }
     });
-}
 
-document.addEventListener("keydown", function(e) {
-    const key = e.key;
-    const active = document.activeElement;
-    const cards = document.querySelectorAll(".card");
-    const index = Array.from(cards).indexOf(active);
-    const cols = Math.floor(document.querySelector(".grid").offsetWidth / 160);
-
-    switch (key) {
-        case "4":
-        case "ArrowLeft":
-            prev();
-            break;
-        case "6":
-        case "ArrowRight":
-            next();
-            break;
-        case "5":
-        case "Enter":
-            togglePlay();
-            break;
-        case "ArrowUp":
-            if (index >= cols) cards[index - cols].focus();
-            break;
-        case "ArrowDown":
-            if (index < cards.length - cols) cards[index + cols].focus();
-            break;
+    window.onload = function() {
+        const savedIndex = parseInt(localStorage.getItem('lastStationIndex'));
+        const savedVolume = parseFloat(localStorage.getItem('volume'));
+        if (!isNaN(savedVolume)) audio.volume = savedVolume;
+        if (!isNaN(savedIndex)) playStation(savedIndex);
+        showVolume();
     }
-
-    if (["4", "5", "6", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Enter"].includes(key)) {
-        e.preventDefault();
-    }
-});
-
-window.onload = function () {
-    audio.volume = 0.7;
-    volText.innerText = "Volume: 70%";
-    playStation(current);
-
-    // Auto-focus first card on load
-    const firstCard = document.querySelector(".card");
-    if (firstCard) firstCard.focus();
-};
 </script>
 </body>
 </html>
-""", station_names=station_names, display_names=display_names)
+""", station_names=station_names)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000)
