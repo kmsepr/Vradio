@@ -248,223 +248,104 @@ def index():
     </div>
 
 <script>
-    const stations = {{ station_names|tojson }};
-    const displayNames = {{ display_names|tojson }};
-    const stationInfo = {
-        "air_calicut": "All India Radio - Calicut Station (684 AM)",
-        "radio_nellikka": "Popular Malayalam Radio",
-        "muthnabi_radio": "Traditional Malayalam Songs",
-        "malayalam_1": "Contemporary Malayalam Music",
-        "radio_digital_malayali": "Digital Malayali Community Radio",
-        "malayalam_90s": "Classic 90s Malayalam Hits"
-    };
-    
-    let current = -1;
-    let isOpen = false;
-    const audio = document.getElementById('modalAudio');
-    const volText = document.getElementById('volText');
-    const miniPlayer = document.getElementById("miniPlayer");
-    const playerModal = document.getElementById("playerModal");
-    const nowPlaying = document.getElementById("nowPlaying");
-    const stationInfoEl = document.getElementById("stationInfo");
-    const playBtn = document.getElementById("playBtn");
-    const miniStatus = document.getElementById("miniStatus");
+// Full JavaScript keypad + D-pad support for HMD 110
 
-    function handleCardKey(event, id) {
-        if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            playStation(stations.indexOf(id));
-        }
-    }
+const stations = {{ station_names|tojson }};
+const displayNames = {{ display_names|tojson }};
+let current = -1;
+const audio = document.getElementById('modalAudio');
+const volText = document.getElementById('volText');
+const miniStatus = document.getElementById("miniStatus");
+const miniTitle = document.getElementById("miniTitle");
+const playBtn = document.getElementById("playBtn");
 
-    function playStation(index) {
-        current = parseInt(index);
-        const id = stations[current];
-        const name = displayNames[id];
-        audio.src = '/' + id;
-        audio.play().catch(e => console.log("Play error:", e));
-        nowPlaying.innerText = name;
-        stationInfoEl.innerText = stationInfo[id] || "";
-        document.getElementById("miniTitle").innerText = name;
-        miniPlayer.style.display = 'flex';
+function volumeUp() {
+    audio.volume = Math.min(1, audio.volume + 0.1);
+    localStorage.setItem('volume', audio.volume.toFixed(2));
+    volText.innerText = `Volume: ${(audio.volume * 100).toFixed(0)}%`;
+}
+function volumeDown() {
+    audio.volume = Math.max(0, audio.volume - 0.1);
+    localStorage.setItem('volume', audio.volume.toFixed(2));
+    volText.innerText = `Volume: ${(audio.volume * 100).toFixed(0)}%`;
+}
+function togglePlay() {
+    if (audio.paused) {
+        audio.play();
+        playBtn.innerHTML = '⏸';
         miniStatus.textContent = "▶";
-        openPlayer();
-        localStorage.setItem('lastStationIndex', current);
-        playBtn.focus();
-        
-        // Update media session for mobile/lock screen controls
-        if ('mediaSession' in navigator) {
-            navigator.mediaSession.metadata = new MediaMetadata({
-                title: name,
-                artist: stationInfo[id] || "Malayalam Radio",
-            });
-        }
+    } else {
+        audio.pause();
+        playBtn.innerHTML = '▶';
+        miniStatus.textContent = "⏸";
+    }
+}
+function prev() {
+    if (current > 0) playStation(current - 1);
+    else playStation(stations.length - 1);
+}
+function next() {
+    if (current < stations.length - 1) playStation(current + 1);
+    else playStation(0);
+}
+function togglePlayer() {
+    const modal = document.getElementById("playerModal");
+    if (modal.style.display === "block") {
+        modal.style.display = "none";
+    } else {
+        modal.style.display = "block";
+    }
+}
+function playStation(index) {
+    current = parseInt(index);
+    const id = stations[current];
+    const name = displayNames[id];
+    audio.src = '/' + id;
+    audio.play();
+    miniTitle.textContent = name;
+    miniStatus.textContent = '▶';
+    document.getElementById("nowPlaying").innerText = name;
+}
+
+document.addEventListener('keydown', function(e) {
+    const key = e.key;
+    const code = e.keyCode || e.which;
+    const activeElement = document.activeElement;
+
+    switch (code) {
+        case 50: volumeUp(); e.preventDefault(); break;       // 2
+        case 56: volumeDown(); e.preventDefault(); break;     // 8
+        case 52: prev(); e.preventDefault(); break;           // 4
+        case 54: next(); e.preventDefault(); break;           // 6
+        case 53: togglePlay(); e.preventDefault(); break;     // 5
+        case 49: togglePlayer(); e.preventDefault(); break;   // 1
     }
 
-    function togglePlay() {
-        if (!audio.src) {
-            const saved = localStorage.getItem('lastStationIndex');
-            if (saved) playStation(saved);
-        } else {
-            if (audio.paused) {
-                audio.play();
-                playBtn.innerHTML = '⏸';
-                miniStatus.textContent = "▶";
-            } else {
-                audio.pause();
-                playBtn.innerHTML = '▶';
-                miniStatus.textContent = "⏸";
-            }
-        }
-    }
+    if (activeElement.classList.contains('card')) {
+        const cards = document.querySelectorAll('.card');
+        const currentIndex = Array.from(cards).indexOf(activeElement);
+        const cols = Math.floor(document.querySelector('.grid').offsetWidth / 200);
 
-    function prev() {
-        if (current > 0) playStation(current - 1);
-        else playStation(stations.length - 1);
-        nowPlaying.style.animation = 'pulse 0.5s';
-    }
-
-    function next() {
-        if (current < stations.length - 1) playStation(current + 1);
-        else playStation(0);
-        nowPlaying.style.animation = 'pulse 0.5s';
-    }
-
-    function openPlayer() {
-        playerModal.style.display = 'block';
-        isOpen = true;
-        document.body.style.overflow = 'hidden';
-    }
-
-    function closePlayer() {
-        playerModal.style.display = 'none';
-        isOpen = false;
-        document.body.style.overflow = 'auto';
-        if (current >= 0) {
-            document.querySelectorAll('.card')[current].focus();
-        }
-    }
-
-    function togglePlayer() {
-        isOpen ? closePlayer() : openPlayer();
-    }
-
-    function volumeUp() {
-        audio.volume = Math.min(1, audio.volume + 0.1);
-        localStorage.setItem('volume', audio.volume.toFixed(2));
-        showVolume();
-    }
-
-    function volumeDown() {
-        audio.volume = Math.max(0, audio.volume - 0.1);
-        localStorage.setItem('volume', audio.volume.toFixed(2));
-        showVolume();
-    }
-
-    function showVolume() {
-        volText.innerText = `Volume: ${(audio.volume * 100).toFixed(0)}%`;
-        volText.style.transform = 'scale(1.2)';
-        setTimeout(() => volText.style.transform = 'scale(1)', 200);
-    }
-
-    // D-pad and keyboard controls
-    document.addEventListener('keydown', function(e) {
-        const activeElement = document.activeElement;
-        
-        // Navigation in station grid
-        if (activeElement.classList.contains('card')) {
-            const cards = document.querySelectorAll('.card');
-            const currentIndex = Array.from(cards).indexOf(activeElement);
-            const cols = Math.floor(document.querySelector('.grid').offsetWidth / 200);
-            
-            switch(e.key) {
-                case 'ArrowUp':
-                    if (currentIndex >= cols) cards[currentIndex - cols].focus();
-                    e.preventDefault();
-                    break;
-                case 'ArrowDown':
-                    if (currentIndex < cards.length - cols) cards[currentIndex + cols].focus();
-                    e.preventDefault();
-                    break;
-                case 'ArrowLeft':
-                    if (currentIndex > 0) cards[currentIndex - 1].focus();
-                    e.preventDefault();
-                    break;
-                case 'ArrowRight':
-                    if (currentIndex < cards.length - 1) cards[currentIndex + 1].focus();
-                    e.preventDefault();
-                    break;
-            }
-        }
-        
-        // Player controls - Updated to match requested layout
-        switch(e.key) {
-            case 'ArrowLeft': 
-                volumeDown();
-                e.preventDefault();
-                break;
-            case 'ArrowRight':
-                volumeUp();
+        switch(key) {
+            case 'ArrowUp':
+                if (currentIndex >= cols) cards[currentIndex - cols].focus();
                 e.preventDefault();
                 break;
             case 'ArrowDown':
-                next();
+                if (currentIndex < cards.length - cols) cards[currentIndex + cols].focus();
                 e.preventDefault();
                 break;
-            case 'ArrowUp': 
-                prev();
+            case 'ArrowLeft':
+                if (currentIndex > 0) cards[currentIndex - 1].focus();
                 e.preventDefault();
                 break;
-            case 'Enter':
-            case ' ':
-            case 'MediaPlayPause':
-                if (activeElement.tagName === 'BUTTON') return;
-                togglePlay();
+            case 'ArrowRight':
+                if (currentIndex < cards.length - 1) cards[currentIndex + 1].focus();
                 e.preventDefault();
                 break;
-            case 'Backspace':
-            case 'Escape':
-                closePlayer();
-                e.preventDefault();
-                break;
-        }
-    });
-
-    // Initialize
-    window.onload = function() {
-        const savedIndex = parseInt(localStorage.getItem('lastStationIndex'));
-        const savedVolume = parseFloat(localStorage.getItem('volume'));
-        
-        if (!isNaN(savedVolume)) {
-            audio.volume = savedVolume;
-        } else {
-            audio.volume = 0.7;
-        }
-        
-        if (!isNaN(savedIndex) && savedIndex >= 0 && savedIndex < stations.length) {
-            playStation(savedIndex);
-        }
-        
-        showVolume();
-        
-        // Update play/pause button when audio state changes
-        audio.addEventListener('play', () => {
-            playBtn.innerHTML = '⏸';
-            miniStatus.textContent = "▶";
-        });
-        audio.addEventListener('pause', () => {
-            playBtn.innerHTML = '▶';
-            miniStatus.textContent = "⏸";
-        });
-        
-        // Support for hardware media keys
-        if ('mediaSession' in navigator) {
-            navigator.mediaSession.setActionHandler('play', togglePlay);
-            navigator.mediaSession.setActionHandler('pause', togglePlay);
-            navigator.mediaSession.setActionHandler('previoustrack', prev);
-            navigator.mediaSession.setActionHandler('nexttrack', next);
         }
     }
+});
 </script>
 </body>
 </html>
