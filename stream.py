@@ -69,6 +69,7 @@ RADIO_STATIONS = {
  
 }
 
+
 def generate_stream(url):
     process = None
     while True:
@@ -112,31 +113,27 @@ def index():
     <meta name='viewport' content='width=device-width, initial-scale=1'>
     <title>Radio</title>
     <style>
-        body { background: #111; color: white; font-family: sans-serif; margin: 0; padding-top: 40px; }
+        body { background: #111; color: white; font-family: sans-serif; margin: 0; }
         h1 { text-align: center; font-size: 1.2rem; padding: 10px; background: #222; margin: 0; }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; padding: 10px; }
         .card { padding: 10px; border-radius: 8px; text-align: center; background: #333; cursor: pointer; }
         .card:hover { background: #555; }
-
         #miniPlayer {
             position: fixed; top: 0; left: 0; width: 100%;
             background: #222; color: white; padding: 8px;
             text-align: center; display: none; z-index: 1000;
         }
-
         #playerModal {
             display: none; position: fixed; top: 40px; left: 0;
             width: 100%; height: calc(100% - 40px); background: #000;
             z-index: 999; text-align: center;
             padding: 15px; box-sizing: border-box;
         }
-
         button {
             background: #444; border: none; color: white;
             padding: 10px 14px; font-size: 1.2rem;
             margin: 4px; border-radius: 8px;
         }
-
         button:active { background: #666; }
     </style>
 </head>
@@ -156,13 +153,13 @@ def index():
         <h2 id="playerTitle">🎶 Now Playing</h2>
         <audio id="modalAudio" controls style="width:100%; margin-top:20px;"></audio>
         <div class="controls">
-            <button onclick="prev()">⏮️</button>
-            <button onclick="togglePlay()">⏯️</button>
-            <button onclick="next()">⏭️</button>
+            <button tabindex="0" onclick="prev()">⏮️</button>
+            <button tabindex="0" onclick="togglePlay()">⏯️</button>
+            <button tabindex="0" onclick="next()">⏭️</button>
         </div>
         <div>
-            <button onclick="volumeDown()">🔉</button>
-            <button onclick="volumeUp()">🔊</button>
+            <button id="volDownBtn" tabindex="0" onclick="volumeDown()">🔉</button>
+            <button id="volUpBtn" tabindex="0" onclick="volumeUp()">🔊</button>
             <div id="volText"></div>
         </div>
     </div>
@@ -170,10 +167,11 @@ def index():
 <script>
     const stations = {{ station_names|tojson }};
     let current = -1;
+    let isOpen = false;
     const audio = document.getElementById('modalAudio');
     const volText = document.getElementById('volText');
-    const miniPlayer = document.getElementById('miniPlayer');
-    const playerModal = document.getElementById('playerModal');
+    const miniPlayer = document.getElementById("miniPlayer");
+    const playerModal = document.getElementById("playerModal");
 
     function playStation(index) {
         current = parseInt(index);
@@ -183,7 +181,7 @@ def index():
         document.getElementById("playerTitle").innerText = '🎶 Playing: ' + name;
         document.getElementById("miniTitle").innerText = name;
         miniPlayer.style.display = 'block';
-        playerModal.style.display = 'block';
+        openPlayer();
         localStorage.setItem('lastStationIndex', current);
     }
 
@@ -204,8 +202,18 @@ def index():
         if (current < stations.length - 1) playStation(current + 1);
     }
 
+    function openPlayer() {
+        playerModal.style.display = 'block';
+        isOpen = true;
+    }
+
+    function closePlayer() {
+        playerModal.style.display = 'none';
+        isOpen = false;
+    }
+
     function togglePlayer() {
-        playerModal.style.display = (playerModal.style.display === 'block') ? 'none' : 'block';
+        isOpen ? closePlayer() : openPlayer();
     }
 
     function volumeUp() {
@@ -223,6 +231,23 @@ def index():
     function showVolume() {
         volText.innerText = `🔊 Volume: ${(audio.volume * 100).toFixed(0)}%`;
     }
+
+    // Handle keyboard volume control only when volume buttons are focused
+    document.addEventListener('keydown', function(e) {
+        const active = document.activeElement;
+        if (active.id === 'volUpBtn' || active.id === 'volDownBtn') {
+            if (e.key === 'ArrowUp') {
+                volumeUp();
+                e.preventDefault();
+            } else if (e.key === 'ArrowDown') {
+                volumeDown();
+                e.preventDefault();
+            } else if (e.key === 'Enter' || e.key === ' ') {
+                active.click();
+                e.preventDefault();
+            }
+        }
+    });
 
     window.onload = function() {
         const savedIndex = parseInt(localStorage.getItem('lastStationIndex'));
