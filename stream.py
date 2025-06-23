@@ -129,6 +129,8 @@ def stream(station_name):
 
 @app.route("/")
 def index():
+    station_names = list(RADIO_STATIONS.keys())
+
     def pastel_color(i):
         r = (100 + (i * 40)) % 256
         g = (150 + (i * 60)) % 256
@@ -140,8 +142,8 @@ def index():
         for b in BOOKMARKS
     )
     links_html = "".join(
-        f"<div class='card' style='background-color: rgba({pastel_color(i)}, 0.85);'><a href='/{name}' target='_blank'>{name}</a></div>"
-        for i, name in enumerate(RADIO_STATIONS)
+        f"<div class='card' style='background-color: rgba({pastel_color(i)}, 0.85);' onclick='playStation({i})'>{name}</div>"
+        for i, name in enumerate(station_names)
     )
 
     return f"""
@@ -157,44 +159,68 @@ def index():
             .sidebar.open {{ left: 0; }}
             h1 {{ font-size: 1.2rem; text-align: center; padding: 10px; background: #222; margin: 0; }}
             .grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; padding: 10px; margin-top: 50px; }}
-            .card {{ padding: 10px; border-radius: 8px; text-align: center; background: #333; }}
-            .card a {{ color: white; text-decoration: none; font-size: 0.95rem; }}
+            .card {{ padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; }}
+            .card:hover {{ opacity: 0.8; }}
+            .controls {{ text-align: center; margin-top: 10px; font-size: 1.5rem; }}
+            .now-playing {{ text-align: center; margin-top: 10px; font-size: 1rem; }}
         </style>
-        <script>
-            function toggleSidebar() {{ document.getElementById('sidebar').classList.toggle('open'); }}
-            document.addEventListener('keydown', function(e) {{ if (e.key === '1') toggleSidebar(); }});
-        </script>
     </head>
     <body>
         <div class='menu-icon' onclick='toggleSidebar()'>☰</div>
         <div class='sidebar' id='sidebar'>{bookmarks_html}</div>
         <h1>📻 Radio Stations</h1>
+        <div class='controls'>
+            <span onclick="prev()">⏮️</span>
+            <span onclick="togglePlay()">⏯️</span>
+            <span onclick="next()">⏭️</span>
+        </div>
+        <div class='now-playing' id='nowPlaying'>No station playing</div>
+        <audio id="audio" controls style="width:100%; display:none;"></audio>
         <div class='grid'>{links_html}</div>
-    </body>
-    </html>
-    """
 
-@app.route("/bookmarks")
-def show_bookmarks():
-    other_links = "".join(
-        f"<li><a href='{b['url']}' target='_blank' style='color:white;text-decoration:none;'>{b['name']}</a></li>"
-        for b in OTHER_BOOKMARKS
-    )
-    return f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>📚 Other Bookmarks</title>
-        <meta name='viewport' content='width=device-width, initial-scale=1' />
-        <style>
-            body {{ background: #111; color: white; font-family: sans-serif; padding: 20px; }}
-            a {{ display: block; margin: 8px 0; }}
-        </style>
-    </head>
-    <body>
-        <h2>📚 Other Bookmarks</h2>
-        <ul>{other_links}</ul>
-        <a href="/" style="color:#ccc;">⬅️ Back to Home</a>
+        <script>
+            const stations = {station_names};
+            let current = -1;
+            const audio = document.getElementById('audio');
+            const nowPlaying = document.getElementById('nowPlaying');
+
+            function toggleSidebar() {{
+                document.getElementById('sidebar').classList.toggle('open');
+            }}
+
+            function playStation(index) {{
+                current = index;
+                const name = stations[current];
+                audio.src = '/' + name;
+                audio.play();
+                nowPlaying.innerText = '▶️ Playing: ' + name;
+                audio.style.display = 'block';
+            }}
+
+            function togglePlay() {{
+                if (audio.paused) {{
+                    audio.play();
+                }} else {{
+                    audio.pause();
+                }}
+            }}
+
+            function prev() {{
+                if (current > 0) {{
+                    playStation(current - 1);
+                }}
+            }}
+
+            function next() {{
+                if (current < stations.length - 1) {{
+                    playStation(current + 1);
+                }}
+            }}
+
+            document.addEventListener('keydown', function(e) {{
+                if (e.key === '1') toggleSidebar();
+            }});
+        </script>
     </body>
     </html>
     """
