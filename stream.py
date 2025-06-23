@@ -115,9 +115,9 @@ def index():
     <button onclick="volumeUp()">+</button>
   </div>
   <div id="volText">Volume: 70%</div>
-  <div style="text-align:center; font-size: 0.9rem; color: #aaa; margin-top: 1rem;">
-    HMD D-Pad: ← Vol− | → Vol+ | ↑ Prev | ↓ Next | 5⏯
-  </div>
+ <div style="text-align:center; font-size: 0.9rem; color: #aaa; margin-top: 1rem;">
+  HMD D-Pad: 4⏮ | 5⏯ | 6⏭ | ↑↓ Scroll
+</div>
 
 <script>
 const stations = {{ station_names|tojson }};
@@ -128,16 +128,6 @@ const nowPlaying = document.getElementById("nowPlaying");
 const playBtn = document.getElementById("playBtn");
 const volText = document.getElementById("volText");
 
-function volumeUp() {
-    audio.volume = Math.min(1, audio.volume + 0.1);
-    localStorage.setItem('volume', audio.volume.toFixed(2));
-    volText.innerText = "Volume: " + Math.round(audio.volume * 100) + "%";
-}
-function volumeDown() {
-    audio.volume = Math.max(0, audio.volume - 0.1);
-    localStorage.setItem('volume', audio.volume.toFixed(2));
-    volText.innerText = "Volume: " + Math.round(audio.volume * 100) + "%";
-}
 function togglePlay() {
     if (audio.paused) {
         audio.play();
@@ -162,33 +152,55 @@ function playStation(index) {
     audio.src = "/" + id;
     nowPlaying.innerText = "Now Playing: " + name;
     playBtn.innerHTML = "⏸";
+
+    // Highlight current card (optional)
+    const cards = document.querySelectorAll(".card");
+    cards.forEach((el, i) => {
+        el.style.background = (i === current) ? "#4caf50" : "#333";
+    });
 }
 
 document.addEventListener("keydown", function(e) {
     const key = e.key;
+    const active = document.activeElement;
+    const cards = document.querySelectorAll(".card");
+    const index = Array.from(cards).indexOf(active);
+    const cols = Math.floor(document.querySelector(".grid").offsetWidth / 160);
 
     switch (key) {
-        case "ArrowUp":    prev(); break;
-        case "ArrowDown":  next(); break;
-        case "ArrowLeft":  volumeDown(); break;
-        case "ArrowRight": volumeUp(); break;
+        case "4":
+        case "ArrowLeft":
+            prev();
+            break;
+        case "6":
+        case "ArrowRight":
+            next();
+            break;
         case "5":
         case "Enter":
-            togglePlay(); break;
+            togglePlay();
+            break;
+        case "ArrowUp":
+            if (index >= cols) cards[index - cols].focus();
+            break;
+        case "ArrowDown":
+            if (index < cards.length - cols) cards[index + cols].focus();
+            break;
     }
 
-    if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "5"].includes(key)) {
+    if (["4", "5", "6", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Enter"].includes(key)) {
         e.preventDefault();
     }
 });
 
-window.onload = function() {
-    const savedVol = localStorage.getItem("volume");
-    if (savedVol) {
-        audio.volume = parseFloat(savedVol);
-        volText.innerText = "Volume: " + Math.round(audio.volume * 100) + "%";
-    }
+window.onload = function () {
+    audio.volume = 0.7;
+    volText.innerText = "Volume: 70%";
     playStation(current);
+
+    // Auto-focus first card on load
+    const firstCard = document.querySelector(".card");
+    if (firstCard) firstCard.focus();
 };
 </script>
 </body>
