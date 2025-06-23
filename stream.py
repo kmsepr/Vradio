@@ -55,54 +55,128 @@ def index():
     <meta name='viewport' content='width=device-width, initial-scale=1'>
     <title>Radio</title>
     <style>
-        body { background: #111; color: white; font-family: sans-serif; margin: 0; }
-        h1 { text-align: center; font-size: 1.2rem; padding: 10px; background: #222; margin: 0; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; padding: 10px; }
-        .card { padding: 10px; border-radius: 8px; text-align: center; background: #333; cursor: pointer; }
-        .card:hover { background: #555; }
+        body { 
+            background: #111; 
+            color: white; 
+            font-family: sans-serif; 
+            margin: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+        h1 { 
+            text-align: center; 
+            font-size: 1.5rem; 
+            padding: 15px; 
+            background: #222; 
+            margin: 0; 
+        }
+        .grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); 
+            gap: 15px; 
+            padding: 15px; 
+        }
+        .card { 
+            padding: 20px 10px; 
+            border-radius: 8px; 
+            text-align: center; 
+            background: #333; 
+            cursor: pointer;
+            font-size: 1.1rem;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+        .card:hover, .card:focus { 
+            background: #555; 
+            transform: scale(1.03);
+        }
+        .card:focus {
+            outline: none;
+            border-color: #4CAF50;
+            box-shadow: 0 0 10px #4CAF50;
+        }
         #miniPlayer {
-            position: fixed; top: 0; left: 0; width: 100%;
-            background: #222; color: white; padding: 8px;
-            text-align: center; display: none; z-index: 1000;
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%;
+            background: #222; 
+            color: white; 
+            padding: 12px;
+            text-align: center; 
+            display: none; 
+            z-index: 1000;
+            font-size: 1.2rem;
         }
         #playerModal {
-            display: none; position: fixed; top: 40px; left: 0;
-            width: 100%; height: calc(100% - 40px); background: #000;
-            z-index: 999; text-align: center;
-            padding: 15px; box-sizing: border-box;
+            display: none; 
+            position: fixed; 
+            top: 60px; 
+            left: 0;
+            width: 100%; 
+            height: calc(100% - 60px); 
+            background: #000;
+            z-index: 999; 
+            text-align: center;
+            padding: 20px; 
+            box-sizing: border-box;
         }
         button {
-            background: #444; border: none; color: white;
-            padding: 10px 14px; font-size: 1.2rem;
-            margin: 4px; border-radius: 8px;
+            background: #444; 
+            border: none; 
+            color: white;
+            padding: 15px 20px; 
+            font-size: 1.5rem;
+            margin: 10px; 
+            border-radius: 50%;
+            min-width: 60px;
+            cursor: pointer;
+            transition: all 0.2s;
         }
-        button:active { background: #666; }
+        button:active, button:focus { 
+            background: #666; 
+            outline: none;
+            transform: scale(1.1);
+        }
+        #volText {
+            font-size: 1.2rem;
+            margin: 15px 0;
+        }
+        .now-playing {
+            font-size: 1.3rem;
+            margin: 20px 0;
+            color: #4CAF50;
+        }
     </style>
 </head>
 <body>
-    <h1>📻 Radio Stations</h1>
+    <h1>📻 Malayalam Radio Stations</h1>
     <div class="grid">
         {% for name in station_names %}
-        <div class="card" onclick="playStation('{{ loop.index0 }}')">{{ name }}</div>
+        <div class="card" tabindex="0" 
+             onclick="playStation('{{ loop.index0 }}')" 
+             onkeydown="handleCardKey(event, '{{ loop.index0 }}')">
+            {{ name }}
+        </div>
         {% endfor %}
     </div>
 
     <div id="miniPlayer" onclick="togglePlayer()">
-        🎶 <span id="miniTitle">Now Playing</span> ⬇️
+        <span id="miniTitle">Select a station</span>
     </div>
 
     <div id="playerModal">
-        <h2 id="playerTitle">🎶 Now Playing</h2>
-        <audio id="modalAudio" controls style="width:100%; margin-top:20px;"></audio>
+        <h2 id="playerTitle">Radio Player</h2>
+        <div class="now-playing" id="nowPlaying"></div>
+        <audio id="modalAudio" controls style="width:100%; margin:20px 0;"></audio>
         <div class="controls">
-            <button onclick="prev()">⏮️</button>
-            <button onclick="togglePlay()">⏯️</button>
-            <button onclick="next()">⏭️</button>
+            <button onclick="prev()" aria-label="Previous">⏮️</button>
+            <button onclick="togglePlay()" aria-label="Play/Pause" id="playBtn">⏯️</button>
+            <button onclick="next()" aria-label="Next">⏭️</button>
         </div>
         <div>
-            <button onclick="volumeDown()">🔉</button>
-            <button onclick="volumeUp()">🔊</button>
-            <div id="volText"></div>
+            <button onclick="volumeDown()" aria-label="Volume Down">🔉</button>
+            <button onclick="volumeUp()" aria-label="Volume Up">🔊</button>
+            <div id="volText">Volume: 100%</div>
         </div>
     </div>
 
@@ -114,17 +188,28 @@ def index():
     const volText = document.getElementById('volText');
     const miniPlayer = document.getElementById("miniPlayer");
     const playerModal = document.getElementById("playerModal");
+    const nowPlaying = document.getElementById("nowPlaying");
+    const playBtn = document.getElementById("playBtn");
+
+    function handleCardKey(event, index) {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            playStation(index);
+        }
+    }
 
     function playStation(index) {
         current = parseInt(index);
         const name = stations[current];
         audio.src = '/' + name;
-        audio.play();
-        document.getElementById("playerTitle").innerText = '🎶 Playing: ' + name;
+        audio.play().catch(e => console.log("Play error:", e));
+        document.getElementById("playerTitle").innerText = 'Now Playing';
+        nowPlaying.innerText = name;
         document.getElementById("miniTitle").innerText = name;
         miniPlayer.style.display = 'block';
         openPlayer();
         localStorage.setItem('lastStationIndex', current);
+        playBtn.focus();
     }
 
     function togglePlay() {
@@ -132,16 +217,24 @@ def index():
             const saved = localStorage.getItem('lastStationIndex');
             if (saved) playStation(saved);
         } else {
-            if (audio.paused) audio.play(); else audio.pause();
+            if (audio.paused) {
+                audio.play();
+                playBtn.innerHTML = '⏸️';
+            } else {
+                audio.pause();
+                playBtn.innerHTML = '▶️';
+            }
         }
     }
 
     function prev() {
         if (current > 0) playStation(current - 1);
+        else playStation(stations.length - 1); // wrap to end
     }
 
     function next() {
         if (current < stations.length - 1) playStation(current + 1);
+        else playStation(0); // wrap to start
     }
 
     function openPlayer() {
@@ -152,6 +245,9 @@ def index():
     function closePlayer() {
         playerModal.style.display = 'none';
         isOpen = false;
+        if (current >= 0) {
+            document.querySelectorAll('.card')[current].focus();
+        }
     }
 
     function togglePlayer() {
@@ -171,27 +267,94 @@ def index():
     }
 
     function showVolume() {
-        volText.innerText = `🔊 Volume: ${(audio.volume * 100).toFixed(0)}%`;
+        volText.innerText = `Volume: ${(audio.volume * 100).toFixed(0)}%`;
     }
 
-    // Keypad mapping
+    // D-pad and keyboard controls
     document.addEventListener('keydown', function(e) {
-        switch (e.key) {
-            case '1': togglePlayer(); break;      // Mini player toggle
-            case '2': volumeUp(); break;          // Volume up
-            case '8': volumeDown(); break;        // Volume down
-            case '4': prev(); break;              // Previous
-            case '6': next(); break;              // Next
-            case '5': togglePlay(); break;        // Play/Pause
+        const activeElement = document.activeElement;
+        
+        // Navigation in station grid
+        if (activeElement.classList.contains('card')) {
+            const cards = document.querySelectorAll('.card');
+            const currentIndex = Array.from(cards).indexOf(activeElement);
+            const cols = Math.floor(document.querySelector('.grid').offsetWidth / 150);
+            
+            switch(e.key) {
+                case 'ArrowUp':
+                    if (currentIndex >= cols) cards[currentIndex - cols].focus();
+                    e.preventDefault();
+                    break;
+                case 'ArrowDown':
+                    if (currentIndex < cards.length - cols) cards[currentIndex + cols].focus();
+                    e.preventDefault();
+                    break;
+                case 'ArrowLeft':
+                    if (currentIndex > 0) cards[currentIndex - 1].focus();
+                    e.preventDefault();
+                    break;
+                case 'ArrowRight':
+                    if (currentIndex < cards.length - 1) cards[currentIndex + 1].focus();
+                    e.preventDefault();
+                    break;
+            }
+        }
+        
+        // Player controls
+        switch(e.key) {
+            case 'ArrowUp': 
+                volumeUp();
+                e.preventDefault();
+                break;
+            case 'ArrowDown':
+                volumeDown();
+                e.preventDefault();
+                break;
+            case 'ArrowLeft': 
+                prev();
+                e.preventDefault();
+                break;
+            case 'ArrowRight': 
+                next();
+                e.preventDefault();
+                break;
+            case 'Enter':
+            case ' ':
+                if (activeElement.tagName === 'BUTTON') return;
+                togglePlay();
+                e.preventDefault();
+                break;
+            case 'Backspace':
+                closePlayer();
+                e.preventDefault();
+                break;
+            case 'Escape':
+                closePlayer();
+                e.preventDefault();
+                break;
         }
     });
 
+    // Initialize
     window.onload = function() {
         const savedIndex = parseInt(localStorage.getItem('lastStationIndex'));
         const savedVolume = parseFloat(localStorage.getItem('volume'));
-        if (!isNaN(savedVolume)) audio.volume = savedVolume;
-        if (!isNaN(savedIndex)) playStation(savedIndex);
+        
+        if (!isNaN(savedVolume)) {
+            audio.volume = savedVolume;
+        } else {
+            audio.volume = 0.7; // default volume
+        }
+        
+        if (!isNaN(savedIndex) && savedIndex >= 0 && savedIndex < stations.length) {
+            playStation(savedIndex);
+        }
+        
         showVolume();
+        
+        // Update play/pause button when audio state changes
+        audio.addEventListener('play', () => playBtn.innerHTML = '⏸️');
+        audio.addEventListener('pause', () => playBtn.innerHTML = '▶️');
     }
 </script>
 </body>
