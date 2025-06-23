@@ -13,39 +13,23 @@ RADIO_STATIONS = {
     "malayalam_90s": "https://stream-159.zeno.fm/gm3g9amzm0hvv?zs-x-7jq8ksTOav9ZhlYHi9xw",
 }
 
-DISPLAY_NAMES = {
-    "air_calicut": "AIR Kozhikode",
-    "radio_nellikka": "Radio Nellikka",
-    "muthnabi_radio": "Muthnabi Radio",
-    "malayalam_1": "Malayalam Radio 1",
-    "radio_digital_malayali": "Digital Malayali",
-    "malayalam_90s": "Malayalam 90s Hits"
-}
-
 def generate_stream(url):
-    process = None
     while True:
-        if process:
-            process.kill()
-        process = subprocess.Popen(
-            [
-                "ffmpeg", "-reconnect", "1", "-reconnect_streamed", "1",
-                "-reconnect_delay_max", "10", "-fflags", "nobuffer",
-                "-flags", "low_delay", "-i", url, "-vn", "-ac", "1",
-                "-b:a", "40k", "-buffer_size", "1024k", "-f", "mp3", "-"
-            ],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            bufsize=8192
-        )
+        process = subprocess.Popen([
+            "ffmpeg", "-reconnect", "1", "-reconnect_streamed", "1",
+            "-reconnect_delay_max", "10", "-fflags", "nobuffer",
+            "-flags", "low_delay", "-i", url, "-vn", "-ac", "1",
+            "-b:a", "40k", "-buffer_size", "1024k", "-f", "mp3", "-"
+        ], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+
         try:
             for chunk in iter(lambda: process.stdout.read(8192), b""):
                 yield chunk
         except GeneratorExit:
             process.kill()
             break
-        except Exception as e:
-            print(f"Stream error: {e}")
+        except Exception:
+            process.kill()
             time.sleep(5)
 
 @app.route("/<station_name>")
@@ -58,120 +42,109 @@ def stream(station_name):
 @app.route("/")
 def index():
     station_names = list(RADIO_STATIONS.keys())
+    display_names = {
+        "air_calicut": "AIR Calicut 684 AM",
+        "radio_nellikka": "Radio Nellikka",
+        "muthnabi_radio": "Muthnabi Radio",
+        "malayalam_1": "Malayalam Radio 1",
+        "radio_digital_malayali": "Digital Malayali",
+        "malayalam_90s": "Malayalam 90s Hits"
+    }
     return render_template_string("""
 <!DOCTYPE html>
 <html>
 <head>
   <meta name='viewport' content='width=device-width, initial-scale=1'>
-  <title>Muthnabi Radio</title>
+  <title>Malayalam Radio</title>
   <style>
     body {
-      background: #111;
-      color: white;
-      font-family: Arial, sans-serif;
-      margin: 0;
-      -webkit-tap-highlight-color: transparent;
+        background: #111; color: white; font-family: sans-serif; margin: 0;
     }
     h1 {
-      text-align: center;
-      font-size: 1.5rem;
-      background: linear-gradient(to right, #1a2a6c, #b21f1f, #fdbb2d);
-      margin: 0;
-      padding: 15px;
+        text-align: center; padding: 1rem; font-size: 1.5rem;
+        background: linear-gradient(to right, #1a2a6c, #b21f1f, #fdbb2d);
     }
-    #playerModal {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.95);
-      z-index: 999;
-      text-align: center;
-      padding: 20px;
-      box-sizing: border-box;
+    .grid {
+        display: grid; gap: 1rem; padding: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
     }
-    .player-content {
-      max-width: 500px;
-      margin: 0 auto;
-      padding-top: 30px;
+    .card {
+        background: #333; border-radius: 8px; padding: 1rem;
+        text-align: center; cursor: pointer; transition: 0.2s;
+    }
+    .card:hover, .card:focus {
+        background: #555;
+        outline: none;
     }
     audio {
-      width: 100%;
-      margin: 20px 0;
+        width: 100%; margin: 1rem 0;
     }
-    button {
-      background: #4CAF50;
-      border: none;
-      color: white;
-      padding: 15px;
-      font-size: 1.6rem;
-      margin: 10px;
-      border-radius: 50%;
-      cursor: pointer;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    .controls {
+        display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;
     }
-    button:focus {
-      outline: 2px solid yellow;
-      box-shadow: 0 0 8px yellow;
+    .controls button {
+        padding: 1rem; font-size: 1.5rem; border: none;
+        border-radius: 50%; background: #4caf50; color: white;
     }
-    #volText {
-      margin: 10px 0;
-      font-size: 1.2rem;
-    }
-    .label {
-      font-size: 1.5rem;
-      margin-bottom: 10px;
-      color: #4CAF50;
+    .label, #volText {
+        text-align: center; margin: 0.5rem 0;
     }
   </style>
 </head>
 <body>
-  <h1>📻 Malayalam Radio</h1>
-  <div id="playerModal">
-    <div class="player-content">
-      <div class="label" id="nowPlaying">Now Playing: Muthnabi Radio</div>
-      <audio id="modalAudio" controls></audio>
-      <div>
-        <button onclick="prev()" tabindex="0">⏮</button>
-        <button onclick="togglePlay()" id="playBtn" tabindex="0">⏯</button>
-        <button onclick="next()" tabindex="0">⏭</button>
-      </div>
-      <div>
-        <button onclick="volumeDown()" tabindex="0">−</button>
-        <button onclick="volumeUp()" tabindex="0">+</button>
-        <div id="volText">Volume: 70%</div>
-      </div>
-      <div style="margin-top:20px; font-size:0.9rem; color:#aaa;">
-        Keys: 2↑ 8↓ 4← 6→ 5⏯
-      </div>
+  <h1>📻 Malayalam Radio Stations</h1>
+  <div class="grid">
+    {% for id, name in display_names.items() %}
+    <div class="card" tabindex="0" onclick="playStation('{{ loop.index0 }}')">
+      {{ name }}
     </div>
+    {% endfor %}
+  </div>
+
+  <div class="label" id="nowPlaying">Now Playing: Loading…</div>
+  <audio id="modalAudio" controls autoplay></audio>
+
+  <div class="controls">
+    <button onclick="prev()">⏮</button>
+    <button onclick="togglePlay()" id="playBtn">⏯</button>
+    <button onclick="next()">⏭</button>
+  </div>
+
+  <div class="controls">
+    <button onclick="volumeDown()">−</button>
+    <button onclick="volumeUp()">+</button>
+  </div>
+  <div id="volText">Volume: 70%</div>
+  <div style="text-align:center; font-size: 0.9rem; color: #aaa; margin-top: 1rem;">
+    HMD D-Pad: ← Vol− | → Vol+ | ↑ Prev | ↓ Next | 5⏯
   </div>
 
 <script>
 const stations = {{ station_names|tojson }};
 const displayNames = {{ display_names|tojson }};
-let current = stations.indexOf('muthnabi_radio');
+let current = stations.indexOf("muthnabi_radio");
 const audio = document.getElementById("modalAudio");
-const volText = document.getElementById("volText");
-const playBtn = document.getElementById("playBtn");
 const nowPlaying = document.getElementById("nowPlaying");
+const playBtn = document.getElementById("playBtn");
+const volText = document.getElementById("volText");
 
 function volumeUp() {
     audio.volume = Math.min(1, audio.volume + 0.1);
     localStorage.setItem('volume', audio.volume.toFixed(2));
-    volText.innerText = `Volume: ${(audio.volume * 100).toFixed(0)}%`;
+    volText.innerText = "Volume: " + Math.round(audio.volume * 100) + "%";
 }
 function volumeDown() {
     audio.volume = Math.max(0, audio.volume - 0.1);
     localStorage.setItem('volume', audio.volume.toFixed(2));
-    volText.innerText = `Volume: ${(audio.volume * 100).toFixed(0)}%`;
+    volText.innerText = "Volume: " + Math.round(audio.volume * 100) + "%";
 }
 function togglePlay() {
     if (audio.paused) {
         audio.play();
-        playBtn.innerHTML = '⏸';
+        playBtn.innerHTML = "⏸";
     } else {
         audio.pause();
-        playBtn.innerHTML = '▶';
+        playBtn.innerHTML = "▶";
     }
 }
 function prev() {
@@ -179,48 +152,48 @@ function prev() {
     playStation(current);
 }
 function next() {
-    current = (current < stations.length - 1) ? current + 1 : 0;
+    current = (current + 1) % stations.length;
     playStation(current);
 }
 function playStation(index) {
     current = index;
     const id = stations[current];
     const name = displayNames[id] || id;
-    audio.src = '/' + id;
-    audio.play();
-    playBtn.innerHTML = '⏸';
+    audio.src = "/" + id;
     nowPlaying.innerText = "Now Playing: " + name;
+    playBtn.innerHTML = "⏸";
 }
 
-document.addEventListener('keydown', function(e) {
-    const code = e.keyCode || e.which;
+document.addEventListener("keydown", function(e) {
+    const key = e.key;
 
-    switch (code) {
-        case 50: volumeUp(); e.preventDefault(); break;       // 2
-        case 56: volumeDown(); e.preventDefault(); break;     // 8
-        case 52: prev(); e.preventDefault(); break;           // 4
-        case 54: next(); e.preventDefault(); break;           // 6
-        case 53: togglePlay(); e.preventDefault(); break;     // 5
-        case 13:
-            if (document.activeElement && document.activeElement.tagName === 'BUTTON') {
-                document.activeElement.click();
-            }
-            break;
+    switch (key) {
+        case "ArrowUp":    prev(); break;
+        case "ArrowDown":  next(); break;
+        case "ArrowLeft":  volumeDown(); break;
+        case "ArrowRight": volumeUp(); break;
+        case "5":
+        case "Enter":
+            togglePlay(); break;
+    }
+
+    if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "5"].includes(key)) {
+        e.preventDefault();
     }
 });
 
 window.onload = function() {
-    const savedVolume = localStorage.getItem('volume');
-    if (savedVolume) {
-        audio.volume = parseFloat(savedVolume);
-        volText.innerText = `Volume: ${(audio.volume * 100).toFixed(0)}%`;
+    const savedVol = localStorage.getItem("volume");
+    if (savedVol) {
+        audio.volume = parseFloat(savedVol);
+        volText.innerText = "Volume: " + Math.round(audio.volume * 100) + "%";
     }
     playStation(current);
 };
 </script>
 </body>
 </html>
-""", station_names=station_names, display_names=DISPLAY_NAMES)
+""", station_names=station_names, display_names=display_names)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000)
