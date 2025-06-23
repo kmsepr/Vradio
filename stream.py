@@ -66,7 +66,7 @@ RADIO_STATIONS = {
     "n1_news": "https://best-str.umn.cdn.united.cloud/stream?stream=sp1400&sp=n1info&channel=n1bos&u=n1info&p=n1Sh4redSecre7iNf0&player=m3u8",
     "vom_radio": "https://radio.psm.mv/draair",
 "radio_nellikka": "https://usa20.fastcast4u.com:2130/stream",
-
+}
  
 
 def generate_stream(url):
