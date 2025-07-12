@@ -145,16 +145,41 @@ def stream_page(station_name):
                 padding: 10px 20px;
                 border-radius: 6px;
             }}
+            #loading {{
+                font-size: 14px;
+                color: #555;
+                margin-bottom: 10px;
+            }}
         </style>
     </head>
     <body>
         <h2>🎙️ Now Playing: {pretty_name}</h2>
-        <audio controls autoplay>
+        <div id="loading">⏳ Loading stream...</div>
+        <audio id="player" controls preload="none">
             <source src="{stream_url}" type="audio/mpeg">
             Your browser does not support the audio element.
         </audio>
         <br>
         <a href="/">⬅️ Back</a>
+
+        <script>
+            const player = document.getElementById("player");
+            const loading = document.getElementById("loading");
+
+            document.addEventListener("DOMContentLoaded", function () {{
+                player.load();
+                player.play().then(() => {{
+                    loading.style.display = "none";
+                }}).catch(err => {{
+                    console.warn("Autoplay blocked:", err.message);
+                    loading.textContent = "▶️ Tap play to start the stream";
+                }});
+            }});
+
+            player.addEventListener("playing", () => {{
+                loading.style.display = "none";
+            }});
+        </script>
     </body>
     </html>
     """
