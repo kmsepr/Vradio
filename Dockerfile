@@ -19,4 +19,4 @@ RUN pip install flask gunicorn
 EXPOSE 8000
 
 # Start Gunicorn with 4 workers and bind to port 8000
-CMD ["gunicorn", "--workers", "4", "--timeout", "600", "--bind", "0.0.0.0:8000", "stream:app"]
+CMD ["gunicorn", "--workers", "4", "--timeout", "3600", "--bind", "0.0.0.0:8000", "stream:app"]
