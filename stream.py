@@ -1,10 +1,15 @@
 import subprocess
 import time
-from flask import Flask, Response, request
+import shutil
+from flask import Flask, Response, request, redirect
 
 app = Flask(__name__)
 
-# 📡 Full list of radio stations (provided by user)
+# ✅ Check if ffmpeg is available
+if not shutil.which("ffmpeg"):
+    raise RuntimeError("ffmpeg not found. Please install ffmpeg.")
+
+# 📡 Full list of radio stations
 RADIO_STATIONS = {
     "muthnabi_radio": "http://cast4.my-control-panel.com/proxy/muthnabi/stream",
     "radio_keralam": "http://ice31.securenetsystems.net/RADIOKERAL",
@@ -106,28 +111,23 @@ def generate_stream(url):
             time.sleep(5)
         print("🔁 Restarting FFmpeg...")
 
-@app.route("/<station_name>")
-def stream_redirect(station_name):
+
+@app.route("/stream/<station_name>")
+def stream_station(station_name):
     url = RADIO_STATIONS.get(station_name)
     if not url:
         return "⚠️ Station not found", 404
+    return Response(generate_stream(url), mimetype="audio/mpeg")
 
-    pretty_name = station_name.replace("_", " ").title()
 
-    return f"""
-    <html>
-    <head>
-        <title>{pretty_name}</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-    </head>
-    <body style="margin:0;padding:0;background:#000;color:#fff;display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;text-align:center;">
-        <div>
-            <h2>🎧 Now Playing: {pretty_name}</h2>
-            <audio src="/stream/{station_name}" autoplay controls style="width:100%;max-width:400px;"></audio>
-        </div>
-    </body>
-    </html>
-    """
+@app.route("/<station_name>")
+def direct_station_redirect(station_name):
+    url = RADIO_STATIONS.get(station_name)
+    if not url:
+        return "⚠️ Station not found", 404
+    return redirect(url)
+
+
 @app.route("/")
 def index():
     page = int(request.args.get("page", 1))
@@ -139,7 +139,7 @@ def index():
     paged_stations = station_names[start:end]
 
     links_html = "".join(
-        f"<a href='/{name}'>{name.replace('_', ' ').title()}</a>"
+        f"<a href='/stream/{name}'>{name.replace('_', ' ').title()}</a>"
         for name in paged_stations
     )
 
@@ -216,7 +216,7 @@ def index():
             }} else if (key === "4" && page > 1) {{
                 window.location.href = "/?page=" + (page - 1);
             }} else if (key === "5") {{
-                const links = document.querySelectorAll("a[href^='/']");
+                const links = document.querySelectorAll("a[href^='/stream/']");
                 const random = links[Math.floor(Math.random() * links.length)];
                 if (random) random.click();
             }} else if (key === "6" && page < total) {{
