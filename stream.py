@@ -108,11 +108,56 @@ def generate_stream(url):
 
 
 @app.route("/<station_name>")
-def stream(station_name):
+def stream_page(station_name):
     url = RADIO_STATIONS.get(station_name)
     if not url:
         return "⚠️ Station not found", 404
-    return Response(generate_stream(url), mimetype="audio/mpeg")
+
+    stream_url = f"/stream/{station_name}"
+    pretty_name = station_name.replace("_", " ").title()
+
+    return f"""
+    <html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>🎧 {pretty_name}</title>
+        <style>
+            body {{
+                font-family: sans-serif;
+                font-size: 14px;
+                background: #f9f9f9;
+                padding: 20px;
+                text-align: center;
+            }}
+            h2 {{
+                font-size: 18px;
+                margin-bottom: 20px;
+            }}
+            audio {{
+                width: 100%;
+                margin-bottom: 20px;
+            }}
+            a {{
+                display: inline-block;
+                background: #007bff;
+                color: white;
+                text-decoration: none;
+                padding: 10px 20px;
+                border-radius: 6px;
+            }}
+        </style>
+    </head>
+    <body>
+        <h2>🎙️ Now Playing: {pretty_name}</h2>
+        <audio controls autoplay>
+            <source src="{stream_url}" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+        <br>
+        <a href="/">⬅️ Back</a>
+    </body>
+    </html>
+    """
 
 
 @app.route("/")
