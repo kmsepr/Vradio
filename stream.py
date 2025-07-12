@@ -1,7 +1,6 @@
 import subprocess
 import time
-from flask import Flask, Response
-
+from flask import Flask, Response, request
 app = Flask(__name__)
 
 # 📡 List of radio stations
@@ -69,6 +68,8 @@ RADIO_STATIONS = {
 
 }
 
+STATIONS_PER_PAGE = 10
+
 
 # 🔄 Function to stream and convert to audio using ffmpeg
 def generate_stream(url):
@@ -111,9 +112,27 @@ def stream(station_name):
 # 🏠 Homepage with links to all stations
 @app.route("/")
 def index():
-    links = [f"<a href='/{name}'>{name}</a>" for name in RADIO_STATIONS]
-    return "<h2>🎙️ Audio Streams</h2>" + "<br>".join(links)
+    page = int(request.args.get("page", 1))
+    station_names = list(RADIO_STATIONS.keys())
+    total_pages = (len(station_names) + STATIONS_PER_PAGE - 1) // STATIONS_PER_PAGE
 
-# 🚀 Run the app
+    start = (page - 1) * STATIONS_PER_PAGE
+    end = start + STATIONS_PER_PAGE
+    paged_stations = station_names[start:end]
+
+    links = [f"<a href='/{name}'>{name}</a>" for name in paged_stations]
+    nav = ""
+
+    if page > 1:
+        nav += f"<a href='/?page={page - 1}'>&laquo; Previous</a> "
+    if page < total_pages:
+        nav += f"<a href='/?page={page + 1}'>Next &raquo;</a>"
+
+    return f"""
+        <h2>🎙️ Audio Streams (Page {page}/{total_pages})</h2>
+        {"<br>".join(links)}<br><br>
+        {nav}
+    """
+# For local debug only
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000, debug=True)
+    app.run(debug=True)
