@@ -106,30 +106,29 @@ def generate_stream(url):
             time.sleep(5)
         print("🔁 Restarting FFmpeg...")
 
-
 @app.route("/<station_name>")
 def stream_page(station_name):
     url = RADIO_STATIONS.get(station_name)
     if not url:
         return "⚠️ Station not found", 404
 
+    stream_url = f"/stream/{station_name}"
     pretty_name = station_name.replace("_", " ").title()
 
     return f"""
     <html>
     <head>
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>🎧 {pretty_name}</title>
+        <title>{pretty_name}</title>
         <style>
             body {{
                 font-family: sans-serif;
-                font-size: 16px;
                 background: #f9f9f9;
                 padding: 20px;
                 text-align: center;
+                font-size: 16px;
             }}
             h2 {{
-                font-size: 20px;
                 margin-bottom: 20px;
             }}
             a {{
@@ -139,18 +138,29 @@ def stream_page(station_name):
                 text-decoration: none;
                 padding: 10px 20px;
                 border-radius: 6px;
-                font-size: 14px;
+            }}
+            audio {{
+                display: none;
             }}
         </style>
     </head>
     <body>
         <h2>🎙️ Now Playing: {pretty_name}</h2>
+        <audio id="player" autoplay>
+            <source src="{stream_url}" type="audio/mpeg">
+        </audio>
         <a href="/">⬅️ Back</a>
+
+        <script>
+            const player = document.getElementById("player");
+            player.volume = 1.0;
+            player.play().catch(err => {{
+                alert("🔈 Tap to start audio");
+            }});
+        </script>
     </body>
     </html>
     """
-
-
 @app.route("/")
 def index():
     page = int(request.args.get("page", 1))
