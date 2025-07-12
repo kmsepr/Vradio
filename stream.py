@@ -185,24 +185,36 @@ def index():
         <div class="nav">{nav_html}</div>
 
         <script>
-        document.addEventListener("keydown", function(e) {{
-            const key = e.key;
-            let page = {page};
-            let total = {total_pages};
+document.addEventListener("keydown", function(e) {
+    const key = e.key;
+    let page = {{ page }};
+    let total = {{ total_pages }};
 
-            if (key === "1") {{
-                window.location.href = "/?page=1";  // First
-            }} else if (key === "4" && page > 1) {{
-                window.location.href = "/?page=" + (page - 1);  // Prev
-            }} else if (key === "6" && page < total) {{
-                window.location.href = "/?page=" + (page + 1);  // Next
-            }} else if (key === "9") {{
-                window.location.href = "/?page=" + total;  // Last
-            }} else if (key === "0") {{
-                window.location.reload();  // Refresh
-            }}
-        }});
-        </script>
+    if (key === "1") {
+        window.location.href = "/?page=1";  // First page
+    } else if (key === "2") {
+        window.location.reload();  // Refresh
+    } else if (key === "3") {
+        window.location.href = "/?page=" + total;  // Last page
+    } else if (key === "4" && page > 1) {
+        window.location.href = "/?page=" + (page - 1);  // Prev
+    } else if (key === "5") {
+        const links = document.querySelectorAll("a[href^='/']");
+        const random = links[Math.floor(Math.random() * links.length)];
+        if (random) random.click();  // Random station
+    } else if (key === "6" && page < total) {
+        window.location.href = "/?page=" + (page + 1);  // Next
+    } else if (key === "7") {
+        window.scrollTo({ top: 0, behavior: "smooth" });  // Scroll to top
+    } else if (key === "8") {
+        window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });  // Scroll to bottom
+    } else if (key === "9") {
+        window.location.href = "/?page=" + (page < total ? page + 1 : 1);  // Next or restart
+    } else if (key === "0") {
+        window.location.href = "about:blank";  // Exit app
+    }
+});
+</script>
     </body>
     </html>
     """
