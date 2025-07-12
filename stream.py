@@ -70,7 +70,7 @@ RADIO_STATIONS = {
 }
 
 
-# 🔄 Streaming function with error handling
+# 🔄 Function to stream and convert to audio using ffmpeg
 def generate_stream(url):
     process = None
     while True:
@@ -86,7 +86,7 @@ def generate_stream(url):
             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=8192
         )
 
-        print(f"🎵 Streaming from: {url} (Mono, 40kbps)")
+        print(f"🎵 Streaming from: {url} (Mono, 24kbps MP3)")
 
         try:
             for chunk in iter(lambda: process.stdout.read(8192), b""):
@@ -97,21 +97,23 @@ def generate_stream(url):
         except Exception as e:
             print(f"⚠️ Stream error: {e}")
 
-        print("🔄 FFmpeg stopped, restarting stream...")
+        print("🔁 Restarting FFmpeg...")
         time.sleep(5)
 
-# 🌍 API to stream a station
+# 🎧 Route to stream any station
 @app.route("/<station_name>")
 def stream(station_name):
     url = RADIO_STATIONS.get(station_name)
     if not url:
         return "⚠️ Station not found", 404
     return Response(generate_stream(url), mimetype="audio/mpeg")
+
+# 🏠 Homepage with links to all stations
 @app.route("/")
-
 def index():
-    return "<br>".join(f"<a href='/{name}'>{name}</a>" for name in RADIO_STATIONS)
+    links = [f"<a href='/{name}'>{name}</a>" for name in RADIO_STATIONS]
+    return "<h2>🎙️ Audio Streams</h2>" + "<br>".join(links)
 
-# 🚀 Launch the app
+# 🚀 Run the app
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000, debug=True)
