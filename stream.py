@@ -183,6 +183,26 @@ def index():
         <h2>🎙️ Audio Streams (Page {page}/{total_pages})</h2>
         {links_html}
         <div class="nav">{nav_html}</div>
+
+        <script>
+        document.addEventListener("keydown", function(e) {{
+            const key = e.key;
+            let page = {page};
+            let total = {total_pages};
+
+            if (key === "1") {{
+                window.location.href = "/?page=1";  // First
+            }} else if (key === "4" && page > 1) {{
+                window.location.href = "/?page=" + (page - 1);  // Prev
+            }} else if (key === "6" && page < total) {{
+                window.location.href = "/?page=" + (page + 1);  // Next
+            }} else if (key === "9") {{
+                window.location.href = "/?page=" + total;  // Last
+            }} else if (key === "0") {{
+                window.location.reload();  // Refresh
+            }}
+        }});
+        </script>
     </body>
     </html>
     """
