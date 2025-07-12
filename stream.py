@@ -68,6 +68,7 @@ RADIO_STATIONS = {
 
 }
 
+
 STATIONS_PER_PAGE = 10
 KEEPALIVE_INTERVAL = 30  # seconds
 
@@ -84,7 +85,7 @@ def generate_stream(url):
             [
                 "ffmpeg", "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "10",
                 "-fflags", "nobuffer", "-flags", "low_delay", "-i", url,
-                "-vn", "-ac", "1", "-b:a", "24k", "-f", "mp3", "-"
+                "-vn", "-ac", "1", "-b:a", "40k", "-f", "mp3", "-"
             ],
             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=8192
         )
@@ -98,7 +99,6 @@ def generate_stream(url):
                     last_data_time = time.time()
                     yield chunk
                 elif time.time() - last_data_time > KEEPALIVE_INTERVAL:
-                    # Send dummy data to keep connection alive
                     yield b"\0" * 10
                     last_data_time = time.time()
         except GeneratorExit:
@@ -147,37 +147,37 @@ def index():
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>🎧 Radio Streams</title>
         <style>
-    body {
-        font-family: sans-serif;
-        font-size: 14px;
-        padding: 400px;
-        margin: auto;
-        background: #f0f0f0;
-    }
-    h2 {
-        font-size: 16px;
-        text-align: center;
-        margin: 10px 0;
-    }
-    a {
-        display: block;
-        background: #007bff;
-        color: white;
-        text-decoration: none;
-        padding: 6px;
-        margin: 4px 0;
-        border-radius: 6px;
-        text-align: center;
-        font-size: 12px;
-    }
-    .nav {
-        display: flex;
-        justify-content: space-between;
-        flex-wrap: wrap;
-        margin-top: 10px;
-        gap: 4px;
-    }
-</style>
+            body {{
+                font-family: sans-serif;
+                font-size: 14px;
+                padding: 10px;
+                margin: 0;
+                background: #f0f0f0;
+            }}
+            h2 {{
+                font-size: 16px;
+                text-align: center;
+                margin: 10px 0;
+            }}
+            a {{
+                display: block;
+                background: #007bff;
+                color: white;
+                text-decoration: none;
+                padding: 8px;
+                margin: 4px 0;
+                border-radius: 6px;
+                text-align: center;
+                font-size: 13px;
+            }}
+            .nav {{
+                display: flex;
+                justify-content: space-between;
+                flex-wrap: wrap;
+                margin-top: 10px;
+                gap: 4px;
+            }}
+        </style>
     </head>
     <body>
         <h2>🎙️ Audio Streams (Page {page}/{total_pages})</h2>
