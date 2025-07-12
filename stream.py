@@ -147,33 +147,37 @@ def index():
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>🎧 Radio Streams</title>
         <style>
-            body {{
-                font-family: sans-serif;
-                font-size: 1.2em;
-                padding: 10px;
-                margin: 0;
-                background: #f9f9f9;
-            }}
-            h2 {{
-                text-align: center;
-            }}
-            a {{
-                display: block;
-                background: #007bff;
-                color: white;
-                text-decoration: none;
-                padding: 12px;
-                margin: 8px 0;
-                border-radius: 8px;
-                text-align: center;
-            }}
-            .nav {{
-                display: flex;
-                justify-content: space-around;
-                flex-wrap: wrap;
-                margin-top: 20px;
-            }}
-        </style>
+    body {
+        font-family: sans-serif;
+        font-size: 14px;
+        padding: 400px;
+        margin: auto;
+        background: #f0f0f0;
+    }
+    h2 {
+        font-size: 16px;
+        text-align: center;
+        margin: 10px 0;
+    }
+    a {
+        display: block;
+        background: #007bff;
+        color: white;
+        text-decoration: none;
+        padding: 6px;
+        margin: 4px 0;
+        border-radius: 6px;
+        text-align: center;
+        font-size: 12px;
+    }
+    .nav {
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        margin-top: 10px;
+        gap: 4px;
+    }
+</style>
     </head>
     <body>
         <h2>🎙️ Audio Streams (Page {page}/{total_pages})</h2>
