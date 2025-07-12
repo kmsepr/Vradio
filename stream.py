@@ -1,9 +1,10 @@
 import subprocess
 import time
 from flask import Flask, Response, request
+
 app = Flask(__name__)
 
-# 📡 List of radio stations
+# 📡 Full list of radio stations (provided by user)
 RADIO_STATIONS = {
     "muthnabi_radio": "http://cast4.my-control-panel.com/proxy/muthnabi/stream",
     "radio_keralam": "http://ice31.securenetsystems.net/RADIOKERAL",
@@ -49,7 +50,6 @@ RADIO_STATIONS = {
     "air_calicut": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio082/chunklist.m3u8",
     "manjeri_fm": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio101/chunklist.m3u8",
     "real_fm": "http://air.pc.cdn.bitgravity.com/air/live/pbaudio083/playlist.m3u8",
-
     "safari_tv": "https://j78dp346yq5r-hls-live.5centscdn.com/safari/live.stream/chunks.m3u8",
     "victers_tv": "https://932y4x26ljv8-hls-live.5centscdn.com/victers/tv.stream/victers/tv1/chunks.m3u8",
     "kairali_we": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/wetv_nim_https/050522/wetv/playlist.m3u8",
@@ -63,11 +63,8 @@ RADIO_STATIONS = {
     "bloomberg_tv": "https://bloomberg-bloomberg-3-br.samsung.wurl.tv/manifest/playlist.m3u8",
     "france_24": "https://live.france24.com/hls/live/2037218/F24_EN_HI_HLS/master_500.m3u8",
     "n1_news": "https://best-str.umn.cdn.united.cloud/stream?stream=sp1400&sp=n1info&channel=n1bos&u=n1info&p=n1Sh4redSecre7iNf0&player=m3u8",
-
     "rt_esp": "https://rt-esp.rttv.com/dvr/rtesp/playlist_64Kb.m3u8",
-
 }
-
 
 STATIONS_PER_PAGE = 10
 KEEPALIVE_INTERVAL = 30  # seconds
@@ -177,44 +174,51 @@ def index():
                 margin-top: 10px;
                 gap: 4px;
             }}
+            .info {{
+                font-size: 11px;
+                text-align: center;
+                margin-top: 8px;
+                color: #555;
+            }}
         </style>
     </head>
     <body>
         <h2>🎙️ Audio Streams (Page {page}/{total_pages})</h2>
         {links_html}
         <div class="nav">{nav_html}</div>
+        <div class="info">🔢 T9 Keys: 1=First, 4=Prev, 6=Next, 3=Last, 5=Random, 0=Exit</div>
 
         <script>
-document.addEventListener("keydown", function(e) {
-    const key = e.key;
-    let page = {{ page }};
-    let total = {{ total_pages }};
+        document.addEventListener("keydown", function(e) {{
+            const key = e.key;
+            let page = {page};
+            let total = {total_pages};
 
-    if (key === "1") {
-        window.location.href = "/?page=1";  // First page
-    } else if (key === "2") {
-        window.location.reload();  // Refresh
-    } else if (key === "3") {
-        window.location.href = "/?page=" + total;  // Last page
-    } else if (key === "4" && page > 1) {
-        window.location.href = "/?page=" + (page - 1);  // Prev
-    } else if (key === "5") {
-        const links = document.querySelectorAll("a[href^='/']");
-        const random = links[Math.floor(Math.random() * links.length)];
-        if (random) random.click();  // Random station
-    } else if (key === "6" && page < total) {
-        window.location.href = "/?page=" + (page + 1);  // Next
-    } else if (key === "7") {
-        window.scrollTo({ top: 0, behavior: "smooth" });  // Scroll to top
-    } else if (key === "8") {
-        window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });  // Scroll to bottom
-    } else if (key === "9") {
-        window.location.href = "/?page=" + (page < total ? page + 1 : 1);  // Next or restart
-    } else if (key === "0") {
-        window.location.href = "about:blank";  // Exit app
-    }
-});
-</script>
+            if (key === "1") {{
+                window.location.href = "/?page=1";
+            }} else if (key === "2") {{
+                window.location.reload();
+            }} else if (key === "3") {{
+                window.location.href = "/?page=" + total;
+            }} else if (key === "4" && page > 1) {{
+                window.location.href = "/?page=" + (page - 1);
+            }} else if (key === "5") {{
+                const links = document.querySelectorAll("a[href^='/']");
+                const random = links[Math.floor(Math.random() * links.length)];
+                if (random) random.click();
+            }} else if (key === "6" && page < total) {{
+                window.location.href = "/?page=" + (page + 1);
+            }} else if (key === "7") {{
+                window.scrollTo({{ top: 0, behavior: "smooth" }});
+            }} else if (key === "8") {{
+                window.scrollTo({{ top: document.body.scrollHeight, behavior: "smooth" }});
+            }} else if (key === "9") {{
+                window.location.href = "/?page=" + (page < total ? page + 1 : 1);
+            }} else if (key === "0") {{
+                window.location.href = "about:blank";
+            }}
+        }});
+        </script>
     </body>
     </html>
     """
