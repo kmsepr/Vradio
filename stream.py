@@ -107,57 +107,24 @@ def generate_stream(url):
         print("🔁 Restarting FFmpeg...")
 
 @app.route("/<station_name>")
-def stream_page(station_name):
+def stream_redirect(station_name):
     url = RADIO_STATIONS.get(station_name)
     if not url:
         return "⚠️ Station not found", 404
 
-    stream_url = f"/stream/{station_name}"
     pretty_name = station_name.replace("_", " ").title()
 
     return f"""
     <html>
     <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>{pretty_name}</title>
-        <style>
-            body {{
-                font-family: sans-serif;
-                background: #f9f9f9;
-                padding: 20px;
-                text-align: center;
-                font-size: 16px;
-            }}
-            h2 {{
-                margin-bottom: 20px;
-            }}
-            a {{
-                display: inline-block;
-                background: #007bff;
-                color: white;
-                text-decoration: none;
-                padding: 10px 20px;
-                border-radius: 6px;
-            }}
-            audio {{
-                display: none;
-            }}
-        </style>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
     </head>
-    <body>
-        <h2>🎙️ Now Playing: {pretty_name}</h2>
-        <audio id="player" autoplay>
-            <source src="{stream_url}" type="audio/mpeg">
-        </audio>
-        <a href="/">⬅️ Back</a>
-
-        <script>
-            const player = document.getElementById("player");
-            player.volume = 1.0;
-            player.play().catch(err => {{
-                alert("🔈 Tap to start audio");
-            }});
-        </script>
+    <body style="margin:0;padding:0;background:#000;color:#fff;display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;text-align:center;">
+        <div>
+            <h2>🎧 Now Playing: {pretty_name}</h2>
+            <audio src="/stream/{station_name}" autoplay controls style="width:100%;max-width:400px;"></audio>
+        </div>
     </body>
     </html>
     """
