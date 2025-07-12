@@ -69,39 +69,47 @@ RADIO_STATIONS = {
 }
 
 STATIONS_PER_PAGE = 10
+KEEPALIVE_INTERVAL = 30  # seconds
 
 
-# 🔄 Function to stream and convert to audio using ffmpeg
 def generate_stream(url):
+    last_data_time = time.time()
     process = None
+
     while True:
         if process:
             process.kill()
 
         process = subprocess.Popen(
             [
-                "ffmpeg", "-reconnect", "1", "-reconnect_streamed", "1",
-                "-reconnect_delay_max", "10", "-fflags", "nobuffer", "-flags", "low_delay",
-                "-i", url, "-vn", "-ac", "1", "-b:a", "24k", "-buffer_size", "1024k", "-f", "mp3", "-"
+                "ffmpeg", "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "10",
+                "-fflags", "nobuffer", "-flags", "low_delay", "-i", url,
+                "-vn", "-ac", "1", "-b:a", "24k", "-f", "mp3", "-"
             ],
             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=8192
         )
 
-        print(f"🎵 Streaming from: {url} (Mono, 24kbps MP3)")
+        print(f"🎵 Streaming from: {url}")
 
         try:
-            for chunk in iter(lambda: process.stdout.read(8192), b""):
-                yield chunk
+            while True:
+                chunk = process.stdout.read(8192)
+                if chunk:
+                    last_data_time = time.time()
+                    yield chunk
+                elif time.time() - last_data_time > KEEPALIVE_INTERVAL:
+                    # Send dummy data to keep connection alive
+                    yield b"\0" * 10
+                    last_data_time = time.time()
         except GeneratorExit:
             process.kill()
             break
         except Exception as e:
             print(f"⚠️ Stream error: {e}")
-
+            time.sleep(5)
         print("🔁 Restarting FFmpeg...")
-        time.sleep(5)
 
-# 🎧 Route to stream any station
+
 @app.route("/<station_name>")
 def stream(station_name):
     url = RADIO_STATIONS.get(station_name)
@@ -109,7 +117,7 @@ def stream(station_name):
         return "⚠️ Station not found", 404
     return Response(generate_stream(url), mimetype="audio/mpeg")
 
-# 🏠 Homepage with links to all stations
+
 @app.route("/")
 def index():
     page = int(request.args.get("page", 1))
@@ -120,19 +128,62 @@ def index():
     end = start + STATIONS_PER_PAGE
     paged_stations = station_names[start:end]
 
-    links = [f"<a href='/{name}'>{name}</a>" for name in paged_stations]
-    nav = ""
+    links_html = "".join(
+        f"<a href='/{name}'>{name.replace('_', ' ').title()}</a>"
+        for name in paged_stations
+    )
 
+    nav_html = ""
     if page > 1:
-        nav += f"<a href='/?page={page - 1}'>&laquo; Previous</a> "
+        nav_html += f"<a href='/?page=1'>⏮️ First</a>"
+        nav_html += f"<a href='/?page={page - 1}'>◀️ Prev</a>"
     if page < total_pages:
-        nav += f"<a href='/?page={page + 1}'>Next &raquo;</a>"
+        nav_html += f"<a href='/?page={page + 1}'>Next ▶️</a>"
+        nav_html += f"<a href='/?page={total_pages}'>Last ⏭️</a>"
 
-    return f"""
+    html = f"""
+    <html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>🎧 Radio Streams</title>
+        <style>
+            body {{
+                font-family: sans-serif;
+                font-size: 1.2em;
+                padding: 10px;
+                margin: 0;
+                background: #f9f9f9;
+            }}
+            h2 {{
+                text-align: center;
+            }}
+            a {{
+                display: block;
+                background: #007bff;
+                color: white;
+                text-decoration: none;
+                padding: 12px;
+                margin: 8px 0;
+                border-radius: 8px;
+                text-align: center;
+            }}
+            .nav {{
+                display: flex;
+                justify-content: space-around;
+                flex-wrap: wrap;
+                margin-top: 20px;
+            }}
+        </style>
+    </head>
+    <body>
         <h2>🎙️ Audio Streams (Page {page}/{total_pages})</h2>
-        {"<br>".join(links)}<br><br>
-        {nav}
+        {links_html}
+        <div class="nav">{nav_html}</div>
+    </body>
+    </html>
     """
-# For local debug only
+    return html
+
+
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=8000)
