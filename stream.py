@@ -120,13 +120,83 @@ def stream_station(station_name):
     return Response(generate_stream(url), mimetype="audio/mpeg")
 
 
-@app.route("/<station_name>")
-def direct_station_redirect(station_name):
+@app.route("/play/<station_name>")
+def play_station(station_name):
     url = RADIO_STATIONS.get(station_name)
     if not url:
         return "⚠️ Station not found", 404
-    return redirect(url)
 
+    display_name = station_name.replace("_", " ").title()
+    stream_url = f"/stream/{station_name}"
+
+
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>{display_name}</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+            body {{
+                font-family: sans-serif;
+                text-align: center;
+                background: #fff;
+                padding: 20px;
+            }}
+            audio {{
+                width: 100%;
+                margin-top: 20px;
+            }}
+            h2 {{
+                font-size: 24px;
+                margin-bottom: 10px;
+            }}
+            .info {{
+                margin: 10px 0;
+                color: #555;
+                font-size: 14px;
+            }}
+            a.back {{
+                display: inline-block;
+                padding: 8px 12px;
+                margin-top: 16px;
+                background: #007bff;
+                color: #fff;
+                text-decoration: none;
+                border-radius: 5px;
+                font-size: 14px;
+            }}
+        </style>
+    </head>
+    <body>
+        <h2>🎧 Now Playing</h2>
+        <div class="info"><strong>{display_name}</strong></div>
+        <audio id="player" controls autoplay>
+            <source id="audioSource" src="{stream_url}" type="audio/mpeg">
+            Your browser does not support audio.
+        </audio>
+        <div class="info">🔁 If stream fails, it will auto-retry</div>
+        <a href="/" class="back">⬅️ Back to Stations</a>
+
+        <script>
+            const player = document.getElementById("player");
+            const source = document.getElementById("audioSource");
+
+            player.addEventListener("error", function() {{
+                console.warn("Stream error. Retrying...");
+                setTimeout(() => {{
+                    const newSrc = source.src.split("?")[0] + "?retry=" + Date.now();
+                    source.src = newSrc;
+                    player.load();
+                    player.play().catch(err => console.warn("Autoplay failed:", err));
+                }}, 2000);
+            }});
+        </script>
+    </body>
+    </html>
+    """
+    return html
 
 @app.route("/")
 def index():
@@ -139,7 +209,7 @@ def index():
     paged_stations = station_names[start:end]
 
     links_html = "".join(
-        f"<a href='/stream/{name}'>{name.replace('_', ' ').title()}</a>"
+        f"<a href='play/{name}'>{name.replace('_', ' ').title()}</a>"
         for name in paged_stations
     )
 
