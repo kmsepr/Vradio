@@ -166,7 +166,7 @@ def play_station(station_name):
             Your browser does not support audio.
         </audio>
         <div class="info">🔁 If stream fails, it will auto-retry</div>
-        <a href="/" class="back">⬅️ Back to Stations</a>
+        
 
         <script>
             const player = document.getElementById("player");
