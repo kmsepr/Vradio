@@ -286,7 +286,7 @@ def index():
             }} else if (key === "4" && page > 1) {{
                 window.location.href = "/?page=" + (page - 1);
             }} else if (key === "5") {{
-                const links = document.querySelectorAll("a[href^='/stream/']");
+                const links = document.querySelectorAll("a[href^='play/']");
                 const random = links[Math.floor(Math.random() * links.length)];
                 if (random) random.click();
             }} else if (key === "6" && page < total) {{
