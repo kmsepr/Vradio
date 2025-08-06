@@ -1,7 +1,8 @@
 import subprocess
 import time
 import shutil
-from flask import Flask, Response, request, redirect
+import json
+from flask import Flask, Response, request
 
 app = Flask(__name__)
 
@@ -12,10 +13,8 @@ if not shutil.which("ffmpeg"):
 # 📡 Full list of radio stations
 RADIO_STATIONS = {
     "muthnabi_radio": "http://cast4.my-control-panel.com/proxy/muthnabi/stream",
-     "radio_nellikka": "https://usa20.fastcast4u.com:2130/stream",
-
-"asianet_news": "https://vidcdn.vidgyor.com/asianet-origin/audioonly/chunks.m3u8",
-
+    "radio_nellikka": "https://usa20.fastcast4u.com:2130/stream",
+    "asianet_news": "https://vidcdn.vidgyor.com/asianet-origin/audioonly/chunks.m3u8",
     "malayalam_1": "http://167.114.131.90:5412/stream",
     "radio_digital_malayali": "https://radio.digitalmalayali.in/listen/stream/radio.mp3",
     "malayalam_90s": "https://stream-159.zeno.fm/gm3g9amzm0hvv?zs-x-7jq8ksTOav9ZhlYHi9xw",
@@ -53,7 +52,6 @@ RADIO_STATIONS = {
     "sanaa_radio": "http://dc5.serverse.com/proxy/pbmhbvxs/stream",
     "rubat_ataq": "http://stream.zeno.fm/5tpfc8d7xqruv",
     "al_jazeera": "http://live-hls-audio-web-aja.getaj.net/VOICE-AJA/index.m3u8",
-    
     "air_kavarati": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio189/chunklist.m3u8",
     "air_calicut": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio082/chunklist.m3u8",
     "manjeri_fm": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio101/chunklist.m3u8",
@@ -61,10 +59,7 @@ RADIO_STATIONS = {
     "safari_tv": "https://j78dp346yq5r-hls-live.5centscdn.com/safari/live.stream/chunks.m3u8",
     "victers_tv": "https://932y4x26ljv8-hls-live.5centscdn.com/victers/tv.stream/victers/tv1/chunks.m3u8",
     "kairali_we": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/wetv_nim_https/050522/wetv/playlist.m3u8",
-
-"mazhavil_manorama": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/mazhavilmanorama_nim_https/050522/mazhavilmanorama/playlist.m3u8",
- 
-    
+    "mazhavil_manorama": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/mazhavilmanorama_nim_https/050522/mazhavilmanorama/playlist.m3u8",
     "bloomberg_tv": "https://bloomberg-bloomberg-3-br.samsung.wurl.tv/manifest/playlist.m3u8",
     "france_24": "https://live.france24.com/hls/live/2037218/F24_EN_HI_HLS/master_500.m3u8",
     "n1_news": "https://best-str.umn.cdn.united.cloud/stream?stream=sp1400&sp=n1info&channel=n1bos&u=n1info&p=n1Sh4redSecre7iNf0&player=m3u8",
@@ -82,7 +77,6 @@ def generate_stream(url):
     while True:
         if process:
             process.kill()
-
         process = subprocess.Popen(
             [
                 "ffmpeg", "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "10",
@@ -91,9 +85,6 @@ def generate_stream(url):
             ],
             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=8192
         )
-
-        print(f"🎵 Streaming from: {url}")
-
         try:
             while True:
                 chunk = process.stdout.read(8192)
@@ -109,7 +100,6 @@ def generate_stream(url):
         except Exception as e:
             print(f"⚠️ Stream error: {e}")
             time.sleep(5)
-        print("🔁 Restarting FFmpeg...")
 
 
 @app.route("/stream/<station_name>")
@@ -129,8 +119,7 @@ def play_station(station_name):
     display_name = station_name.replace("_", " ").title()
     stream_url = f"/stream/{station_name}"
 
-
-    html = f"""
+    return f"""
     <!DOCTYPE html>
     <html>
     <head>
@@ -196,13 +185,14 @@ def play_station(station_name):
     </body>
     </html>
     """
-    return html
+
 
 @app.route("/")
 def index():
     page = int(request.args.get("page", 1))
     station_names = list(RADIO_STATIONS.keys())
     total_pages = (len(station_names) + STATIONS_PER_PAGE - 1) // STATIONS_PER_PAGE
+    station_list_json = json.dumps(station_names)
 
     start = (page - 1) * STATIONS_PER_PAGE
     end = start + STATIONS_PER_PAGE
@@ -221,7 +211,7 @@ def index():
         nav_html += f"<a href='/?page={page + 1}'>Next ▶️</a>"
         nav_html += f"<a href='/?page={total_pages}'>Last ⏭️</a>"
 
-    html = f"""
+    return f"""
     <html>
     <head>
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -272,6 +262,8 @@ def index():
         <div class="info">🔢 T9 Keys: 1=First, 4=Prev, 6=Next, 3=Last, 5=Random, 0=Exit</div>
 
         <script>
+        const allStations = {station_list_json};
+
         document.addEventListener("keydown", function(e) {{
             const key = e.key;
             let page = {page};
@@ -286,9 +278,8 @@ def index():
             }} else if (key === "4" && page > 1) {{
                 window.location.href = "/?page=" + (page - 1);
             }} else if (key === "5") {{
-                const links = document.querySelectorAll("a[href^='play/']");
-                const random = links[Math.floor(Math.random() * links.length)];
-                if (random) random.click();
+                const randomStation = allStations[Math.floor(Math.random() * allStations.length)];
+                window.location.href = "/play/" + randomStation;
             }} else if (key === "6" && page < total) {{
                 window.location.href = "/?page=" + (page + 1);
             }} else if (key === "7") {{
@@ -305,7 +296,6 @@ def index():
     </body>
     </html>
     """
-    return html
 
 
 if __name__ == "__main__":
