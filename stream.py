@@ -84,13 +84,14 @@ def generate_stream(url):
         if process:
             process.kill()
         process = subprocess.Popen(
-            [
-                "ffmpeg", "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "10",
-                "-fflags", "nobuffer", "-flags", "low_delay", "-i", url,
-                "-vn", "-ac", "1", "-b:a", "40k", "-f", "mp3", "-"
-            ],
-            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=8192
-        )
+    [
+        "ffmpeg", "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "10",
+        "-fflags", "nobuffer", "-flags", "low_delay", "-i", url,
+        "-vn", "-ac", "1", "-ar", "22050", "-b:a", "24k", "-f", "mp3", "-"
+    ],
+    stdout=subprocess.PIPE,
+    stderr=subprocess.DEVNULL
+)
         try:
             while True:
                 chunk = process.stdout.read(8192)
