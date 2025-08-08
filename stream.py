@@ -124,7 +124,7 @@ def play_station(station_name):
         return "⚠️ Station not found", 404
 
     display_name = station_name.replace("_", " ").title()
-    stream_url = f"/stream/{station_name}"
+    stream_url = request.url_root.rstrip("/") + f"/stream/{station_name}"
 
     return f"""
     <!DOCTYPE html>
@@ -173,8 +173,6 @@ def play_station(station_name):
             Your browser does not support audio.
         </audio>
         <div class="info">🔁 If stream fails, it will auto-retry</div>
-        
-
         <script>
             const player = document.getElementById("player");
             const source = document.getElementById("audioSource");
