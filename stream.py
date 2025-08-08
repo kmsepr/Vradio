@@ -1,14 +1,21 @@
-from flask import Flask, Response, render_template_string
 import subprocess
 import time
+import shutil
+from flask import Flask, Response, request, redirect
 
 app = Flask(__name__)
 
+# ✅ Check if ffmpeg is available
+if not shutil.which("ffmpeg"):
+    raise RuntimeError("ffmpeg not found. Please install ffmpeg.")
 
-# 📡 List of radio stations
+# 📡 Full list of radio stations
 RADIO_STATIONS = {
     "muthnabi_radio": "http://cast4.my-control-panel.com/proxy/muthnabi/stream",
-    
+     "radio_nellikka": "https://usa20.fastcast4u.com:2130/stream",
+
+"asianet_news": "https://vidcdn.vidgyor.com/asianet-origin/audioonly/chunks.m3u8",
+
     "malayalam_1": "http://167.114.131.90:5412/stream",
     "radio_digital_malayali": "https://radio.digitalmalayali.in/listen/stream/radio.mp3",
     "malayalam_90s": "https://stream-159.zeno.fm/gm3g9amzm0hvv?zs-x-7jq8ksTOav9ZhlYHi9xw",
@@ -46,214 +53,190 @@ RADIO_STATIONS = {
     "sanaa_radio": "http://dc5.serverse.com/proxy/pbmhbvxs/stream",
     "rubat_ataq": "http://stream.zeno.fm/5tpfc8d7xqruv",
     "al_jazeera": "http://live-hls-audio-web-aja.getaj.net/VOICE-AJA/index.m3u8",
-    "asianet_news": "https://vidcdn.vidgyor.com/asianet-origin/audioonly/chunks.m3u8",
+    
     "air_kavarati": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio189/chunklist.m3u8",
     "air_calicut": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio082/chunklist.m3u8",
     "manjeri_fm": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio101/chunklist.m3u8",
     "real_fm": "http://air.pc.cdn.bitgravity.com/air/live/pbaudio083/playlist.m3u8",
-    "vom_news": "https://psmnews.mv/stream/radio-dhivehi-raajjeyge-adu",
     "safari_tv": "https://j78dp346yq5r-hls-live.5centscdn.com/safari/live.stream/chunks.m3u8",
     "victers_tv": "https://932y4x26ljv8-hls-live.5centscdn.com/victers/tv.stream/victers/tv1/chunks.m3u8",
     "kairali_we": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/wetv_nim_https/050522/wetv/playlist.m3u8",
-    
-    "dd_malayalam": "https://d3eyhgoylams0m.cloudfront.net/v1/manifest/93ce20f0f52760bf38be911ff4c91ed02aa2fd92/ed7bd2c7-8d10-4051-b397-2f6b90f99acb/562ee8f9-9950-48a0-ba1d-effa00cf0478/2.m3u8",
-   
-    "24_news": "https://segment.yuppcdn.net/110322/channel24/playlist.m3u8",
-    "mazhavil_manorama": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/mazhavilmanorama_nim_https/050522/mazhavilmanorama/playlist.m3u8",
+
+"mazhavil_manorama": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/mazhavilmanorama_nim_https/050522/mazhavilmanorama/playlist.m3u8",
+ 
     
     "bloomberg_tv": "https://bloomberg-bloomberg-3-br.samsung.wurl.tv/manifest/playlist.m3u8",
     "france_24": "https://live.france24.com/hls/live/2037218/F24_EN_HI_HLS/master_500.m3u8",
     "n1_news": "https://best-str.umn.cdn.united.cloud/stream?stream=sp1400&sp=n1info&channel=n1bos&u=n1info&p=n1Sh4redSecre7iNf0&player=m3u8",
-    "vom_radio": "https://radio.psm.mv/draair",
-"radio_nellikka": "https://usa20.fastcast4u.com:2130/stream",
+    "rt_esp": "https://rt-esp.rttv.com/dvr/rtesp/playlist_64Kb.m3u8",
 }
- 
+
+STATIONS_PER_PAGE = 10
+KEEPALIVE_INTERVAL = 30  # seconds
+
 
 def generate_stream(url):
+    last_data_time = time.time()
     process = None
+
     while True:
         if process:
             process.kill()
+
         process = subprocess.Popen(
             [
-                "ffmpeg", "-reconnect", "1", "-reconnect_streamed", "1",
-                "-reconnect_delay_max", "10", "-fflags", "nobuffer",
-                "-flags", "low_delay", "-i", url, "-vn", "-ac", "1",
-                "-b:a", "40k", "-buffer_size", "1024k", "-f", "mp3", "-"
+                "ffmpeg", "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "10",
+                "-fflags", "nobuffer", "-flags", "low_delay", "-i", url,
+                "-vn", "-ac", "1", "-b:a", "40k", "-f", "mp3", "-"
             ],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            bufsize=8192
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=8192
         )
+
+        print(f"🎵 Streaming from: {url}")
+
         try:
-            for chunk in iter(lambda: process.stdout.read(8192), b""):
-                yield chunk
+            while True:
+                chunk = process.stdout.read(8192)
+                if chunk:
+                    last_data_time = time.time()
+                    yield chunk
+                elif time.time() - last_data_time > KEEPALIVE_INTERVAL:
+                    yield b"\0" * 10
+                    last_data_time = time.time()
         except GeneratorExit:
             process.kill()
             break
         except Exception as e:
-            print(f"Stream error: {e}")
+            print(f"⚠️ Stream error: {e}")
             time.sleep(5)
+        print("🔁 Restarting FFmpeg...")
 
-@app.route("/<station_name>")
-def stream(station_name):
+
+@app.route("/stream/<station_name>")
+def stream_station(station_name):
     url = RADIO_STATIONS.get(station_name)
     if not url:
-        return "Station not found", 404
+        return "⚠️ Station not found", 404
     return Response(generate_stream(url), mimetype="audio/mpeg")
+
+
+@app.route("/<station_name>")
+def direct_station_redirect(station_name):
+    url = RADIO_STATIONS.get(station_name)
+    if not url:
+        return "⚠️ Station not found", 404
+    return redirect(url)
+
 
 @app.route("/")
 def index():
+    page = int(request.args.get("page", 1))
     station_names = list(RADIO_STATIONS.keys())
-    return render_template_string("""
-<!DOCTYPE html>
-<html>
-<head>
-    <meta name='viewport' content='width=device-width, initial-scale=1'>
-    <title>Radio</title>
-    <style>
-        body { background: #111; color: white; font-family: sans-serif; margin: 0; }
-        h1 { text-align: center; font-size: 1.2rem; padding: 10px; background: #222; margin: 0; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; padding: 10px; }
-        .card { padding: 10px; border-radius: 8px; text-align: center; background: #333; cursor: pointer; }
-        .card:hover { background: #555; }
-        #miniPlayer {
-            position: fixed; top: 0; left: 0; width: 100%;
-            background: #222; color: white; padding: 8px;
-            text-align: center; display: none; z-index: 1000;
-        }
-        #playerModal {
-            display: none; position: fixed; top: 40px; left: 0;
-            width: 100%; height: calc(100% - 40px); background: #000;
-            z-index: 999; text-align: center;
-            padding: 15px; box-sizing: border-box;
-        }
-        button {
-            background: #444; border: none; color: white;
-            padding: 10px 14px; font-size: 1.2rem;
-            margin: 4px; border-radius: 8px;
-        }
-        button:active { background: #666; }
-    </style>
-</head>
-<body>
-    <h1>📻 Radio Stations</h1>
-    <div class="grid">
-        {% for name in station_names %}
-        <div class="card" onclick="playStation('{{ loop.index0 }}')">{{ name }}</div>
-        {% endfor %}
-    </div>
+    total_pages = (len(station_names) + STATIONS_PER_PAGE - 1) // STATIONS_PER_PAGE
 
-    <div id="miniPlayer" onclick="togglePlayer()">
-        🎶 <span id="miniTitle">Now Playing</span> ⬇️
-    </div>
+    start = (page - 1) * STATIONS_PER_PAGE
+    end = start + STATIONS_PER_PAGE
+    paged_stations = station_names[start:end]
 
-    <div id="playerModal">
-        <h2 id="playerTitle">🎶 Now Playing</h2>
-        <audio id="modalAudio" controls style="width:100%; margin-top:20px;"></audio>
-        <div class="controls">
-            <button onclick="prev()">⏮️</button>
-            <button onclick="togglePlay()">⏯️</button>
-            <button onclick="next()">⏭️</button>
-        </div>
-        <div>
-            <button onclick="volumeDown()">🔉</button>
-            <button onclick="volumeUp()">🔊</button>
-            <div id="volText"></div>
-        </div>
-    </div>
+    links_html = "".join(
+        f"<a href='/stream/{name}'>{name.replace('_', ' ').title()}</a>"
+        for name in paged_stations
+    )
 
-<script>
-    const stations = {{ station_names|tojson }};
-    let current = -1;
-    let isOpen = false;
-    const audio = document.getElementById('modalAudio');
-    const volText = document.getElementById('volText');
-    const miniPlayer = document.getElementById("miniPlayer");
-    const playerModal = document.getElementById("playerModal");
+    nav_html = ""
+    if page > 1:
+        nav_html += f"<a href='/?page=1'>⏮️ First</a>"
+        nav_html += f"<a href='/?page={page - 1}'>◀️ Prev</a>"
+    if page < total_pages:
+        nav_html += f"<a href='/?page={page + 1}'>Next ▶️</a>"
+        nav_html += f"<a href='/?page={total_pages}'>Last ⏭️</a>"
 
-    function playStation(index) {
-        current = parseInt(index);
-        const name = stations[current];
-        audio.src = '/' + name;
-        audio.play();
-        document.getElementById("playerTitle").innerText = '🎶 Playing: ' + name;
-        document.getElementById("miniTitle").innerText = name;
-        miniPlayer.style.display = 'block';
-        openPlayer();
-        localStorage.setItem('lastStationIndex', current);
-    }
+    html = f"""
+    <html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>🎧 Radio Streams</title>
+        <style>
+            body {{
+                font-family: sans-serif;
+                font-size: 14px;
+                padding: 10px;
+                margin: 0;
+                background: #f0f0f0;
+            }}
+            h2 {{
+                font-size: 16px;
+                text-align: center;
+                margin: 10px 0;
+            }}
+            a {{
+                display: block;
+                background: #007bff;
+                color: white;
+                text-decoration: none;
+                padding: 8px;
+                margin: 4px 0;
+                border-radius: 6px;
+                text-align: center;
+                font-size: 13px;
+            }}
+            .nav {{
+                display: flex;
+                justify-content: space-between;
+                flex-wrap: wrap;
+                margin-top: 10px;
+                gap: 4px;
+            }}
+            .info {{
+                font-size: 11px;
+                text-align: center;
+                margin-top: 8px;
+                color: #555;
+            }}
+        </style>
+    </head>
+    <body>
+        <h2>🎙️ Audio Streams (Page {page}/{total_pages})</h2>
+        {links_html}
+        <div class="nav">{nav_html}</div>
+        <div class="info">🔢 T9 Keys: 1=First, 4=Prev, 6=Next, 3=Last, 5=Random, 0=Exit</div>
 
-    function togglePlay() {
-        if (!audio.src) {
-            const saved = localStorage.getItem('lastStationIndex');
-            if (saved) playStation(saved);
-        } else {
-            if (audio.paused) audio.play(); else audio.pause();
-        }
-    }
+        <script>
+        document.addEventListener("keydown", function(e) {{
+            const key = e.key;
+            let page = {page};
+            let total = {total_pages};
 
-    function prev() {
-        if (current > 0) playStation(current - 1);
-    }
+            if (key === "1") {{
+                window.location.href = "/?page=1";
+            }} else if (key === "2") {{
+                window.location.reload();
+            }} else if (key === "3") {{
+                window.location.href = "/?page=" + total;
+            }} else if (key === "4" && page > 1) {{
+                window.location.href = "/?page=" + (page - 1);
+            }} else if (key === "5") {{
+                const links = document.querySelectorAll("a[href^='/stream/']");
+                const random = links[Math.floor(Math.random() * links.length)];
+                if (random) random.click();
+            }} else if (key === "6" && page < total) {{
+                window.location.href = "/?page=" + (page + 1);
+            }} else if (key === "7") {{
+                window.scrollTo({{ top: 0, behavior: "smooth" }});
+            }} else if (key === "8") {{
+                window.scrollTo({{ top: document.body.scrollHeight, behavior: "smooth" }});
+            }} else if (key === "9") {{
+                window.location.href = "/?page=" + (page < total ? page + 1 : 1);
+            }} else if (key === "0") {{
+                window.location.href = "about:blank";
+            }}
+        }});
+        </script>
+    </body>
+    </html>
+    """
+    return html
 
-    function next() {
-        if (current < stations.length - 1) playStation(current + 1);
-    }
-
-    function openPlayer() {
-        playerModal.style.display = 'block';
-        isOpen = true;
-    }
-
-    function closePlayer() {
-        playerModal.style.display = 'none';
-        isOpen = false;
-    }
-
-    function togglePlayer() {
-        isOpen ? closePlayer() : openPlayer();
-    }
-
-    function volumeUp() {
-        audio.volume = Math.min(1, audio.volume + 0.1);
-        localStorage.setItem('volume', audio.volume.toFixed(2));
-        showVolume();
-    }
-
-    function volumeDown() {
-        audio.volume = Math.max(0, audio.volume - 0.1);
-        localStorage.setItem('volume', audio.volume.toFixed(2));
-        showVolume();
-    }
-
-    function showVolume() {
-        volText.innerText = `🔊 Volume: ${(audio.volume * 100).toFixed(0)}%`;
-    }
-
-    // Keypad mapping
-    document.addEventListener('keydown', function(e) {
-        switch (e.key) {
-            case '1': togglePlayer(); break;      // Mini player toggle
-            case '2': volumeUp(); break;          // Volume up
-            case '8': volumeDown(); break;        // Volume down
-            case '4': prev(); break;              // Previous
-            case '6': next(); break;              // Next
-            case '5': togglePlay(); break;        // Play/Pause
-        }
-    });
-
-    window.onload = function() {
-        const savedIndex = parseInt(localStorage.getItem('lastStationIndex'));
-        const savedVolume = parseFloat(localStorage.getItem('volume'));
-        if (!isNaN(savedVolume)) audio.volume = savedVolume;
-        if (!isNaN(savedIndex)) playStation(savedIndex);
-        showVolume();
-    }
-</script>
-</body>
-</html>
-""", station_names=station_names)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000)
