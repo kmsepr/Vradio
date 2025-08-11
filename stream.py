@@ -84,10 +84,15 @@ def generate_stream(url):
 
         process = subprocess.Popen(
             [
-                "ffmpeg", "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "10",
-                "-fflags", "nobuffer", "-flags", "low_delay", "-i", url,
-                "-vn", "-ac", "1", "-b:a", "24k", "bufsize","64k","-f", "mp3", "-"
-            ],
+    "ffmpeg", "-reconnect", "1", "-reconnect_streamed", "1",
+    "-reconnect_delay_max", "10", "-reconnect_at_eof", "1",
+    "-rw_timeout", "15000000",
+    "-probesize", "64k", "-analyzeduration", "500000",
+    "-fflags", "nobuffer",
+    "-i", url,
+    "-vn", "-ac", "1", "-b:a", "24k", "-bufsize", "64k",
+    "-f", "mp3", "-"
+],
             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=8192
         )
 
