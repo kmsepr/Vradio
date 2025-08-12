@@ -115,15 +115,9 @@ def generate_stream(url):
                 elif time.time() - last_data_time > KEEPALIVE_INTERVAL:
                     yield b"\0" * 10
                     last_data_time = time.time()
-        except GeneratorExit:
-            # Gracefully terminate ffmpeg on client disconnect
-            process.terminate()
-            try:
-                process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                process.wait()
-            break
+   except GeneratorExit:
+        process.kill()
+        break
         except Exception as e:
             print(f"⚠️ Stream error: {e}")
             time.sleep(5)
