@@ -1,7 +1,8 @@
 import subprocess
 import time
 import shutil
-from flask import Flask, Response, request, redirect
+import json
+from flask import Flask, Response, request
 
 app = Flask(__name__)
 
@@ -12,8 +13,7 @@ if not shutil.which("ffmpeg"):
 # 📡 Full list of radio stations
 RADIO_STATIONS = {
     "muthnabi_radio": "http://cast4.my-control-panel.com/proxy/muthnabi/stream",
-     "radio_nellikka": "https://usa20.fastcast4u.com:2130/stream",
-
+    "radio_nellikka": "https://usa20.fastcast4u.com:2130/stream",
 "air_kavarati": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio189/chunklist.m3u8",
     "air_calicut": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio082/chunklist.m3u8",
     "manjeri_fm": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio101/chunklist.m3u8",
@@ -21,9 +21,8 @@ RADIO_STATIONS = {
     "safari_tv": "https://j78dp346yq5r-hls-live.5centscdn.com/safari/live.stream/chunks.m3u8",
     "victers_tv": "https://932y4x26ljv8-hls-live.5centscdn.com/victers/tv.stream/victers/tv1/chunks.m3u8",
     "kairali_we": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/wetv_nim_https/050522/wetv/playlist.m3u8",
-
-"mazhavil_manorama": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/mazhavilmanorama_nim_https/050522/mazhavilmanorama/playlist.m3u8",
-
+    "mazhavil_manorama": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/mazhavilmanorama_nim_https/050522/mazhavilmanorama/playlist.m3u8",
+    "bloomberg_tv": "https://bloomberg-bloomberg-3-br.samsung.wurl.tv/manifest/playlist.m3u8",
     "malayalam_1": "http://167.114.131.90:5412/stream",
     "radio_digital_malayali": "https://radio.digitalmalayali.in/listen/stream/radio.mp3",
     "malayalam_90s": "https://stream-159.zeno.fm/gm3g9amzm0hvv?zs-x-7jq8ksTOav9ZhlYHi9xw",
@@ -32,13 +31,20 @@ RADIO_STATIONS = {
     "swaranjali": "https://stream-161.zeno.fm/x7mve2vt01zuv?zs-D4nK05-7SSK2FZAsvumh2w",
     "radio_beat_malayalam": "http://live.exertion.in:8050/radio.mp3",
     "shahul_radio": "https://stream-150.zeno.fm/cynbm5ngx38uv?zs=Ktca5StNRWm-sdIR7GloVg",
+
+
     "raja_radio": "http://159.203.111.241:8026/stream",
+
     "nonstop_hindi": "http://s5.voscast.com:8216/stream",
     "fm_gold": "https://airhlspush.pc.cdn.bitgravity.com/httppush/hispbaudio005/hispbaudio00564kbps.m3u8",
+
+
     "motivational_series": "http://104.7.66.64:8010",
     "deenagers_radio": "http://104.7.66.64:8003/",
     "hajj_channel": "http://104.7.66.64:8005",
     "abc_islam": "http://s10.voscast.com:9276/stream",
+
+
     "eram_fm": "http://icecast2.edisimo.com:8000/eramfm.mp3",
     "al_sumood_fm": "http://us3.internet-radio.com/proxy/alsumoodfm2020?mp=/stream",
     "nur_ala_nur": "http://104.7.66.64:8011/",
@@ -56,18 +62,14 @@ RADIO_STATIONS = {
     "al_nour": "http://audiostreaming.itworkscdn.com:9066/",
     "allahu_akbar_radio": "http://66.45.232.132:9996/stream",
     "omar_abdul_kafi_radio": "http://104.7.66.64:8007",
+
     "urdu_islamic_lecture": "http://144.91.121.54:27001/channel_02.aac",
     "hob_nabi": "http://216.245.210.78:8098/stream",
     "sanaa_radio": "http://dc5.serverse.com/proxy/pbmhbvxs/stream",
     "rubat_ataq": "http://stream.zeno.fm/5tpfc8d7xqruv",
     "al_jazeera": "http://live-hls-audio-web-aja.getaj.net/VOICE-AJA/index.m3u8",
-
-
-
-
-    "bloomberg_tv": "https://bloomberg-bloomberg-3-br.samsung.wurl.tv/manifest/playlist.m3u8",
-    "france_24": "https://live.france24.com/hls/live/2037218/F24_EN_HI_HLS/master_500.m3u8",
-
+    
+    
 }
 
 STATIONS_PER_PAGE = 10
@@ -81,23 +83,14 @@ def generate_stream(url):
     while True:
         if process:
             process.kill()
-
         process = subprocess.Popen(
             [
-    "ffmpeg", "-reconnect", "1", "-reconnect_streamed", "1",
-    "-reconnect_delay_max", "10", "-reconnect_at_eof", "1",
-    "-rw_timeout", "15000000",
-    "-probesize", "64k", "-analyzeduration", "500000",
-    "-fflags", "nobuffer",
-    "-i", url,
-    "-vn", "-ac", "1", "-b:a", "24k", "-bufsize", "64k",
-    "-f", "mp3", "-"
-],
+                "ffmpeg", "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "10",
+                "-fflags", "nobuffer", "-flags", "low_delay", "-i", url,
+                "-vn", "-ac", "1", "-b:a", "32k", "-f", "mp3", "-"
+            ],
             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=8192
         )
-
-        print(f"🎵 Streaming from: {url}")
-
         try:
             while True:
                 chunk = process.stdout.read(8192)
@@ -113,7 +106,6 @@ def generate_stream(url):
         except Exception as e:
             print(f"⚠️ Stream error: {e}")
             time.sleep(5)
-        print("🔁 Restarting FFmpeg...")
 
 
 @app.route("/stream/<station_name>")
@@ -124,12 +116,81 @@ def stream_station(station_name):
     return Response(generate_stream(url), mimetype="audio/mpeg")
 
 
-@app.route("/<station_name>")
-def direct_station_redirect(station_name):
+@app.route("/play/<station_name>")
+def play_station(station_name):
     url = RADIO_STATIONS.get(station_name)
     if not url:
         return "⚠️ Station not found", 404
-    return redirect(url)
+
+    display_name = station_name.replace("_", " ").title()
+    stream_url = f"/stream/{station_name}"
+
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>{display_name}</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+            body {{
+                font-family: sans-serif;
+                text-align: center;
+                background: #fff;
+                padding: 20px;
+            }}
+            audio {{
+                width: 100%;
+                margin-top: 20px;
+            }}
+            h2 {{
+                font-size: 24px;
+                margin-bottom: 10px;
+            }}
+            .info {{
+                margin: 10px 0;
+                color: #555;
+                font-size: 14px;
+            }}
+            a.back {{
+                display: inline-block;
+                padding: 8px 12px;
+                margin-top: 16px;
+                background: #007bff;
+                color: #fff;
+                text-decoration: none;
+                border-radius: 5px;
+                font-size: 14px;
+            }}
+        </style>
+    </head>
+    <body>
+        <h2>🎧 Now Playing</h2>
+        <div class="info"><strong>{display_name}</strong></div>
+        <audio id="player" controls autoplay>
+            <source id="audioSource" src="{stream_url}" type="audio/mpeg">
+            Your browser does not support audio.
+        </audio>
+        <div class="info">🔁 If stream fails, it will auto-retry</div>
+        
+
+        <script>
+            const player = document.getElementById("player");
+            const source = document.getElementById("audioSource");
+
+            player.addEventListener("error", function() {{
+                console.warn("Stream error. Retrying...");
+                setTimeout(() => {{
+                    const newSrc = source.src.split("?")[0] + "?retry=" + Date.now();
+                    source.src = newSrc;
+                    player.load();
+                    player.play().catch(err => console.warn("Autoplay failed:", err));
+                }}, 2000);
+            }});
+        </script>
+    </body>
+    </html>
+    """
 
 
 @app.route("/")
@@ -137,13 +198,14 @@ def index():
     page = int(request.args.get("page", 1))
     station_names = list(RADIO_STATIONS.keys())
     total_pages = (len(station_names) + STATIONS_PER_PAGE - 1) // STATIONS_PER_PAGE
+    station_list_json = json.dumps(station_names)
 
     start = (page - 1) * STATIONS_PER_PAGE
     end = start + STATIONS_PER_PAGE
     paged_stations = station_names[start:end]
 
     links_html = "".join(
-        f"<a href='/stream/{name}'>{name.replace('_', ' ').title()}</a>"
+        f"<a href='play/{name}'>{name.replace('_', ' ').title()}</a>"
         for name in paged_stations
     )
 
@@ -155,7 +217,7 @@ def index():
         nav_html += f"<a href='/?page={page + 1}'>Next ▶️</a>"
         nav_html += f"<a href='/?page={total_pages}'>Last ⏭️</a>"
 
-    html = f"""
+    return f"""
     <html>
     <head>
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -206,6 +268,8 @@ def index():
         <div class="info">🔢 T9 Keys: 1=First, 4=Prev, 6=Next, 3=Last, 5=Random, 0=Exit</div>
 
         <script>
+        const allStations = {station_list_json};
+
         document.addEventListener("keydown", function(e) {{
             const key = e.key;
             let page = {page};
@@ -220,9 +284,8 @@ def index():
             }} else if (key === "4" && page > 1) {{
                 window.location.href = "/?page=" + (page - 1);
             }} else if (key === "5") {{
-                const links = document.querySelectorAll("a[href^='/stream/']");
-                const random = links[Math.floor(Math.random() * links.length)];
-                if (random) random.click();
+                const randomStation = allStations[Math.floor(Math.random() * allStations.length)];
+                window.location.href = "/play/" + randomStation;
             }} else if (key === "6" && page < total) {{
                 window.location.href = "/?page=" + (page + 1);
             }} else if (key === "7") {{
@@ -239,7 +302,6 @@ def index():
     </body>
     </html>
     """
-    return html
 
 
 if __name__ == "__main__":
