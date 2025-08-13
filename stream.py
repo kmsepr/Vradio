@@ -143,11 +143,6 @@ def play_station(station_name):
     if not url:
         return "⚠️ Station not found", 404
 
-    station_names = list(RADIO_STATIONS.keys())
-    current_index = station_names.index(station_name)
-    prev_station = station_names[current_index - 1] if current_index > 0 else station_names[-1]
-    next_station = station_names[current_index + 1] if current_index < len(station_names) - 1 else station_names[0]
-
     display_name = station_name.replace("_", " ").title()
     stream_url = f"/stream/{station_name}"
 
@@ -178,19 +173,15 @@ def play_station(station_name):
                 color: #555;
                 font-size: 14px;
             }}
-            a.btn {{
+            .timer-btn {{
                 display: inline-block;
                 padding: 8px 12px;
                 margin-top: 12px;
-                background: #007bff;
-                color: #fff;
-                text-decoration: none;
+                background: #28a745;
+                color: white;
                 border-radius: 5px;
                 font-size: 14px;
-                margin: 4px;
-            }}
-            .timer-btn {{
-                background: #28a745;
+                text-decoration: none;
             }}
             .timer-info {{
                 font-size: 14px;
@@ -207,18 +198,17 @@ def play_station(station_name):
             <source id="audioSource" src="{stream_url}" type="audio/mpeg">
             Your browser does not support audio.
         </audio>
-        <div class="info">🔁 If stream fails, it will auto-retry</div>
+        <div class="info" id="playTime">▶️ Playing: 0m 0s</div>
 
-        <a href="/play/{prev_station}" class="btn">⏮ Prev</a>
-        <a href="/play/{next_station}" class="btn">⏭ Next</a>
-        <a href="#" class="btn timer-btn" onclick="setSleepTimer()">⏲ Sleep Timer</a>
+        <a href="#" class="timer-btn" onclick="setSleepTimer()">⏲ Sleep Timer</a>
         <div id="timerInfo" class="timer-info"></div>
-        <a href="/" class="btn">🏠 Back</a>
 
         <script>
             const player = document.getElementById("player");
             const source = document.getElementById("audioSource");
+            const playTimeEl = document.getElementById("playTime");
 
+            // Auto-retry on error
             player.addEventListener("error", function() {{
                 console.warn("Stream error. Retrying...");
                 setTimeout(() => {{
@@ -229,7 +219,16 @@ def play_station(station_name):
                 }}, 2000);
             }});
 
-            // Sleep Timer
+            // Playing time counter
+            let playSeconds = 0;
+            setInterval(() => {{
+                if (!player.paused) {{
+                    playSeconds++;
+                    playTimeEl.textContent = "▶️ Playing: " + Math.floor(playSeconds / 60) + "m " + (playSeconds % 60) + "s";
+                }}
+            }}, 1000);
+
+            // Sleep timer
             let sleepTimer = null;
             let countdownInterval = null;
 
@@ -257,23 +256,10 @@ def play_station(station_name):
                     }}, 1000);
                 }}
             }}
-
-            // Keypad control
-            document.addEventListener("keydown", function(e) {{
-                if (e.key === "4") {{
-                    window.location.href = "/play/{prev_station}";
-                }} else if (e.key === "6") {{
-                    window.location.href = "/play/{next_station}";
-                }} else if (e.key === "0") {{
-                    window.location.href = "/";
-                }}
-            }});
         </script>
     </body>
     </html>
     """
-
-
 @app.route("/")
 def index():
     page = int(request.args.get("page", 1))
