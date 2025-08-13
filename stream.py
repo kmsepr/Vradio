@@ -10,19 +10,64 @@ app = Flask(__name__)
 if not shutil.which("ffmpeg"):
     raise RuntimeError("ffmpeg not found. Please install ffmpeg.")
 
-# 📡 Radio stations
+# 📡 Full list of radio stations
 RADIO_STATIONS = {
     "muthnabi_radio": "http://cast4.my-control-panel.com/proxy/muthnabi/stream",
     "radio_nellikka": "https://usa20.fastcast4u.com:2130/stream",
+    "air_kavarati": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio189/chunklist.m3u8",
     "air_calicut": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio082/chunklist.m3u8",
+    "manjeri_fm": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio101/chunklist.m3u8",
     "real_fm": "http://air.pc.cdn.bitgravity.com/air/live/pbaudio083/playlist.m3u8",
-    # ... add all other stations here
+    "safari_tv": "https://j78dp346yq5r-hls-live.5centscdn.com/safari/live.stream/chunks.m3u8",
+    "victers_tv": "https://932y4x26ljv8-hls-live.5centscdn.com/victers/tv.stream/victers/tv1/chunks.m3u8",
+    "kairali_we": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/wetv_nim_https/050522/wetv/playlist.m3u8",
+    "mazhavil_manorama": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/mazhavilmanorama_nim_https/050522/mazhavilmanorama/playlist.m3u8",
+    "bloomberg_tv": "https://bloomberg-bloomberg-3-br.samsung.wurl.tv/manifest/playlist.m3u8",
+    "malayalam_1": "http://167.114.131.90:5412/stream",
+    "radio_digital_malayali": "https://radio.digitalmalayali.in/listen/stream/radio.mp3",
+    "malayalam_90s": "https://stream-159.zeno.fm/gm3g9amzm0hvv?zs-x-7jq8ksTOav9ZhlYHi9xw",
+    "aural_oldies": "https://stream-162.zeno.fm/tksfwb1mgzzuv?zs=SxeQj1-7R0alsZSWJie5eQ",
+    "radio_malayalam": "https://radiomalayalamfm.com/radio/8000/radio.mp3",
+    "swaranjali": "https://stream-161.zeno.fm/x7mve2vt01zuv?zs-D4nK05-7SSK2FZAsvumh2w",
+    "radio_beat_malayalam": "http://live.exertion.in:8050/radio.mp3",
+    "shahul_radio": "https://stream-150.zeno.fm/cynbm5ngx38uv?zs=Ktca5StNRWm-sdIR7GloVg",
+    "raja_radio": "http://159.203.111.241:8026/stream",
+    "nonstop_hindi": "http://s5.voscast.com:8216/stream",
+    "fm_gold": "https://airhlspush.pc.cdn.bitgravity.com/httppush/hispbaudio005/hispbaudio00564kbps.m3u8",
+    "motivational_series": "http://104.7.66.64:8010",
+    "deenagers_radio": "http://104.7.66.64:8003/",
+    "hajj_channel": "http://104.7.66.64:8005",
+    "abc_islam": "http://s10.voscast.com:9276/stream",
+    "eram_fm": "http://icecast2.edisimo.com:8000/eramfm.mp3",
+    "al_sumood_fm": "http://us3.internet-radio.com/proxy/alsumoodfm2020?mp=/stream",
+    "nur_ala_nur": "http://104.7.66.64:8011/",
+    "ruqya_radio": "http://104.7.66.64:8004",
+    "seiyun_radio": "http://s2.radio.co/s26c62011e/listen",
+    "noor_al_eman": "http://edge.mixlr.com/channel/boaht",
+    "sam_yemen": "https://edge.mixlr.com/channel/kijwr",
+    "afaq": "https://edge.mixlr.com/channel/rumps",
+    "alfasi_radio": "https://qurango.net/radio/mishary_alafasi",
+    "tafsir_quran": "https://radio.quranradiotafsir.com/9992/stream",
+    "sirat_al_mustaqim": "http://104.7.66.64:8091/stream",
+    "river_nile_radio": "http://104.7.66.64:8087",
+    "quran_radio_cairo": "http://n02.radiojar.com/8s5u5tpdtwzuv",
+    "quran_radio_nablus": "http://www.quran-radio.org:8002/",
+    "al_nour": "http://audiostreaming.itworkscdn.com:9066/",
+    "allahu_akbar_radio": "http://66.45.232.132:9996/stream",
+    "omar_abdul_kafi_radio": "http://104.7.66.64:8007",
+    "urdu_islamic_lecture": "http://144.91.121.54:27001/channel_02.aac",
+    "hob_nabi": "http://216.245.210.78:8098/stream",
+    "sanaa_radio": "http://dc5.serverse.com/proxy/pbmhbvxs/stream",
+    "rubat_ataq": "http://stream.zeno.fm/5tpfc8d7xqruv",
+    "al_jazeera": "http://live-hls-audio-web-aja.getaj.net/VOICE-AJA/index.m3u8",
 }
 
 STATIONS_PER_PAGE = 10
 KEEPALIVE_INTERVAL = 30  # seconds
 
-# 🔄 Transcode/stream generator
+# -------------------------------
+# Transcoded streaming generator
+# -------------------------------
 def generate_stream(url):
     last_data_time = time.time()
     process = None
@@ -74,7 +119,10 @@ def generate_stream(url):
             print(f"⚠️ Stream error: {e}")
             time.sleep(5)
 
-# 🎛 Raw transcoded stream (direct link)
+
+# -------------------------------
+# Raw transcoded stream endpoint
+# -------------------------------
 @app.route("/stream/<station_name>")
 def stream_station(station_name):
     url = RADIO_STATIONS.get(station_name)
@@ -82,15 +130,17 @@ def stream_station(station_name):
         return "⚠️ Station not found", 404
     return Response(generate_stream(url), mimetype="audio/mpeg")
 
-# 🎧 Player with UI
+
+# -------------------------------
+# Play page without embedded player
+# -------------------------------
 @app.route("/play/<station_name>")
 def play_station(station_name):
-    url = RADIO_STATIONS.get(station_name)
-    if not url:
+    if station_name not in RADIO_STATIONS:
         return "⚠️ Station not found", 404
 
     display_name = station_name.replace("_", " ").title()
-    stream_url = f"/stream/{station_name}"  # points to transcoded stream
+    stream_url = f"/stream/{station_name}"  # raw 24kbps transcoded link
 
     return f"""
     <!DOCTYPE html>
@@ -100,59 +150,28 @@ def play_station(station_name):
         <title>{display_name}</title>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
-            body {{ font-family: sans-serif; text-align: center; background: #fff; padding: 20px; }}
-            audio {{ width: 100%; margin-top: 20px; }}
-            h2 {{ font-size: 24px; margin-bottom: 10px; }}
-            .info {{ margin: 10px 0; color: #555; font-size: 14px; }}
-            .timer-btn {{ display: inline-block; padding: 8px 12px; margin-top: 12px; background: #28a745; color: white; border-radius: 5px; font-size: 14px; text-decoration: none; }}
-            .timer-info {{ font-size: 14px; color: #333; margin-top: 6px; }}
+            body {{ font-family: sans-serif; text-align:center; padding:20px; background:#fff; }}
+            h2 {{ font-size:24px; margin-bottom:10px; }}
+            .info {{ margin:10px 0; color:#555; font-size:16px; }}
+            .timer-btn {{
+                display:inline-block; padding:8px 12px; margin-top:12px;
+                background:#28a745; color:white; border-radius:5px; font-size:14px; text-decoration:none;
+            }}
+            .timer-info {{ font-size:14px; color:#333; margin-top:6px; }}
         </style>
     </head>
     <body>
         <h2>🎧 Now Playing</h2>
         <div class="info"><strong>{display_name}</strong></div>
 
-        <audio id="player" controls autoplay>
-            <source id="audioSource" src="{stream_url}" type="audio/mpeg">
-            Your browser does not support audio.
-        </audio>
-        <div class="info" id="playTime">▶️ Playing: 0m 0s</div>
-
-        <!-- Direct Link (raw transcoded stream) -->
-        <a href="{stream_url}" target="_blank" class="timer-btn" style="background:#007bff;">🔗 Direct Link</a>
-
-        <!-- Sleep Timer -->
+        <a href="{stream_url}" target="_blank" class="timer-btn" style="background:#007bff;">🔗 Play Stream</a>
         <a href="#" class="timer-btn" onclick="setSleepTimer()">⏲ Sleep Timer</a>
         <div id="timerInfo" class="timer-info"></div>
 
         <script>
-            const player = document.getElementById("player");
-            const source = document.getElementById("audioSource");
-            const playTimeEl = document.getElementById("playTime");
-
-            // Auto-retry on error
-            player.addEventListener("error", function() {{
-                console.warn("Stream error. Retrying...");
-                setTimeout(() => {{
-                    const newSrc = source.src.split("?")[0] + "?retry=" + Date.now();
-                    source.src = newSrc;
-                    player.load();
-                    player.play().catch(err => console.warn("Autoplay failed:", err));
-                }}, 2000);
-            }});
-
-            // Playing time counter
-            let playSeconds = 0;
-            setInterval(() => {{
-                if (!player.paused) {{
-                    playSeconds++;
-                    playTimeEl.textContent = "▶️ Playing: " + Math.floor(playSeconds / 60) + "m " + (playSeconds % 60) + "s";
-                }}
-            }}, 1000);
-
-            // Sleep timer
             let sleepTimer = null;
             let countdownInterval = null;
+
             function setSleepTimer() {{
                 let minutes = prompt("Enter minutes until stop:", "30");
                 if (minutes && !isNaN(minutes) && minutes > 0) {{
@@ -161,8 +180,7 @@ def play_station(station_name):
                     clearTimeout(sleepTimer);
 
                     sleepTimer = setTimeout(() => {{
-                        player.pause();
-                        alert("⏹ Sleep timer reached. Stream stopped.");
+                        alert("⏹ Sleep timer reached.");
                         document.getElementById("timerInfo").textContent = "";
                     }}, secondsLeft * 1000);
 
@@ -179,7 +197,10 @@ def play_station(station_name):
     </html>
     """
 
-# 📄 Main page: paginated list of stations
+
+# -------------------------------
+# Index page with pagination & T9
+# -------------------------------
 @app.route("/")
 def index():
     page = int(request.args.get("page", 1))
@@ -210,11 +231,11 @@ def index():
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>🎧 Radio Streams</title>
         <style>
-            body {{ font-family: sans-serif; font-size: 14px; padding: 10px; margin: 0; background: #f0f0f0; }}
-            h2 {{ font-size: 16px; text-align: center; margin: 10px 0; }}
-            a {{ display: block; background: #007bff; color: white; text-decoration: none; padding: 8px; margin: 4px 0; border-radius: 6px; text-align: center; font-size: 13px; }}
-            .nav {{ display: flex; justify-content: space-between; flex-wrap: wrap; margin-top: 10px; gap: 4px; }}
-            .info {{ font-size: 11px; text-align: center; margin-top: 8px; color: #555; }}
+            body {{ font-family:sans-serif; font-size:14px; padding:10px; margin:0; background:#f0f0f0; }}
+            h2 {{ font-size:16px; text-align:center; margin:10px 0; }}
+            a {{ display:block; background:#007bff; color:white; text-decoration:none; padding:8px; margin:4px 0; border-radius:6px; text-align:center; font-size:13px; }}
+            .nav {{ display:flex; justify-content:space-between; flex-wrap:wrap; margin-top:10px; gap:4px; }}
+            .info {{ font-size:11px; text-align:center; margin-top:8px; color:#555; }}
         </style>
     </head>
     <body>
@@ -225,6 +246,7 @@ def index():
 
         <script>
         const allStations = {station_list_json};
+
         document.addEventListener("keydown", function(e) {{
             const key = e.key;
             let page = {page};
@@ -239,8 +261,8 @@ def index():
                 window.location.href = "/play/" + randomStation;
             }}
             else if (key === "6" && page < total) window.location.href = "/?page=" + (page + 1);
-            else if (key === "7") window.scrollTo({{ top: 0, behavior: "smooth" }});
-            else if (key === "8") window.scrollTo({{ top: document.body.scrollHeight, behavior: "smooth" }});
+            else if (key === "7") window.scrollTo({{ top:0, behavior:"smooth" }});
+            else if (key === "8") window.scrollTo({{ top:document.body.scrollHeight, behavior:"smooth" }});
             else if (key === "9") window.location.href = "/?page=" + (page < total ? page + 1 : 1);
             else if (key === "0") window.location.href = "about:blank";
         }});
@@ -248,6 +270,7 @@ def index():
     </body>
     </html>
     """
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000)
