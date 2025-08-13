@@ -143,6 +143,11 @@ def play_station(station_name):
     if not url:
         return "⚠️ Station not found", 404
 
+    station_names = list(RADIO_STATIONS.keys())
+    current_index = station_names.index(station_name)
+    prev_station = station_names[current_index - 1] if current_index > 0 else station_names[-1]
+    next_station = station_names[current_index + 1] if current_index < len(station_names) - 1 else station_names[0]
+
     display_name = station_name.replace("_", " ").title()
     stream_url = f"/stream/{station_name}"
 
@@ -173,27 +178,42 @@ def play_station(station_name):
                 color: #555;
                 font-size: 14px;
             }}
-            a.back {{
+            a.btn {{
                 display: inline-block;
                 padding: 8px 12px;
-                margin-top: 16px;
+                margin-top: 12px;
                 background: #007bff;
                 color: #fff;
                 text-decoration: none;
                 border-radius: 5px;
                 font-size: 14px;
+                margin: 4px;
+            }}
+            .timer-btn {{
+                background: #28a745;
+            }}
+            .timer-info {{
+                font-size: 14px;
+                color: #333;
+                margin-top: 6px;
             }}
         </style>
     </head>
     <body>
         <h2>🎧 Now Playing</h2>
         <div class="info"><strong>{display_name}</strong></div>
+
         <audio id="player" controls autoplay>
             <source id="audioSource" src="{stream_url}" type="audio/mpeg">
             Your browser does not support audio.
         </audio>
         <div class="info">🔁 If stream fails, it will auto-retry</div>
-        
+
+        <a href="/play/{prev_station}" class="btn">⏮ Prev</a>
+        <a href="/play/{next_station}" class="btn">⏭ Next</a>
+        <a href="#" class="btn timer-btn" onclick="setSleepTimer()">⏲ Sleep Timer</a>
+        <div id="timerInfo" class="timer-info"></div>
+        <a href="/" class="btn">🏠 Back</a>
 
         <script>
             const player = document.getElementById("player");
@@ -207,6 +227,46 @@ def play_station(station_name):
                     player.load();
                     player.play().catch(err => console.warn("Autoplay failed:", err));
                 }}, 2000);
+            }});
+
+            // Sleep Timer
+            let sleepTimer = null;
+            let countdownInterval = null;
+
+            function setSleepTimer() {{
+                let minutes = prompt("Enter minutes until stop:", "30");
+                if (minutes && !isNaN(minutes) && minutes > 0) {{
+                    let secondsLeft = parseInt(minutes) * 60;
+                    clearInterval(countdownInterval);
+                    clearTimeout(sleepTimer);
+
+                    sleepTimer = setTimeout(() => {{
+                        player.pause();
+                        alert("⏹ Sleep timer reached. Stream stopped.");
+                        document.getElementById("timerInfo").textContent = "";
+                    }}, secondsLeft * 1000);
+
+                    countdownInterval = setInterval(() => {{
+                        secondsLeft--;
+                        if (secondsLeft <= 0) {{
+                            clearInterval(countdownInterval);
+                        }} else {{
+                            document.getElementById("timerInfo").textContent =
+                                "⏳ Sleep timer: " + Math.floor(secondsLeft/60) + "m " + (secondsLeft%60) + "s left";
+                        }}
+                    }}, 1000);
+                }}
+            }}
+
+            // Keypad control
+            document.addEventListener("keydown", function(e) {{
+                if (e.key === "4") {{
+                    window.location.href = "/play/{prev_station}";
+                }} else if (e.key === "6") {{
+                    window.location.href = "/play/{next_station}";
+                }} else if (e.key === "0") {{
+                    window.location.href = "/";
+                }}
             }});
         </script>
     </body>
