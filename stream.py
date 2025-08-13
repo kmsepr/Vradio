@@ -137,6 +137,13 @@ def stream_station(station_name):
     return Response(generate_stream(url), mimetype="audio/mpeg")
 
 
+@app.route("/direct/<station_name>")
+def direct_station(station_name):
+    url = RADIO_STATIONS.get(station_name)
+    if not url:
+        return "⚠️ Station not found", 404
+    return Response(generate_stream(url), mimetype="audio/mpeg")
+
 @app.route("/play/<station_name>")
 def play_station(station_name):
     url = RADIO_STATIONS.get(station_name)
@@ -199,6 +206,9 @@ def play_station(station_name):
             Your browser does not support audio.
         </audio>
         <div class="info" id="playTime">▶️ Playing: 0m 0s</div>
+
+
+         <a href="/direct/{station_name}" target="_blank" class="timer-btn" style="background:#007bff;">🔗 Direct Link</a>
 
         <a href="#" class="timer-btn" onclick="setSleepTimer()">⏲ Sleep Timer</a>
         <div id="timerInfo" class="timer-info"></div>
