@@ -76,41 +76,39 @@ KEEPALIVE_INTERVAL = 30  # seconds
 
 
 def generate_stream(url):
-    last_data_time = time.time()
-    process = None
-
     while True:
-        if process:
-            process.kill()
-
         process = subprocess.Popen(
             [
-                "ffmpeg", "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "10",
-                "-fflags", "nobuffer", "-flags", "low_delay", "-i", url,
-                "-vn", "-ac", "1", "-b:a", "32k", "-f", "mp3", "-"
+                "ffmpeg",
+                "-reconnect", "1",
+                "-reconnect_streamed", "1",
+                "-reconnect_delay_max", "10",
+                "-i", url,
+                "-vn",
+                "-ac", "1",
+                "-b:a", "48k",  # a bit higher bitrate, more stable
+                "-f", "mp3",
+                "-"
             ],
-            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=8192
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            bufsize=4096   # moderate buffer
         )
 
         print(f"🎵 Streaming from: {url}")
 
         try:
-            while True:
-                chunk = process.stdout.read(8192)
-                if chunk:
-                    last_data_time = time.time()
-                    yield chunk
-                elif time.time() - last_data_time > KEEPALIVE_INTERVAL:
-                    yield b"\0" * 10
-                    last_data_time = time.time()
+            for chunk in iter(lambda: process.stdout.read(4096), b""):
+                yield chunk
         except GeneratorExit:
             process.kill()
             break
         except Exception as e:
             print(f"⚠️ Stream error: {e}")
-            time.sleep(5)
-        print("🔁 Restarting FFmpeg...")
-
+        finally:
+            process.kill()
+            print("🔁 Restarting FFmpeg in 3s...")
+            time.sleep(3)
 
 @app.route("/stream/<station_name>")
 def stream_station(station_name):
