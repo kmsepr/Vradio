@@ -88,7 +88,8 @@ def generate_stream(url):
     "-vn",
     "-ac", "1",
     "-b:a", "40k",                   # 🎧 low-bitrate mono
-    "-bufsize", "1M",                # 🛑 smoother buffering
+    "-bufsize", "2M", 
+"-max_delay", "500000",               # 🛑 smoother buffering
     "-f", "mp3",
     "-"
       ],
