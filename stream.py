@@ -83,15 +83,12 @@ def generate_stream(url):
     "-reconnect", "1",
     "-reconnect_streamed", "1",
     "-reconnect_delay_max", "10",
-    "-rw_timeout", "5000000",   # ⏱ network timeout (5s)
     "-i", url,
     "-vn",
     "-ac", "1",
-    "-b:a", "40k",              # 🎧 low bitrate
-    "-bufsize", "128k",         # 🔽 smaller buffer
-    "-flush_packets", "1",      # 🚀 flush immediately
+    "-b:a", "40k",
     "-f", "mp3",
-    "pipe:1"
+    "-"
 ],
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
