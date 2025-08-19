@@ -78,18 +78,20 @@ KEEPALIVE_INTERVAL = 30  # seconds
 def generate_stream(url):
     while True:
         process = subprocess.Popen(
-            [
-                "ffmpeg",
-                "-reconnect", "1",
-                "-reconnect_streamed", "1",
-                "-reconnect_delay_max", "10",
-                "-i", url,
-                "-vn",
-                "-ac", "1",
-                "-b:a", "40k",  # a bit higher bitrate, more stable
-                "-f", "mp3",
-                "-"
-            ],
+   [
+    "ffmpeg",
+    "-reconnect", "1",
+    "-reconnect_streamed", "1",
+    "-reconnect_delay_max", "10",
+    "-timeout", "5000000",           # ⏱ prevent hang on bad connection
+    "-i", url,
+    "-vn",
+    "-ac", "1",
+    "-b:a", "40k",                   # 🎧 low-bitrate mono
+    "-bufsize", "1M",                # 🛑 smoother buffering
+    "-f", "mp3",
+    "-"
+      ],
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
             bufsize=4096   # moderate buffer
