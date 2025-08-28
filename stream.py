@@ -78,27 +78,22 @@ KEEPALIVE_INTERVAL = 30  # seconds
 def generate_stream(url):
     while True:
         process = subprocess.Popen(
-    [
-        "ffmpeg",
-        "-reconnect", "1",                     # Enable reconnecting if the stream is lost
-        "-reconnect_streamed", "1",             # Enable reconnecting for streamed media
-        "-reconnect_delay_max", "10",           # Max reconnect delay (seconds)
-        "-i", url,                              # Input stream URL
-        "-vn",                                  # No video
-        "-ac", "1",                             # Audio channel count (mono)
-        "-b:a", "16k",                          # Set audio bitrate to 16 kbps
-        "-f", "mp3",                            # Output format MP3
-        "-buffer_size", "500000",               # Increase buffer size to handle fluctuating speeds
-        "-max_delay", "500000",                 # Max delay to wait for packets (helps with slower streams)
-        "-probesize", "5000000",                # Increase probing size to help with slower or variable streams
-        "-flush_packets", "0",                  # Disable packet flushing, helps prevent interruptions
-        "-"
-    ],
-    stdout=subprocess.PIPE,
-    stderr=subprocess.DEVNULL,
-    bufsize=8192  # Larger buffer size to reduce frequent reads
-)
-            
+   [
+    "ffmpeg",
+    "-reconnect", "1",
+    "-reconnect_streamed", "1",
+    "-reconnect_delay_max", "10",
+    "-i", url,
+    "-vn",
+    "-ac", "1",
+    "-b:a", "40k",
+    "-f", "mp3",
+    "-"
+],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            bufsize=4096   # moderate buffer
+        )
 
         print(f"🎵 Streaming from: {url}")
 
