@@ -104,37 +104,37 @@ def home():
             .random { background: #4caf50; }
         </style>
         <script>
-            const page = {{page}};
-            const totalPages = {{total_pages}};
+    const page = {{page}};
+    const totalPages = {{total_pages}};
 
-            function goPage(p) {
-                if (p < 1) p = totalPages;
-                if (p > totalPages) p = 1;
-                window.location.href = "/?page=" + p;
+    function goPage(p) {
+        if (p < 1) p = totalPages;
+        if (p > totalPages) p = 1;
+        window.location.href = "/?page=" + p;
+    }
+
+    function randomPlay() {
+        const stations = {{ station_list|tojson }};
+        const rand = Math.floor(Math.random() * stations.length);
+        window.location.href = "/player?station=" + stations[rand];
+    }
+
+    // Keypad support
+    document.addEventListener('keydown', function(e) {
+        const key = e.key;
+        if (key === "4") { goPage(page - 1); }   // Previous page
+        else if (key === "6") { goPage(page + 1); }  // Next page
+        else if (key >= "1" && key <= "5") {
+            const index = parseInt(key) - 1;
+            const stations = {{ stations_on_page|tojson }};
+            if (stations[index]) {
+                window.location.href = "/player?station=" + stations[index];
             }
-
-            function randomPlay() {
-                const stations = {{ station_list|tojson }};
-                const rand = Math.floor(Math.random() * stations.length);
-                window.location.href = "/player?station=" + stations[rand];
-            }
-
-            // Keypad support
-            document.addEventListener('keydown', function(e) {
-                const key = e.key;
-                if (key === "2") { goPage(page + 1); }
-                else if (key === "8") { goPage(page - 1); }
-                else if (key >= "1" && key <= "5") {
-                    const index = parseInt(key) - 1;
-                    const stations = {{ stations_on_page|tojson }};
-                    if (stations[index]) {
-                        window.location.href = "/player?station=" + stations[index];
-                    }
-                } else if (key === "0") {  // random play
-                    randomPlay();
-                }
-            });
-        </script>
+        } else if (key === "0") {  // Random station
+            randomPlay();
+        }
+    });
+</script>
     </head>
     <body>
         <h2>📻 VRadio</h2>
