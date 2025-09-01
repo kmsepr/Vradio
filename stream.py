@@ -295,7 +295,7 @@ def record():
         record_process.kill()
 
     record_process = subprocess.Popen(
-        ["ffmpeg", "-i", url, "-map_metadata", "-1", "-c", "copy", record_file],
+        ["ffmpeg", "-i", url, "-map_metadata", "-1", "-f", "mp3","-y", record_file],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL
     )
