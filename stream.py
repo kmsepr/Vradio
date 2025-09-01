@@ -154,7 +154,7 @@ def home():
             <div>Page {{page}} of {{total_pages}}</div>
         </div>
 
-        <small>Keypad: 2=Next, 8=Prev, 1-5=Select, 0=Random</small>
+        <small>Keypad: 6=Next, 4=Prev, 0=Random</small>
     </body>
     </html>
     """, stations_on_page=stations_on_page, page=page, total_pages=total_pages, station_list=station_list)
@@ -209,13 +209,13 @@ def player():
             // Keypad shortcuts
             document.addEventListener('keydown', function(e) {
                 const key = e.key;
-                if (key === "0") {  // record / stop record
+                if (key === "5") {  // record / stop record
                     toggleRecord();
                 } else if (key === "1") {  // home
                     window.location.href = "/";
                 } else if (key === "4") {  // previous
                     goToStation(currentIndex - 1);
-                } else if (key === "5") {  // random
+                } else if (key === "0") {  // random
                     randomStation();
                 } else if (key === "6") {  // next
                     goToStation(currentIndex + 1);
@@ -233,7 +233,7 @@ def player():
             <br>
             <button class="record" onclick="toggleRecord()">⏺ Record / Stop</button>
             <br>
-            <small>Keypad shortcuts: 0=Record, 1=Home, 4=Prev, 5=Random, 6=Next</small>
+            <small>Keypad shortcuts: 5=Record, 1=Home, 4=Prev, 0=Random, 6=Next</small>
         </div>
     </body>
     </html>
