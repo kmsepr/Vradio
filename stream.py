@@ -12,9 +12,15 @@ if not shutil.which("ffmpeg"):
 
 # ---------------- RADIO STATIONS ----------------
 RADIO_STATIONS = {
-    "muthnabi_radio": "http://example.com/stream1",
-    "islam_radio": "http://example.com/stream2",
-    "quran_radio": "http://example.com/stream3"
+    "muthnabi_radio": "http://cast4.my-control-panel.com/proxy/muthnabi/stream",
+     "radio_nellikka": "https://usa20.fastcast4u.com:2130/stream",
+
+"air_kavarati": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio189/chunklist.m3u8",
+    "air_calicut": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio082/chunklist.m3u8",
+    "manjeri_fm": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio101/chunklist.m3u8",
+    "real_fm": "http://air.pc.cdn.bitgravity.com/air/live/pbaudio083/playlist.m3u8",
+    "safari_tv": "https://j78dp346yq5r-hls-live.5centscdn.com/safari/live.stream/chunks.m3u8",
+    "victers_tv": "https://932y4x26ljv8-hls-live.5centscdn.com/victers/tv.stream/victers/tv1/chunks.m3u8",
 }
 
 # ---------------- GLOBAL VARIABLES ----------------
