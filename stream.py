@@ -73,6 +73,8 @@ RADIO_STATIONS = {
 }
 
 
+STATIONS_PER_PAGE = 10  # how many stations per page
+
 # Track processes
 ffmpeg_process = None
 record_process = None
@@ -83,6 +85,19 @@ record_file = None
 # 🏠 Home screen
 @app.route("/")
 def home():
+    # current page
+    page = int(request.args.get("page", 1))
+
+    # get station list
+    station_names = list(RADIO_STATIONS.keys())
+    total_pages = (len(station_names) + STATIONS_PER_PAGE - 1) // STATIONS_PER_PAGE
+
+    # slice for current page
+    start = (page - 1) * STATIONS_PER_PAGE
+    end = start + STATIONS_PER_PAGE
+    paged_stations = station_names[start:end]
+
+    # render
     return render_template_string("""
     <html>
     <head>
@@ -109,53 +124,141 @@ def home():
                 background: #4CAF50; 
                 color: white;
             }
+            .nav {
+                margin: 20px;
+            }
+            .nav a {
+                padding: 8px 12px;
+                margin: 4px;
+                text-decoration: none;
+                background: #007bff;
+                color: white;
+                border-radius: 6px;
+            }
         </style>
     </head>
     <body>
-        <h2>📻 Flask VRadio</h2>
-        {% for name in stations.keys() %}
+        <h2>📻 Flask VRadio (Page {{page}} / {{total}})</h2>
+        
+        {% for name in stations %}
         <div class="station">
             <b>{{name}}</b><br>
             <a href="/player?station={{name}}"><button>▶ Select</button></a>
         </div>
         {% endfor %}
+
+        <div class="nav">
+            {% if page > 1 %}
+                <a href="/?page=1">⏮ First (1)</a>
+                <a href="/?page={{page-1}}">◀ Prev (4)</a>
+            {% endif %}
+            {% if page < total %}
+                <a href="/?page={{page+1}}">Next ▶ (6)</a>
+                <a href="/?page={{total}}">Last ⏭ (3)</a>
+            {% endif %}
+            <a href="/random">🎲 Random (5)</a>
+        </div>
+
+        <script>
+            document.addEventListener("keydown", function(e) {
+                if (e.key === "1") {
+                    window.location.href = "/?page=1";
+                } else if (e.key === "4" && {{page}} > 1) {
+                    window.location.href = "/?page={{page-1}}";
+                } else if (e.key === "6" && {{page}} < {{total}}) {
+                    window.location.href = "/?page={{page+1}}";
+                } else if (e.key === "3") {
+                    window.location.href = "/?page={{total}}";
+                } else if (e.key === "5") {
+                    window.location.href = "/random";
+                }
+            });
+        </script>
     </body>
     </html>
-    """, stations=RADIO_STATIONS)
+    """, stations=paged_stations, page=page, total=total_pages)
 
 
 # 🎶 Player screen
 @app.route("/player")
 def player():
     station = request.args.get("station")
-    if station not in RADIO_STATIONS:
-        return "Station not found", 404
+    url = RADIO_STATIONS.get(station, "")
+
     return render_template_string("""
     <html>
     <head>
-        <title>▶ {{station}}</title>
+        <title>{{station}} - Player</title>
         <style>
-            body { font-family: Arial, sans-serif; background: black; color: white; text-align: center; }
-            .container { margin-top: 60px; }
-            audio { width: 90%; max-width: 400px; margin: 20px auto; display: block; }
-            button { padding: 12px 18px; margin: 8px; border: none; border-radius: 12px; font-size: 16px; cursor: pointer; }
-            .record { background: #ff9800; color: white; }
-            .stop { background: #f44336; color: white; }
+            body { font-family: Arial, sans-serif; background: #f4f4f4; text-align: center; }
+            h2 { margin-top: 20px; }
+            .controls { margin: 20px; }
+            button {
+                padding: 14px 22px;
+                margin: 8px;
+                border: none;
+                border-radius: 10px;
+                font-size: 16px;
+                cursor: pointer;
+                background: #2196F3;
+                color: white;
+            }
+            audio {
+                margin-top: 20px;
+                width: 90%;
+                max-width: 420px;
+            }
         </style>
     </head>
     <body>
-        <div class="container">
-            <h2>{{station}}</h2>
-            <audio controls autoplay>
-                <source src="/play?station={{station}}" type="audio/mpeg">
-                Your browser does not support audio.
-            </audio>
-            <br>
-            <a href="/record?station={{station}}" target="_blank"><button class="record">⏺ Record</button></a>
+        <h2>▶ Playing: {{station}}</h2>
+
+        <div class="controls">
+            <button onclick="togglePlay()">▶⏸ Play/Pause (5)</button>
+            <button onclick="toggleRecord()">⏺ Record/Stop (0)</button>
+            <a href="/"><button>🏠 Home (1)</button></a>
         </div>
+
+        <audio id="player" autoplay>
+            <source src="{{url}}" type="audio/mpeg">
+        </audio>
+
+        <p id="recordingStatus"></p>
+
+        <script>
+            var audio = document.getElementById("player");
+            var isPlaying = true;
+            var isRecording = false;
+
+            function togglePlay() {
+                if (isPlaying) {
+                    audio.pause();
+                } else {
+                    audio.play();
+                }
+                isPlaying = !isPlaying;
+            }
+
+            function toggleRecord() {
+                if (!isRecording) {
+                    document.getElementById("recordingStatus").innerText = "🔴 Recording...";
+                    // TODO: start recording backend call
+                } else {
+                    document.getElementById("recordingStatus").innerText = "✅ Recording saved.";
+                    // TODO: stop recording backend call
+                }
+                isRecording = !isRecording;
+            }
+
+            document.addEventListener("keydown", function(e) {
+                if (e.key === "5") { togglePlay(); }
+                else if (e.key === "0") { toggleRecord(); }
+                else if (e.key === "1") { window.location.href = "/"; }
+            });
+        </script>
     </body>
     </html>
-    """, station=station)
+    """, station=station, url=url)
 
 
 # 🎶 Stream playback
