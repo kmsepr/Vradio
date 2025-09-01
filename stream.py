@@ -370,19 +370,11 @@ def play():
     return Response(generate(), mimetype="audio/mpeg")
 
 
-# ⏺️ Record screen
 @app.route("/record")
 def record():
     global recording, record_file
-
-    if recording:
-        # stop recording
-        recording = False
-        size = os.path.getsize(record_file) // 1024 if record_file and os.path.exists(record_file) else 0
-        return jsonify({"status": "stopped", "file": record_file, "size": size})
-
-    # start recording
     station = request.args.get("station")
+
     if station not in RADIO_STATIONS:
         return jsonify({"status": "error", "message": "Station not found"}), 404
 
@@ -390,6 +382,7 @@ def record():
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     record_file = f"recordings/{station.replace(' ', '_')}_{timestamp}.mp3"
     recording = True
+
     return jsonify({"status": "recording", "file": record_file})
 
 
@@ -415,7 +408,6 @@ def stop_record():
         download_name=os.path.basename(record_file),
         mimetype="audio/mpeg"
     )
-
 
 # ⏹️ Stop all playback
 @app.route("/stop")
