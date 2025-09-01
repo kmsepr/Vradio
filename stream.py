@@ -138,9 +138,9 @@ def index():
     paged_stations = station_names[start:end]
 
     links_html = "".join(
-        f"<a href='/stream/{name}'>{name.replace('_', ' ').title()}</a>"
-        for name in paged_stations
-    )
+    f"<a href='/play/{name}'>{name.replace('_', ' ').title()}</a>"
+    for name in paged_stations
+)
 
     nav_html = ""
     if page > 1:
