@@ -246,13 +246,11 @@ button {
 }
 </style>
         <script>
-const stationList = {{ station_list|tojson }};
-let currentIndex = {{ current_index }};
-let recording = false;
-let recordFile = null;
-
-window.onload = function() {
-    const audio = document.querySelector('audio');  // Now exists
+    const stationList = {{ station_list|tojson }};
+    let currentIndex = {{ current_index }};
+    let recording = false;
+    let recordFile = null;
+    const audio = document.querySelector('audio');
 
     function goToStation(index) {
         if (index < 0) index = stationList.length - 1;
@@ -277,12 +275,14 @@ window.onload = function() {
             recording = true;
             recordFile = data.file;
             document.getElementById("rec-status").innerText = "⏺ Recording...";
-            updateSize(); // KB display starts
+            updateSize();
         } else if (data.status === "stopped") {
             recording = false;
             document.getElementById("rec-status").innerText = "⏹ Stopped";
-            document.getElementById("rec-size").innerText = ""; // Clear KB
-            if (data.file) window.location.href = "/stop_record";
+            if (data.file) {
+                // auto-download after stop
+                window.location.href = "/stop_record";
+            }
         }
     }
 
@@ -304,17 +304,20 @@ window.onload = function() {
     // Keypad shortcuts
     document.addEventListener('keydown', function(e) {
         const key = e.key;
-        if (key === "5") togglePlayStop();
-        else if (key === "*") toggleRecord();
-        else if (key === "1") window.location.href = "/";
-        else if (key === "4") goToStation(currentIndex - 1);
-        else if (key === "0") randomStation();
-        else if (key === "6") goToStation(currentIndex + 1);
+        if (key === "5") {
+            togglePlayStop();   // Play/Stop
+        } else if (key === "*") {
+            toggleRecord();     // Record/Stop
+        } else if (key === "1") {
+            window.location.href = "/";
+        } else if (key === "4") {
+            goToStation(currentIndex - 1);
+        } else if (key === "0") {
+            randomStation();
+        } else if (key === "6") {
+            goToStation(currentIndex + 1);
+        }
     });
-
-    // Record button click
-    document.querySelector(".record").onclick = toggleRecord;
-};
 </script>
     </head>
     <body>
