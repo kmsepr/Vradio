@@ -2,6 +2,7 @@ import subprocess
 import time
 import shutil
 from flask import Flask, Response, request, redirect
+from flask import send_file
 
 app = Flask(__name__)
 
@@ -234,6 +235,92 @@ def index():
     </html>
     """
     return html
+
+
+
+
+@app.route("/play/<station_name>")
+def play_screen(station_name):
+    if station_name not in RADIO_STATIONS:
+        return "⚠️ Station not found", 404
+
+    station_names = list(RADIO_STATIONS.keys())
+    idx = station_names.index(station_name)
+    prev_station = station_names[idx - 1] if idx > 0 else station_names[-1]
+    next_station = station_names[idx + 1] if idx < len(station_names) - 1 else station_names[0]
+
+    html = f"""
+    <html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>▶️ Playing {station_name.replace("_", " ").title()}</title>
+        <style>
+            body {{ font-family: sans-serif; text-align: center; padding: 20px; background: #f9f9f9; }}
+            h2 {{ margin-bottom: 15px; }}
+            audio {{ width: 100%; max-width: 500px; margin-bottom: 20px; }}
+            .controls button {{
+                margin: 8px; padding: 10px 20px; font-size: 16px;
+                border: none; border-radius: 6px; cursor: pointer;
+            }}
+            .prev {{ background: #6c757d; color: white; }}
+            .play {{ background: #28a745; color: white; }}
+            .next {{ background: #007bff; color: white; }}
+            .record {{ background: #dc3545; color: white; }}
+        </style>
+    </head>
+    <body>
+        <h2>🎶 Now Playing: {station_name.replace("_", " ").title()}</h2>
+
+        <audio id="player" controls autoplay>
+            <source src="/stream/{station_name}" type="audio/mpeg">
+        </audio>
+
+        <div class="controls">
+            <a href="/play/{prev_station}"><button class="prev">⏮️ Prev</button></a>
+            <button class="play" onclick="togglePlay()">⏯️ Play/Pause</button>
+            <a href="/play/{next_station}"><button class="next">⏭️ Next</button></a>
+            <a href="/download/{station_name}"><button class="record">⏺️ Record</button></a>
+        </div>
+
+        <script>
+            const player = document.getElementById("player");
+            function togglePlay() {{
+                if (player.paused) {{
+                    player.play();
+                }} else {{
+                    player.pause();
+                }}
+            }}
+        </script>
+    </body>
+    </html>
+    """
+    return html
+
+
+@app.route("/download/<station_name>")
+def download_station(station_name):
+    url = RADIO_STATIONS.get(station_name)
+    if not url:
+        return "⚠️ Station not found", 404
+
+    import requests
+    r = requests.get(url, stream=True)
+    if r.status_code != 200:
+        return "⚠️ Stream unavailable", 500
+
+    def generate():
+        for chunk in r.iter_content(chunk_size=4096):
+            if chunk:
+                yield chunk
+
+    filename = f"{station_name}_{time.strftime('%Y%m%d-%H%M%S')}.mp3"
+
+    return Response(
+        generate(),
+        mimetype="audio/mpeg",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
 
 
 if __name__ == "__main__":
