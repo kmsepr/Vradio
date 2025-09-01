@@ -26,20 +26,43 @@ current_station = None
 def home():
     return render_template_string("""
     <html>
-    <head><title>📻 Flask VRadio</title></head>
+    <head>
+        <title>📻 VRadio</title>
+        <style>
+            body { font-family: Arial, sans-serif; background: #f4f4f4; text-align: center; }
+            h2 { margin-top: 20px; }
+            .station { 
+                background: #fff; 
+                padding: 15px; 
+                margin: 10px auto; 
+                width: 90%; 
+                max-width: 400px; 
+                border-radius: 12px; 
+                box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+            }
+            button { 
+                padding: 10px 15px; 
+                margin: 5px; 
+                border: none; 
+                border-radius: 8px; 
+                font-size: 14px; 
+                cursor: pointer;
+            }
+            .play { background: #4CAF50; color: white; }
+            .record { background: #ff9800; color: white; }
+            .stop { background: #f44336; color: white; }
+        </style>
+    </head>
     <body>
-        <h2>📻 Radio Streaming</h2>
-        <ul>
+        <h2>📻 Flask VRadio</h2>
         {% for name, url in stations.items() %}
-            <li>
-                <b>{{name}}</b> 
-                [<a href="/play?station={{name}}">▶️ Play</a>] 
-                [<a href="/record?station={{name}}">⏺️ Record</a>] 
-            </li>
+        <div class="station">
+            <b>{{name}}</b><br>
+            <a href="/play?station={{name}}"><button class="play">▶ Play</button></a>
+            <a href="/record?station={{name}}"><button class="record">⏺ Record</button></a>
+            <a href="/stop"><button class="stop">⏹ Stop</button></a>
+        </div>
         {% endfor %}
-        </ul>
-        <br>
-        <a href="/stop">⏹️ Stop All</a>
     </body>
     </html>
     """, stations=RADIO_STATIONS)
