@@ -402,15 +402,19 @@ def record_size():
         return jsonify({"size": size, "active": True})
     return jsonify({"size": 0, "active": False})
 
-
 # ⏹️ Stop recording and download
 @app.route("/stop_record")
 def stop_record():
     global recording, record_file
     recording = False
-    if record_file and os.path.exists(record_file):
-        return send_file(record_file, as_attachment=True)
-    return "No recording found", 404
+    if not record_file or not os.path.exists(record_file):
+        return "No recording found", 404
+    return send_file(
+        record_file,
+        as_attachment=True,
+        download_name=os.path.basename(record_file),
+        mimetype="audio/mpeg"
+    )
 
 
 # ⏹️ Stop all playback
