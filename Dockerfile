@@ -1,22 +1,15 @@
-# Use a minimal base image with Python and FFmpeg
 FROM python:3.11-slim
 
-# Install system packages
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ffmpeg \
-    && rm -rf /var/lib/apt/lists/*
+# Install system dependencies (ffmpeg + required libs)
+RUN apt-get update && apt-get install -y ffmpeg && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy app
+COPY . /app
 WORKDIR /app
 
-# Copy your app code
-COPY stream.py .
-
-# Install dependencies
-RUN pip install flask gunicorn
-
-# Expose the port Flask/Gunicorn runs on
-EXPOSE 8000
-
-# Start Gunicorn with 4 workers and bind to port 8000
-CMD ["gunicorn", "--workers", "4", "--timeout", "3600", "--bind", "0.0.0.0:8000", "stream:app"]
+# Run with Gunicorn
+CMD ["gunicorn", "-b", "0.0.0.0:8000", "app:app"]
