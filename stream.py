@@ -258,11 +258,12 @@ button {
         window.location.href = "/player?station=" + stationList[index];
     }
 
-    function togglePlayPause() {
+    function togglePlayStop() {
         if (audio.paused) {
             audio.play();
         } else {
             audio.pause();
+            audio.currentTime = 0; // Stop and reset
         }
     }
 
@@ -304,9 +305,9 @@ button {
     document.addEventListener('keydown', function(e) {
         const key = e.key;
         if (key === "5") {
-            togglePlayPause();   // Play/Pause
+            togglePlayStop();   // Play/Stop
         } else if (key === "*") {
-            toggleRecord();      // Record/Stop
+            toggleRecord();     // Record/Stop
         } else if (key === "1") {
             window.location.href = "/";
         } else if (key === "4") {
@@ -328,10 +329,10 @@ button {
             </audio>
             <br>
             <button class="record" onclick="toggleRecord()">⏺ Record / Stop</button>
-<div id="rec-status">Not recording</div>
-<div id="rec-size"></div>
-<br>
-<small>Keypad shortcuts: 5=Play/Pause, *=Record/Stop, 1=Home, 4=Prev, 0=Random, 6=Next</small>
+            <div id="rec-status">Not recording</div>
+            <div id="rec-size"></div>
+            <br>
+            <small>Keypad shortcuts: 5=Play/Stop, *=Record/Stop, 1=Home, 4=Prev, 0=Random, 6=Next</small>
         </div>
     </body>
     </html>
