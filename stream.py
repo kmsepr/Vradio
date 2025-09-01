@@ -123,12 +123,17 @@ def home():
     """, stations=RADIO_STATIONS)
 
 
-# 🎶 Player screen
+# 🎶 Player screen with keypad support
 @app.route("/player")
 def player():
     station = request.args.get("station")
     if station not in RADIO_STATIONS:
         return "Station not found", 404
+
+    # Convert station names to list for next/prev navigation
+    station_list = list(RADIO_STATIONS.keys())
+    current_index = station_list.index(station)
+
     return render_template_string("""
     <html>
     <head>
@@ -141,6 +146,38 @@ def player():
             .record { background: #ff9800; color: white; }
             .stop { background: #f44336; color: white; }
         </style>
+        <script>
+            const stationList = {{ station_list|tojson }};
+            let currentIndex = {{ current_index }};
+
+            function goToStation(index) {
+                if (index < 0) index = stationList.length - 1;
+                if (index >= stationList.length) index = 0;
+                window.location.href = "/player?station=" + stationList[index];
+            }
+
+            function toggleRecord() {
+                fetch("/record?station=" + stationList[currentIndex])
+                    .then(res => res.text())
+                    .then(html => {
+                        const w = window.open("", "_blank");
+                        w.document.write(html);
+                    });
+            }
+
+            document.addEventListener('keydown', function(e) {
+                const key = e.key;
+                if (key === "0") {  // record / stop record
+                    toggleRecord();
+                } else if (key === "1") {  // home
+                    window.location.href = "/";
+                } else if (key === "4") {  // previous
+                    goToStation(currentIndex - 1);
+                } else if (key === "6") {  // next
+                    goToStation(currentIndex + 1);
+                }
+            });
+        </script>
     </head>
     <body>
         <div class="container">
@@ -150,11 +187,13 @@ def player():
                 Your browser does not support audio.
             </audio>
             <br>
-            <a href="/record?station={{station}}" target="_blank"><button class="record">⏺ Record</button></a>
+            <button class="record" onclick="toggleRecord()">⏺ Record / Stop</button>
+            <br>
+            <small>Keypad shortcuts: 0=Record, 1=Home, 4=Prev, 6=Next</small>
         </div>
     </body>
     </html>
-    """, station=station)
+    """, station=station, station_list=station_list, current_index=current_index)
 
 
 # 🎶 Stream playback
