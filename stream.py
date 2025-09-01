@@ -2,7 +2,7 @@ import subprocess
 import shutil
 import os
 from datetime import datetime
-from flask import Flask, Response, request, render_template_string
+from flask import Flask, Response, request, render_template_string, send_file, jsonify
 
 app = Flask(__name__)
 
@@ -16,10 +16,11 @@ RADIO_STATIONS = {
     "Kuran Radio": "http://qurango.net/radio/mishary",
 }
 
-# Track FFmpeg processes
+# Track processes
 ffmpeg_process = None
 record_process = None
 current_station = None
+record_file = None
 
 
 # 🏠 Home screen
@@ -48,20 +49,17 @@ def home():
                 border-radius: 8px; 
                 font-size: 14px; 
                 cursor: pointer;
+                background: #4CAF50; 
+                color: white;
             }
-            .play { background: #4CAF50; color: white; }
-            .record { background: #ff9800; color: white; }
-            .stop { background: #f44336; color: white; }
         </style>
     </head>
     <body>
         <h2>📻 Flask VRadio</h2>
-        {% for name, url in stations.items() %}
+        {% for name in stations.keys() %}
         <div class="station">
             <b>{{name}}</b><br>
-            <a href="/player?station={{name}}"><button class="play">▶ Play</button></a>
-            <a href="/record?station={{name}}"><button class="record">⏺ Record</button></a>
-            <a href="/stop"><button class="stop">⏹ Stop</button></a>
+            <a href="/player?station={{name}}"><button>▶ Select</button></a>
         </div>
         {% endfor %}
     </body>
@@ -69,7 +67,7 @@ def home():
     """, stations=RADIO_STATIONS)
 
 
-# 🎶 Separate play screen
+# 🎶 Player screen
 @app.route("/player")
 def player():
     station = request.args.get("station")
@@ -82,63 +80,31 @@ def player():
         <style>
             body { font-family: Arial, sans-serif; background: black; color: white; text-align: center; }
             .container { margin-top: 60px; }
-            .timer { font-size: 22px; margin: 10px; }
             audio { width: 90%; max-width: 400px; margin: 20px auto; display: block; }
-            button { 
-                padding: 12px 18px; 
-                margin: 8px; 
-                border: none; 
-                border-radius: 12px; 
-                font-size: 16px; 
-                cursor: pointer;
-            }
+            button { padding: 12px 18px; margin: 8px; border: none; border-radius: 12px; font-size: 16px; cursor: pointer; }
+            .record { background: #ff9800; color: white; }
             .stop { background: #f44336; color: white; }
         </style>
     </head>
     <body>
         <div class="container">
             <h2>{{station}}</h2>
-            <div class="timer">
-                <span id="current">00:00</span> / <span id="duration">--:--</span>
-            </div>
-            <audio id="player" controls autoplay>
+            <audio controls autoplay>
                 <source src="/play?station={{station}}" type="audio/mpeg">
                 Your browser does not support audio.
             </audio>
             <br>
-            <a href="/stop"><button class="stop">⏹ Stop</button></a>
+            <a href="/record?station={{station}}" target="_blank"><button class="record">⏺ Record</button></a>
         </div>
-
-        <script>
-            const audio = document.getElementById("player");
-            const cur = document.getElementById("current");
-            const dur = document.getElementById("duration");
-
-            audio.addEventListener("timeupdate", () => {
-                let m = Math.floor(audio.currentTime / 60).toString().padStart(2,'0');
-                let s = Math.floor(audio.currentTime % 60).toString().padStart(2,'0');
-                cur.textContent = m + ":" + s;
-            });
-
-            audio.addEventListener("loadedmetadata", () => {
-                if (!isNaN(audio.duration)) {
-                    let m = Math.floor(audio.duration / 60).toString().padStart(2,'0');
-                    let s = Math.floor(audio.duration % 60).toString().padStart(2,'0');
-                    dur.textContent = m + ":" + s;
-                } else {
-                    dur.textContent = "LIVE";
-                }
-            });
-        </script>
     </body>
     </html>
     """, station=station)
 
 
-# 🎶 Play stream (raw audio route)
+# 🎶 Stream playback
 @app.route("/play")
 def play():
-    global ffmpeg_process, record_process, current_station
+    global ffmpeg_process, current_station
     station = request.args.get("station")
     if station not in RADIO_STATIONS:
         return "Station not found", 404
@@ -168,10 +134,10 @@ def play():
     return Response(generate(), mimetype="audio/mpeg")
 
 
-# ⏺️ Record route
+# ⏺️ Record screen
 @app.route("/record")
 def record():
-    global record_process, current_station
+    global record_process, record_file
 
     station = request.args.get("station")
     if station not in RADIO_STATIONS:
@@ -179,38 +145,84 @@ def record():
 
     url = RADIO_STATIONS[station]
 
-    # Make recordings folder
     os.makedirs("recordings", exist_ok=True)
 
-    # Timestamped filename
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    filename = f"recordings/{station.replace(' ', '_')}_{timestamp}.mp3"
+    record_file = f"recordings/{station.replace(' ', '_')}_{timestamp}.mp3"
 
     # Stop previous recording
     if record_process:
         record_process.kill()
 
-    # Start robust recording without metadata
     record_process = subprocess.Popen(
-        ["ffmpeg", "-i", url, "-map_metadata", "-1", "-c", "copy", filename],
+        ["ffmpeg", "-i", url, "-map_metadata", "-1", "-c", "copy", record_file],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL
     )
 
-    return f"⏺️ Recording started: {filename}"
+    return render_template_string("""
+    <html>
+    <head>
+        <title>⏺ Recording</title>
+        <style>
+            body { font-family: Arial, sans-serif; background: black; color: white; text-align: center; }
+            .container { margin-top: 60px; }
+            .status { font-size: 18px; margin: 15px; }
+            button { padding: 12px 18px; margin: 8px; border: none; border-radius: 12px; font-size: 16px; cursor: pointer; background: #f44336; color: white; }
+        </style>
+        <script>
+            async function updateSize() {
+                let res = await fetch('/record_size');
+                let data = await res.json();
+                document.getElementById("size").innerText = data.size + " KB";
+                if (data.active) {
+                    setTimeout(updateSize, 1000);
+                }
+            }
+            updateSize();
+        </script>
+    </head>
+    <body>
+        <div class="container">
+            <h2>⏺ Recording: {{station}}</h2>
+            <div class="status">File Size: <span id="size">0 KB</span></div>
+            <a href="/stop_record"><button>⏹ Stop Recording</button></a>
+        </div>
+    </body>
+    </html>
+    """, station=station)
 
 
-# ⏹️ Stop all playback & recording
-@app.route("/stop")
-def stop():
-    global ffmpeg_process, record_process
-    if ffmpeg_process:
-        ffmpeg_process.kill()
-        ffmpeg_process = None
+# 📏 Recording size API
+@app.route("/record_size")
+def record_size():
+    global record_file, record_process
+    if record_file and os.path.exists(record_file) and record_process:
+        size = os.path.getsize(record_file) // 1024
+        return jsonify({"size": size, "active": True})
+    return jsonify({"size": 0, "active": False})
+
+
+# ⏹️ Stop recording and download
+@app.route("/stop_record")
+def stop_record():
+    global record_process, record_file
     if record_process:
         record_process.kill()
         record_process = None
-    return "⏹️ Stopped playback & recording"
+    if record_file and os.path.exists(record_file):
+        return send_file(record_file, as_attachment=True)
+    return "No recording found", 404
+
+
+# ⏹️ Stop all playback
+@app.route("/stop")
+def stop():
+    global ffmpeg_process
+    if ffmpeg_process:
+        ffmpeg_process.kill()
+        ffmpeg_process = None
+    return "⏹️ Stopped playback"
 
 
 if __name__ == "__main__":
