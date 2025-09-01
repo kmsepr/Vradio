@@ -1,7 +1,8 @@
 import subprocess
 import time
 import shutil
-from flask import Flask, Response, request, redirect
+import os
+from flask import Flask, Response, request, redirect, send_file
 
 app = Flask(__name__)
 
@@ -9,21 +10,28 @@ app = Flask(__name__)
 if not shutil.which("ffmpeg"):
     raise RuntimeError("ffmpeg not found. Please install ffmpeg.")
 
+# 📂 Downloads folder (cross-platform)
+def get_downloads_folder():
+    if os.name == "nt":  # Windows
+        return os.path.join(os.environ["USERPROFILE"], "Downloads")
+    else:  # Linux/macOS/Android Termux
+        return os.path.join(os.path.expanduser("~"), "Downloads")
+
+DOWNLOADS_DIR = get_downloads_folder()
+os.makedirs(DOWNLOADS_DIR, exist_ok=True)
+
 # 📡 Full list of radio stations
 RADIO_STATIONS = {
     "muthnabi_radio": "http://cast4.my-control-panel.com/proxy/muthnabi/stream",
-     "radio_nellikka": "https://usa20.fastcast4u.com:2130/stream",
-
-"air_kavarati": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio189/chunklist.m3u8",
+    "radio_nellikka": "https://usa20.fastcast4u.com:2130/stream",
+    "air_kavarati": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio189/chunklist.m3u8",
     "air_calicut": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio082/chunklist.m3u8",
     "manjeri_fm": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio101/chunklist.m3u8",
     "real_fm": "http://air.pc.cdn.bitgravity.com/air/live/pbaudio083/playlist.m3u8",
     "safari_tv": "https://j78dp346yq5r-hls-live.5centscdn.com/safari/live.stream/chunks.m3u8",
     "victers_tv": "https://932y4x26ljv8-hls-live.5centscdn.com/victers/tv.stream/victers/tv1/chunks.m3u8",
     "kairali_we": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/wetv_nim_https/050522/wetv/playlist.m3u8",
-
-"mazhavil_manorama": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/mazhavilmanorama_nim_https/050522/mazhavilmanorama/playlist.m3u8",
-
+    "mazhavil_manorama": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/mazhavilmanorama_nim_https/050522/mazhavilmanorama/playlist.m3u8",
     "malayalam_1": "http://167.114.131.90:5412/stream",
     "radio_digital_malayali": "https://radio.digitalmalayali.in/listen/stream/radio.mp3",
     "malayalam_90s": "https://stream-159.zeno.fm/gm3g9amzm0hvv?zs-x-7jq8ksTOav9ZhlYHi9xw",
@@ -61,38 +69,33 @@ RADIO_STATIONS = {
     "sanaa_radio": "http://dc5.serverse.com/proxy/pbmhbvxs/stream",
     "rubat_ataq": "http://stream.zeno.fm/5tpfc8d7xqruv",
     "al_jazeera": "http://live-hls-audio-web-aja.getaj.net/VOICE-AJA/index.m3u8",
-
-
-
-
     "bloomberg_tv": "https://bloomberg-bloomberg-3-br.samsung.wurl.tv/manifest/playlist.m3u8",
     "france_24": "https://live.france24.com/hls/live/2037218/F24_EN_HI_HLS/master_500.m3u8",
-
-"vom_radio": "https://radio.psm.mv/draair",
+    "vom_radio": "https://radio.psm.mv/draair",
 }
 
 STATIONS_PER_PAGE = 10
 KEEPALIVE_INTERVAL = 30  # seconds
 
-
+# ---------------- Stream Generator ----------------
 def generate_stream(url):
     while True:
         process = subprocess.Popen(
-   [
-    "ffmpeg",
-    "-reconnect", "1",
-    "-reconnect_streamed", "1",
-    "-reconnect_delay_max", "10",
-    "-i", url,
-    "-vn",
-    "-ac", "1",
-    "-b:a", "64k",
-    "-f", "mp3",
-    "-"
-],
+            [
+                "ffmpeg",
+                "-reconnect", "1",
+                "-reconnect_streamed", "1",
+                "-reconnect_delay_max", "10",
+                "-i", url,
+                "-vn",
+                "-ac", "1",
+                "-b:a", "64k",
+                "-f", "mp3",
+                "-"
+            ],
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
-            bufsize=4096   # moderate buffer
+            bufsize=4096
         )
 
         print(f"🎵 Streaming from: {url}")
@@ -117,6 +120,22 @@ def stream_station(station_name):
         return "⚠️ Station not found", 404
     return Response(generate_stream(url), mimetype="audio/mpeg")
 
+@app.route("/record/<station_name>")
+def record_station(station_name):
+    """Start or stop recording a station into Downloads folder"""
+    url = RADIO_STATIONS.get(station_name)
+    if not url:
+        return "⚠️ Station not found", 404
+
+    filename = os.path.join(DOWNLOADS_DIR, f"{station_name}_{int(time.time())}.mp3")
+
+    subprocess.Popen([
+        "ffmpeg", "-i", url, "-vn",
+        "-acodec", "libmp3lame", "-b:a", "128k",
+        filename
+    ])
+
+    return f"⏺️ Recording started: {filename}"
 
 @app.route("/<station_name>")
 def direct_station_redirect(station_name):
@@ -124,7 +143,6 @@ def direct_station_redirect(station_name):
     if not url:
         return "⚠️ Station not found", 404
     return redirect(url)
-
 
 @app.route("/")
 def index():
@@ -137,7 +155,10 @@ def index():
     paged_stations = station_names[start:end]
 
     links_html = "".join(
-        f"<a href='/stream/{name}'>{name.replace('_', ' ').title()}</a>"
+        f"<div style='margin:4px 0;'>"
+        f"<a href='/stream/{name}'>{name.replace('_', ' ').title()}</a> "
+        f"<a href='/record/{name}' style='background:#28a745;'>⏺️ Record</a>"
+        f"</div>"
         for name in paged_stations
     )
 
@@ -168,14 +189,13 @@ def index():
                 margin: 10px 0;
             }}
             a {{
-                display: block;
+                display: inline-block;
                 background: #007bff;
                 color: white;
                 text-decoration: none;
-                padding: 8px;
-                margin: 4px 0;
+                padding: 6px 10px;
+                margin: 2px;
                 border-radius: 6px;
-                text-align: center;
                 font-size: 13px;
             }}
             .nav {{
@@ -198,43 +218,10 @@ def index():
         {links_html}
         <div class="nav">{nav_html}</div>
         <div class="info">🔢 T9 Keys: 1=First, 4=Prev, 6=Next, 3=Last, 5=Random, 0=Exit</div>
-
-        <script>
-        document.addEventListener("keydown", function(e) {{
-            const key = e.key;
-            let page = {page};
-            let total = {total_pages};
-
-            if (key === "1") {{
-                window.location.href = "/?page=1";
-            }} else if (key === "2") {{
-                window.location.reload();
-            }} else if (key === "3") {{
-                window.location.href = "/?page=" + total;
-            }} else if (key === "4" && page > 1) {{
-                window.location.href = "/?page=" + (page - 1);
-            }} else if (key === "5") {{
-                const links = document.querySelectorAll("a[href^='/stream/']");
-                const random = links[Math.floor(Math.random() * links.length)];
-                if (random) random.click();
-            }} else if (key === "6" && page < total) {{
-                window.location.href = "/?page=" + (page + 1);
-            }} else if (key === "7") {{
-                window.scrollTo({{ top: 0, behavior: "smooth" }});
-            }} else if (key === "8") {{
-                window.scrollTo({{ top: document.body.scrollHeight, behavior: "smooth" }});
-            }} else if (key === "9") {{
-                window.location.href = "/?page=" + (page < total ? page + 1 : 1);
-            }} else if (key === "0") {{
-                window.location.href = "about:blank";
-            }}
-        }});
-        </script>
     </body>
     </html>
     """
     return html
-
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000)
