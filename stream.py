@@ -1,6 +1,7 @@
 import subprocess
 import shutil
 import os
+import random
 from datetime import datetime
 from flask import Flask, Response, request, render_template_string, send_file, jsonify
 
@@ -79,11 +80,11 @@ current_station = None
 record_file = None
 
 
-# 🏠 Home screen with pagination
+# 🏠 Home screen with pagination + random play
 @app.route("/")
 def home():
     page = int(request.args.get("page", 1))
-    per_page = 5  # stations per page
+    per_page = 5
     station_list = list(RADIO_STATIONS.keys())
     total_pages = (len(station_list) + per_page - 1) // per_page
     start = (page - 1) * per_page
@@ -100,6 +101,7 @@ def home():
             h2 { font-size: 22px; margin: 15px 0; }
             .station { background: #111; padding: 20px; margin: 10px auto; width: 95%; border-radius: 12px; }
             button { padding: 15px 25px; margin: 5px; font-size: 18px; border-radius: 12px; border: none; cursor: pointer; background: #ff5722; color: white; width: 90%; max-width: 300px; display:block; }
+            .random { background: #4caf50; }
         </style>
         <script>
             const page = {{page}};
@@ -111,40 +113,51 @@ def home():
                 window.location.href = "/?page=" + p;
             }
 
+            function randomPlay() {
+                const stations = {{ station_list|tojson }};
+                const rand = Math.floor(Math.random() * stations.length);
+                window.location.href = "/player?station=" + stations[rand];
+            }
+
             // Keypad support
             document.addEventListener('keydown', function(e) {
                 const key = e.key;
-                if (key === "2") { // next page
-                    goPage(page + 1);
-                } else if (key === "8") { // previous page
-                    goPage(page - 1);
-                } else if (key >= "1" && key <= "5") { // select station 1-5
+                if (key === "2") { goPage(page + 1); }
+                else if (key === "8") { goPage(page - 1); }
+                else if (key >= "1" && key <= "5") {
                     const index = parseInt(key) - 1;
                     const stations = {{ stations_on_page|tojson }};
                     if (stations[index]) {
                         window.location.href = "/player?station=" + stations[index];
                     }
+                } else if (key === "0") {  // random play
+                    randomPlay();
                 }
             });
         </script>
     </head>
     <body>
         <h2>📻 VRadio</h2>
+
+        <button class="random" onclick="randomPlay()">🎲 Random Play</button>
+
         {% for name in stations_on_page %}
         <div class="station">
             <div style="font-size:20px; margin-bottom:10px;">{{name}}</div>
             <a href="/player?station={{name}}"><button>▶ Play</button></a>
         </div>
         {% endfor %}
+
         <div>
             <button onclick="goPage(page-1)">⬅ Prev Page</button>
             <button onclick="goPage(page+1)">Next Page ➡</button>
             <div>Page {{page}} of {{total_pages}}</div>
         </div>
-        <small>Keypad: 2=Next, 8=Prev, 1-5=Select Station</small>
+
+        <small>Keypad: 2=Next, 8=Prev, 1-5=Select, 0=Random</small>
     </body>
     </html>
-    """, stations_on_page=stations_on_page, page=page, total_pages=total_pages)
+    """, stations_on_page=stations_on_page, page=page, total_pages=total_pages, station_list=station_list)
 
 
 # 🎶 Player screen with keypad support
