@@ -93,70 +93,56 @@ def home():
 
     return render_template_string("""
     <html>
-    <head>
-        <title>📻 VRadio</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-            body { font-family: Arial, sans-serif; background: #000; color: #fff; text-align: center; padding: 10px; }
-            h2 { font-size: 22px; margin: 15px 0; }
-            .station { background: #111; padding: 20px; margin: 10px auto; width: 95%; border-radius: 12px; }
-            button { padding: 15px 25px; margin: 5px; font-size: 18px; border-radius: 12px; border: none; cursor: pointer; background: #ff5722; color: white; width: 90%; max-width: 300px; display:block; }
-            .random { background: #4caf50; }
-        </style>
-        <script>
-    const page = {{page}};
-    const totalPages = {{total_pages}};
-
-    function goPage(p) {
-        if (p < 1) p = totalPages;
-        if (p > totalPages) p = 1;
-        window.location.href = "/?page=" + p;
-    }
-
-    function randomPlay() {
-        const stations = {{ station_list|tojson }};
-        const rand = Math.floor(Math.random() * stations.length);
-        window.location.href = "/player?station=" + stations[rand];
-    }
-
-    // Keypad support
-    document.addEventListener('keydown', function(e) {
-        const key = e.key;
-        if (key === "4") { goPage(page - 1); }   // Previous page
-        else if (key === "6") { goPage(page + 1); }  // Next page
-        else if (key >= "1" && key <= "5") {
-            const index = parseInt(key) - 1;
-            const stations = {{ stations_on_page|tojson }};
-            if (stations[index]) {
-                window.location.href = "/player?station=" + stations[index];
-            }
-        } else if (key === "0") {  // Random station
-            randomPlay();
-        }
-    });
+<head>
+<title>📻 VRadio</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body { font-family: Arial, sans-serif; background: #121212; color: #fff; text-align: center; padding: 10px; }
+h2 { font-size: 24px; margin-bottom: 20px; }
+.station-card { background: #1e1e1e; margin: 10px auto; padding: 15px; border-radius: 12px; width: 90%; max-width: 350px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+.station-name { font-size: 20px; margin-bottom: 10px; }
+.station-card button { padding: 12px 20px; font-size: 16px; border-radius: 10px; border: none; cursor: pointer; background: #ff5722; color: white; transition: 0.2s; width: 100%; }
+.station-card button:hover { background: #e64a19; }
+.random-btn { background: #4caf50; margin-bottom: 20px; padding: 14px 22px; font-size: 18px; width: 90%; max-width: 350px; }
+.random-btn:hover { background: #43a047; }
+.pagination { margin-top: 20px; }
+.pagination button { padding: 10px 15px; margin: 5px; font-size: 16px; border-radius: 10px; border: none; cursor: pointer; background: #333; color: #fff; transition: 0.2s; }
+.pagination button:hover { background: #555; }
+</style>
+<script>
+const page = {{page}};
+const totalPages = {{total_pages}};
+const stationList = {{ station_list|tojson }};
+function goPage(p){ if(p<1)p=totalPages;if(p>totalPages)p=1; window.location.href="/?page="+p; }
+function randomPlay(){ const rand=Math.floor(Math.random()*stationList.length); window.location.href="/player?station="+stationList[rand]; }
+document.addEventListener('keydown', function(e){
+  const key=e.key;
+  if(key==="4"){goPage(page-1);} else if(key==="6"){goPage(page+1);} 
+  else if(key>="1" && key<="5"){const index=parseInt(key)-1; const stations={{ stations_on_page|tojson }}; if(stations[index]) window.location.href="/player?station="+stations[index];}
+  else if(key==="0"){randomPlay();}
+});
 </script>
-    </head>
-    <body>
-        <h2>📻 VRadio</h2>
+</head>
+<body>
+<h2>📻 VRadio</h2>
+<button class="random-btn" onclick="randomPlay()">🎲 Random Play</button>
 
-        <button class="random" onclick="randomPlay()">🎲 Random Play</button>
+{% for name in stations_on_page %}
+<div class="station-card">
+  <div class="station-name">{{name}}</div>
+  <button onclick="window.location.href='/player?station={{name}}'">▶ Play</button>
+</div>
+{% endfor %}
 
-        {% for name in stations_on_page %}
-        <div class="station">
-            <div style="font-size:20px; margin-bottom:10px;">{{name}}</div>
-            <a href="/player?station={{name}}"><button>▶ Play</button></a>
-        </div>
-        {% endfor %}
+<div class="pagination">
+  <button onclick="goPage(page-1)">⬅ Prev Page</button>
+  <button onclick="goPage(page+1)">Next Page ➡</button>
+  <div>Page {{page}} of {{total_pages}}</div>
+</div>
 
-        <div>
-            <button onclick="goPage(page-1)">⬅ Prev Page</button>
-            <button onclick="goPage(page+1)">Next Page ➡</button>
-            <div>Page {{page}} of {{total_pages}}</div>
-        </div>
-
-        <small>Keypad: 6=Next, 4=Prev, 0=Random</small>
-    </body>
-    </html>
+<small>Keypad: 6=Next, 4=Prev, 0=Random</small>
+</body>
+</html>
     """, stations_on_page=stations_on_page, page=page, total_pages=total_pages, station_list=station_list)
 
 
