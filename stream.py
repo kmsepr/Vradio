@@ -21,9 +21,9 @@ RADIO_STATIONS = {
 }
 
 # 🎛 Process managers (per station)
-ffmpeg_processes = {}  # playback
-record_processes = {}  # recording
-record_files = {}      # station -> file path
+ffmpeg_processes = {}   # playback
+record_processes = {}   # recording
+record_files = {}       # station -> file path
 
 
 # 🔹 Helper to stop ffmpeg process
@@ -33,7 +33,7 @@ def stop_process(proc):
         proc.wait()
 
 
-# 🏠 Home page with pagination + random play
+# 🏠 Home page
 @app.route("/")
 def home():
     page = int(request.args.get("page", 1))
@@ -123,27 +123,43 @@ def player():
     const stationList = {{ station_list|tojson }};
     let currentIndex = {{ current_index }};
     let recording = false;
+    let recordFiles = {};  // temp store file names
 
     function goToStation(i){ if(i<0)i=stationList.length-1; if(i>=stationList.length)i=0; window.location.href="/player?station="+stationList[i]; }
 
     async function toggleRecord(){
+        const station = stationList[currentIndex];
         if(!recording){
-            let res = await fetch("/record?station=" + stationList[currentIndex]);
+            let res = await fetch("/record?station=" + station);
             let data = await res.json();
             if(data.status==="recording"){ 
                 recording=true; 
                 document.getElementById("rec-status").innerText="⏺ Recording"; 
+                recordFiles[station] = data.file;
                 updateSize(); 
-                document.querySelector('.record').innerText="⏹ Stop & Download";
+                document.querySelector('.record').innerText="⏹ Stop Recording";
             }
-        }else{
-            window.location.href="/stop_record?station="+stationList[currentIndex];
+        } else {
+            let res = await fetch("/stop_record?station=" + station);
+            if(res.ok){
+                let blob = await res.blob();
+                let url = window.URL.createObjectURL(blob);
+                let a = document.createElement("a");
+                a.href = url;
+                a.download = recordFiles[station].split('/').pop();
+                a.click();
+                window.URL.revokeObjectURL(url);
+            }
+            recording=false;
+            document.getElementById("rec-status").innerText="Not recording";
+            document.querySelector('.record').innerText="⏺ Start Recording";
         }
     }
 
     async function updateSize(){
+        const station = stationList[currentIndex];
         if(!recording) return;
-        let res = await fetch("/record_size?station="+stationList[currentIndex]);
+        let res = await fetch("/record_size?station="+station);
         let data = await res.json();
         if(data.active){ 
             document.getElementById("rec-size").innerText=data.size+" KB"; 
@@ -249,7 +265,7 @@ def record_size():
     return jsonify({"size": 0, "active": False})
 
 
-# ⏹ Stop recording + auto download
+# ⏹ Stop recording + download
 @app.route("/stop_record")
 def stop_record():
     station = request.args.get("station")
