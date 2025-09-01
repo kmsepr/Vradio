@@ -182,83 +182,84 @@ def home():
 # 🎶 Player screen
 @app.route("/player")
 def player():
-    station = request.args.get("station")
-    url = RADIO_STATIONS.get(station, "")
+    station = request.args.get("station", list(RADIO_STATIONS.keys())[0])
+    stations = list(RADIO_STATIONS.keys())
+    current_index = stations.index(station)
+    prev_station = stations[current_index - 1] if current_index > 0 else stations[-1]
+    next_station = stations[(current_index + 1) % len(stations)]
 
     return render_template_string("""
     <html>
     <head>
-        <title>{{station}} - Player</title>
+        <title>Now Playing - {{station}}</title>
         <style>
-            body { font-family: Arial, sans-serif; background: #f4f4f4; text-align: center; }
+            body { font-family: Arial, sans-serif; text-align: center; background: #f4f4f4; }
             h2 { margin-top: 20px; }
-            .controls { margin: 20px; }
+            audio { margin-top: 20px; width: 80%; }
+            .controls { margin-top: 20px; }
             button {
-                padding: 14px 22px;
-                margin: 8px;
+                padding: 14px 20px;
+                margin: 6px;
                 border: none;
                 border-radius: 10px;
                 font-size: 16px;
                 cursor: pointer;
-                background: #2196F3;
                 color: white;
             }
-            audio {
-                margin-top: 20px;
-                width: 90%;
-                max-width: 420px;
-            }
+            .home { background: #9E9E9E; }
+            .play { background: #4CAF50; }
+            .rec { background: #f44336; }
         </style>
     </head>
     <body>
-        <h2>▶ Playing: {{station}}</h2>
+        <h2>🎶 Now Playing: {{station}}</h2>
+        <audio id="player" src="{{RADIO_STATIONS[station]}}" controls autoplay></audio>
 
         <div class="controls">
-            <button onclick="togglePlay()">▶⏸ Play/Pause (5)</button>
-            <button onclick="toggleRecord()">⏺ Record/Stop (0)</button>
-            <a href="/"><button>🏠 Home (1)</button></a>
+            <button class="home" onclick="window.location.href='/'">🏠 Home (1)</button>
+            <button class="play" onclick="togglePlay()">⏯ Play/Pause (5)</button>
+            <button class="rec" onclick="toggleRecord()">⏺ Record/Stop (0)</button>
         </div>
 
-        <audio id="player" autoplay>
-            <source src="{{url}}" type="audio/mpeg">
-        </audio>
-
-        <p id="recordingStatus"></p>
-
         <script>
-            var audio = document.getElementById("player");
-            var isPlaying = true;
-            var isRecording = false;
+            const player = document.getElementById("player");
+            let recording = false;
 
             function togglePlay() {
-                if (isPlaying) {
-                    audio.pause();
-                } else {
-                    audio.play();
-                }
-                isPlaying = !isPlaying;
+                if (player.paused) { player.play(); }
+                else { player.pause(); }
             }
 
             function toggleRecord() {
-                if (!isRecording) {
-                    document.getElementById("recordingStatus").innerText = "🔴 Recording...";
-                    // TODO: start recording backend call
+                if (!recording) {
+                    window.location.href = "/record?station={{station}}";
                 } else {
-                    document.getElementById("recordingStatus").innerText = "✅ Recording saved.";
-                    // TODO: stop recording backend call
+                    window.location.href = "/stop_record";
                 }
-                isRecording = !isRecording;
+                recording = !recording;
             }
 
             document.addEventListener("keydown", function(e) {
-                if (e.key === "5") { togglePlay(); }
-                else if (e.key === "0") { toggleRecord(); }
-                else if (e.key === "1") { window.location.href = "/"; }
+                if (e.key === "1") {
+                    window.location.href = "/";
+                }
+                else if (e.key === "5") {
+                    togglePlay();
+                }
+                else if (e.key === "0") {
+                    toggleRecord();
+                }
+                else if (e.key === "4") {
+                    window.location.href = "/player?station={{prev_station}}";
+                }
+                else if (e.key === "6") {
+                    window.location.href = "/player?station={{next_station}}";
+                }
             });
         </script>
     </body>
     </html>
-    """, station=station, url=url)
+    """, station=station, prev_station=prev_station, next_station=next_station, RADIO_STATIONS=RADIO_STATIONS)
 
 
 # 🎶 Stream playback
