@@ -1,111 +1,121 @@
 import subprocess
 import shutil
-import os
 from flask import Flask, Response, request, render_template_string
 
 app = Flask(__name__)
 
-# ✅ Check if ffmpeg is available
+# ✅ Check if ffmpeg is installed
 if not shutil.which("ffmpeg"):
     raise RuntimeError("ffmpeg not found. Please install ffmpeg.")
 
-# 📡 Radio stations
+# 📡 Example radio stations
 RADIO_STATIONS = {
-    "muthnabi_radio": "http://cast4.my-control-panel.com/proxy/muthnabi/stream",
-    "islam_radio": "http://live.radioislam.org.za:8000/;stream.mp3",
-    "calicut_radio": "http://radio.garden/api/ara/content/listen/xyz123",  # example
+    "Muthnabi Radio": "http://cast4.my-control-panel.com/proxy/muthnabi/stream",
+    "Kuran Radio": "http://qurango.net/radio/mishary",
 }
 
-current_process = None
-current_station = None
-recording_process = None
+# Track FFmpeg processes
+ffmpeg_process = None
+record_process = None
 
-# 🏠 Home screen
+
 @app.route("/")
 def home():
-    html = """
-    <h1>📻 Flask Radio Recorder</h1>
-    <p>Select a station to Play or Record:</p>
-    <ul>
-    {% for name, url in stations.items() %}
-        <li>
-            <b>{{ name }}</b> 
-            [<a href="/play/{{ name }}">▶️ Play</a>] 
-            [<a href="/record/{{ name }}">⏺️ Record</a>] 
-            [<a href="/stop">⏹️ Stop</a>]
-        </li>
-    {% endfor %}
-    </ul>
-    """
-    return render_template_string(html, stations=RADIO_STATIONS)
+    return render_template_string("""
+    <html>
+    <head>
+        <title>Radio Stream</title>
+    </head>
+    <body>
+        <h2>📻 Radio Streaming</h2>
+        <ul>
+        {% for name, url in stations.items() %}
+            <li>
+                {{name}} 
+                <a href="/play?url={{url}}">▶️ Play</a>
+                <a href="/record?url={{url}}">⏺️ Record</a>
+            </li>
+        {% endfor %}
+        </ul>
+        <br>
+        <a href="/stop">⏹️ Stop All</a>
+    </body>
+    </html>
+    """, stations=RADIO_STATIONS)
 
 
-# 🎶 Play route
-@app.route("/play/<station>")
-def play(station):
-    global current_process, current_station
+@app.route("/play")
+def play():
+    global ffmpeg_process, record_process
+    url = request.args.get("url")
 
-    if station not in RADIO_STATIONS:
-        return "Station not found", 404
+    # Stop previous play/record
+    stop_all()
 
-    url = RADIO_STATIONS[station]
+    # Start playback only
+    ffmpeg_process = subprocess.Popen([
+        "ffmpeg", "-i", url,
+        "-c", "copy", "-f", "mp3",
+        "pipe:1"
+    ], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
 
     def generate():
-        global current_process
-        if current_process:
-            current_process.kill()
-        # 🔊 Play without metadata
-        current_process = subprocess.Popen(
-            ["ffmpeg", "-i", url, "-f", "mp3", "-"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL
-        )
         while True:
-            chunk = current_process.stdout.read(1024)
-            if not chunk:
+            data = ffmpeg_process.stdout.read(1024)
+            if not data:
                 break
-            yield chunk
+            yield data
 
-    current_station = station
     return Response(generate(), mimetype="audio/mpeg")
 
 
-# ⏺️ Record route (while listening)
-@app.route("/record/<station>")
-def record(station):
-    global recording_process
+@app.route("/record")
+def record():
+    global ffmpeg_process, record_process
+    url = request.args.get("url")
 
-    if station not in RADIO_STATIONS:
-        return "Station not found", 404
+    # Stop previous play/record
+    stop_all()
 
-    url = RADIO_STATIONS[station]
-    filename = f"{station}.mp3"
+    # Start recording without metadata
+    record_process = subprocess.Popen([
+        "ffmpeg", "-i", url,
+        "-map_metadata", "-1",  # 🚫 Remove metadata
+        "-c", "copy", f"recording.mp3"
+    ], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
 
-    if recording_process:
-        recording_process.kill()
+    # Also play while recording
+    ffmpeg_process = subprocess.Popen([
+        "ffmpeg", "-i", url,
+        "-c", "copy", "-f", "mp3",
+        "pipe:1"
+    ], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
 
-    # 🎤 Record exactly what’s playing, no metadata
-    recording_process = subprocess.Popen(
-        ["ffmpeg", "-i", url, "-f", "mp3", filename],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL
-    )
+    def generate():
+        while True:
+            data = ffmpeg_process.stdout.read(1024)
+            if not data:
+                break
+            yield data
 
-    return f"Recording started: {filename}"
+    return Response(generate(), mimetype="audio/mpeg")
 
 
-# ⏹️ Stop everything
 @app.route("/stop")
 def stop():
-    global current_process, recording_process
-    if current_process:
-        current_process.kill()
-        current_process = None
-    if recording_process:
-        recording_process.kill()
-        recording_process = None
-    return "Stopped."
+    stop_all()
+    return "⏹️ Stopped playback & recording"
+
+
+def stop_all():
+    global ffmpeg_process, record_process
+    if ffmpeg_process:
+        ffmpeg_process.kill()
+        ffmpeg_process = None
+    if record_process:
+        record_process.kill()
+        record_process = None
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000)
+    app.run(host="0.0.0.0", port=8000, threaded=True)
