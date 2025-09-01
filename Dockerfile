@@ -1,15 +1,23 @@
+# Use official lightweight Python image
 FROM python:3.11-slim
 
-# Install system dependencies (ffmpeg + required libs)
+# Install FFmpeg
 RUN apt-get update && apt-get install -y ffmpeg && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy app
-COPY . /app
+# Set working directory
 WORKDIR /app
 
-# Run with Gunicorn
-CMD ["gunicorn", "-b", "0.0.0.0:8000", "app:app"]
+# Copy requirements if you have one
+COPY requirements.txt .
+
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy app code
+COPY . .
+
+# Expose Flask port
+EXPOSE 8000
+
+# Run Flask app
+CMD ["python", "stream.py"]
