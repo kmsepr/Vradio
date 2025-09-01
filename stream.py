@@ -21,9 +21,9 @@ RADIO_STATIONS = {
 }
 
 # 🎛 Process managers
-ffmpeg_processes = {}   # station -> ffmpeg process
-record_files = {}       # station -> recording file path
-recording_flags = {}    # station -> True/False
+ffmpeg_processes = {}    # station -> playback process
+record_processes = {}    # station -> recording process
+record_files = {}        # station -> recording file
 
 
 # 🔹 Stop process safely
@@ -122,15 +122,16 @@ def player():
     <script>
     const stationList = {{ station_list|tojson }};
     let currentIndex = {{ current_index }};
-    let recordingFlags = {};
+    let recording = false;
+
     async function toggleRecord(){
         const station = stationList[currentIndex];
-        if(!recordingFlags[station]){
+        if(!recording){
             let res = await fetch("/record?station=" + station);
             let data = await res.json();
-            if(data.status==="recording"){
-                recordingFlags[station]=true;
-                document.getElementById("rec-status").innerText="⏺ Recording";
+            if(data.status==="recording"){ 
+                recording=true; 
+                document.getElementById("rec-status").innerText="⏺ Recording"; 
                 document.querySelector('.record').innerText="⏹ Stop Recording";
             }
         } else {
@@ -144,8 +145,8 @@ def player():
                 a.click();
                 window.URL.revokeObjectURL(url);
             }
-            recordingFlags[station]=false;
-            document.getElementById("rec-status").innerText="Not recording";
+            recording=false;
+            document.getElementById("rec-status").innerText="Not recording"; 
             document.querySelector('.record').innerText="⏺ Start Recording";
         }
     }
@@ -174,7 +175,7 @@ def player():
     """, station=station, station_list=station_list, current_index=current_index)
 
 
-# 🎶 Playback + recording combined
+# 🎶 Playback stream
 @app.route("/play")
 def play():
     station = request.args.get("station")
@@ -182,23 +183,18 @@ def play():
         return "Station not found", 404
 
     url = RADIO_STATIONS[station]
-    os.makedirs("recordings", exist_ok=True)
 
-    # If process exists, reuse
-    if station not in ffmpeg_processes:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        record_file = f"recordings/{station}_{timestamp}.mp3"
-        record_files[station] = record_file
-        recording_flags[station] = False  # start recording later
+    # Stop previous playback if exists
+    if station in ffmpeg_processes:
+        stop_process(ffmpeg_processes[station])
+        ffmpeg_processes.pop(station, None)
 
-        # Tee command: output to file + pipe:1 (browser)
-        ffmpeg_processes[station] = subprocess.Popen(
-            ["ffmpeg", "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "2",
-             "-i", url, "-c:a", "libmp3lame", "-b:a", "128k",
-             "-f", "tee", f"[f=mp3]{record_file}|[f=mp3]pipe:1"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL
-        )
+    ffmpeg_processes[station] = subprocess.Popen(
+        ["ffmpeg", "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "2",
+         "-i", url, "-c:a", "libmp3lame", "-b:a", "128k", "-f", "mp3", "-"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL
+    )
 
     def generate():
         try:
@@ -214,36 +210,50 @@ def play():
     return Response(generate(), mimetype="audio/mpeg")
 
 
-# ⏺ Start recording flag
+# ⏺ Start recording
 @app.route("/record")
 def record():
     station = request.args.get("station")
-    if station not in ffmpeg_processes:
-        return jsonify({"error": "Station not playing"}), 400
+    if station not in RADIO_STATIONS:
+        return jsonify({"error": "Station not found"}), 404
 
-    recording_flags[station] = True
-    return jsonify({"status": "recording", "file": record_files[station]})
+    os.makedirs("recordings", exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    record_file = f"recordings/{station}_{timestamp}.mp3"
+    record_files[station] = record_file
+
+    # Stop previous recording if exists
+    if station in record_processes:
+        stop_process(record_processes[station])
+        record_processes.pop(station, None)
+
+    url = RADIO_STATIONS[station]
+    record_processes[station] = subprocess.Popen(
+        ["ffmpeg", "-reconnect", "1", "-reconnect_streamed", "1", "-i", url, "-vn", "-acodec", "libmp3lame", record_file],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+    )
+
+    return jsonify({"status": "recording", "file": record_file})
 
 
 # ⏹ Stop recording
 @app.route("/stop_record")
 def stop_record():
     station = request.args.get("station")
-    if station not in recording_flags or not recording_flags[station]:
-        return "No recording active", 404
+    if station not in record_processes:
+        return "No recording found", 404
 
-    recording_flags[station] = False
-    file_path = record_files[station]
-    return send_file(file_path, as_attachment=True)
+    stop_process(record_processes[station])
+    record_processes.pop(station, None)
+    return send_file(record_files[station], as_attachment=True)
 
 
 # ⏹ Stop playback
 @app.route("/stop")
 def stop():
     station = request.args.get("station")
-    proc = ffmpeg_processes.get(station)
-    if proc:
-        stop_process(proc)
+    if station in ffmpeg_processes:
+        stop_process(ffmpeg_processes[station])
         ffmpeg_processes.pop(station, None)
     return "⏹ Stopped playback"
 
