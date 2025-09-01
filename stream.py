@@ -342,7 +342,7 @@ def play():
         ffmpeg_process.kill()
 
     ffmpeg_process = subprocess.Popen(
-        ["ffmpeg", "-i", url, "-c:a", "libmp3lame", "-b:a", "128k", "-f", "mp3", "-"],
+        ["ffmpeg", "-i", url, "-c:a", "libmp3lame", "-b:a", "40k", "-f", "mp3", "-"],
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL
     )
