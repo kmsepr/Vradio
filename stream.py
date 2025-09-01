@@ -160,14 +160,14 @@ def home():
     """, stations_on_page=stations_on_page, page=page, total_pages=total_pages, station_list=station_list)
 
 
-# 🎶 Player screen with keypad support
+# 🎶 Player screen with keypad support + random play
 @app.route("/player")
 def player():
     station = request.args.get("station")
     if station not in RADIO_STATIONS:
         return "Station not found", 404
 
-    # Convert station names to list for next/prev navigation
+    # Convert station names to list for next/prev/random navigation
     station_list = list(RADIO_STATIONS.keys())
     current_index = station_list.index(station)
 
@@ -181,7 +181,6 @@ def player():
             audio { width: 90%; max-width: 400px; margin: 20px auto; display: block; }
             button { padding: 12px 18px; margin: 8px; border: none; border-radius: 12px; font-size: 16px; cursor: pointer; }
             .record { background: #ff9800; color: white; }
-            .stop { background: #f44336; color: white; }
         </style>
         <script>
             const stationList = {{ station_list|tojson }};
@@ -202,6 +201,12 @@ def player():
                     });
             }
 
+            function randomStation() {
+                const randIndex = Math.floor(Math.random() * stationList.length);
+                goToStation(randIndex);
+            }
+
+            // Keypad shortcuts
             document.addEventListener('keydown', function(e) {
                 const key = e.key;
                 if (key === "0") {  // record / stop record
@@ -210,6 +215,8 @@ def player():
                     window.location.href = "/";
                 } else if (key === "4") {  // previous
                     goToStation(currentIndex - 1);
+                } else if (key === "5") {  // random
+                    randomStation();
                 } else if (key === "6") {  // next
                     goToStation(currentIndex + 1);
                 }
@@ -226,7 +233,7 @@ def player():
             <br>
             <button class="record" onclick="toggleRecord()">⏺ Record / Stop</button>
             <br>
-            <small>Keypad shortcuts: 0=Record, 1=Home, 4=Prev, 6=Next</small>
+            <small>Keypad shortcuts: 0=Record, 1=Home, 4=Prev, 5=Random, 6=Next</small>
         </div>
     </body>
     </html>
