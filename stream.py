@@ -250,11 +250,20 @@ button {
     let currentIndex = {{ current_index }};
     let recording = false;
     let recordFile = null;
+    const audio = document.querySelector('audio');
 
     function goToStation(index) {
         if (index < 0) index = stationList.length - 1;
         if (index >= stationList.length) index = 0;
         window.location.href = "/player?station=" + stationList[index];
+    }
+
+    function togglePlayPause() {
+        if (audio.paused) {
+            audio.play();
+        } else {
+            audio.pause();
+        }
     }
 
     async function toggleRecord() {
@@ -295,7 +304,9 @@ button {
     document.addEventListener('keydown', function(e) {
         const key = e.key;
         if (key === "5") {
-            toggleRecord();
+            togglePlayPause();   // Play/Pause
+        } else if (key === "*") {
+            toggleRecord();      // Record/Stop
         } else if (key === "1") {
             window.location.href = "/";
         } else if (key === "4") {
@@ -320,7 +331,7 @@ button {
 <div id="rec-status">Not recording</div>
 <div id="rec-size"></div>
 <br>
-<small>Keypad shortcuts: 5=Record/Stop, 1=Home, 4=Prev, 0=Random, 6=Next</small>
+<small>Keypad shortcuts: 5=Play/Pause, *=Record/Stop, 1=Home, 4=Prev, 0=Random, 6=Next</small>
         </div>
     </body>
     </html>
