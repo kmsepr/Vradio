@@ -97,17 +97,69 @@ def home():
 <title>📻 VRadio</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-body { font-family: Arial, sans-serif; background: #121212; color: #fff; text-align: center; padding: 10px; }
-h2 { font-size: 24px; margin-bottom: 20px; }
-.station-card { background: #1e1e1e; margin: 10px auto; padding: 15px; border-radius: 12px; width: 90%; max-width: 350px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-.station-name { font-size: 20px; margin-bottom: 10px; }
-.station-card button { padding: 12px 20px; font-size: 16px; border-radius: 10px; border: none; cursor: pointer; background: #ff5722; color: white; transition: 0.2s; width: 100%; }
+body { 
+    font-family: Arial, sans-serif; 
+    background: #121212; 
+    color: #fff; 
+    text-align: center; 
+    padding: 2vh 2vw;
+}
+h2 { 
+    font-size: 5vw;  /* scales with screen width */
+    margin-bottom: 3vh; 
+}
+.station-card { 
+    background: #1e1e1e; 
+    margin: 2vh auto; 
+    padding: 2vh; 
+    border-radius: 12px; 
+    width: 95%; 
+    max-width: 600px; 
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3); 
+}
+.station-name { 
+    font-size: 4vw; 
+    margin-bottom: 2vh; 
+}
+.station-card button { 
+    padding: 2vh 2vw; 
+    font-size: 3.5vw; 
+    border-radius: 10px; 
+    border: none; 
+    cursor: pointer; 
+    background: #ff5722; 
+    color: white; 
+    width: 100%; 
+    transition: 0.2s; 
+}
 .station-card button:hover { background: #e64a19; }
-.random-btn { background: #4caf50; margin-bottom: 20px; padding: 14px 22px; font-size: 18px; width: 90%; max-width: 350px; }
+.random-btn { 
+    background: #4caf50; 
+    margin-bottom: 2vh; 
+    padding: 2vh 2vw; 
+    font-size: 4vw; 
+    width: 95%; 
+    max-width: 600px; 
+}
 .random-btn:hover { background: #43a047; }
-.pagination { margin-top: 20px; }
-.pagination button { padding: 10px 15px; margin: 5px; font-size: 16px; border-radius: 10px; border: none; cursor: pointer; background: #333; color: #fff; transition: 0.2s; }
+.pagination { margin-top: 2vh; }
+.pagination button { 
+    padding: 1.5vh 2vw; 
+    margin: 1vh; 
+    font-size: 3vw; 
+    border-radius: 10px; 
+    border: none; 
+    cursor: pointer; 
+    background: #333; 
+    color: #fff; 
+}
 .pagination button:hover { background: #555; }
+
+/* 📱 Mobile tweak */
+@media (max-width: 600px) {
+  h2 { font-size: 6vw; }
+  .station-card button, .random-btn { font-size: 5vw; }
+}
 </style>
 <script>
 const page = {{page}};
@@ -162,52 +214,99 @@ def player():
     <head>
         <title>▶ {{station}}</title>
         <style>
-            body { font-family: Arial, sans-serif; background: black; color: white; text-align: center; }
-            .container { margin-top: 60px; }
-            audio { width: 90%; max-width: 400px; margin: 20px auto; display: block; }
-            button { padding: 12px 18px; margin: 8px; border: none; border-radius: 12px; font-size: 16px; cursor: pointer; }
-            .record { background: #ff9800; color: white; }
-        </style>
+body { 
+    font-family: Arial, sans-serif; 
+    background: black; 
+    color: white; 
+    text-align: center; 
+    padding: 2vh 2vw;
+}
+.container { margin-top: 5vh; }
+h2 { font-size: 5vw; }
+audio { 
+    width: 95%; 
+    max-width: 600px; 
+    margin: 2vh auto; 
+    display: block; 
+}
+button { 
+    padding: 2vh 2vw; 
+    margin: 2vh; 
+    border: none; 
+    border-radius: 12px; 
+    font-size: 3.5vw; 
+    cursor: pointer; 
+}
+.record { background: #ff9800; color: white; }
+
+/* 📱 Mobile tweak */
+@media (max-width: 600px) {
+  h2 { font-size: 6vw; }
+  button { font-size: 5vw; }
+}
+</style>
         <script>
-            const stationList = {{ station_list|tojson }};
-            let currentIndex = {{ current_index }};
+    const stationList = {{ station_list|tojson }};
+    let currentIndex = {{ current_index }};
+    let recording = false;
+    let recordFile = null;
 
-            function goToStation(index) {
-                if (index < 0) index = stationList.length - 1;
-                if (index >= stationList.length) index = 0;
-                window.location.href = "/player?station=" + stationList[index];
+    function goToStation(index) {
+        if (index < 0) index = stationList.length - 1;
+        if (index >= stationList.length) index = 0;
+        window.location.href = "/player?station=" + stationList[index];
+    }
+
+    async function toggleRecord() {
+        let res = await fetch("/record?station=" + stationList[currentIndex]);
+        let data = await res.json();
+
+        if (data.status === "recording") {
+            recording = true;
+            recordFile = data.file;
+            document.getElementById("rec-status").innerText = "⏺ Recording...";
+            updateSize();
+        } else if (data.status === "stopped") {
+            recording = false;
+            document.getElementById("rec-status").innerText = "⏹ Stopped";
+            if (data.file) {
+                // auto-download after stop
+                window.location.href = "/stop_record";
             }
+        }
+    }
 
-            function toggleRecord() {
-                fetch("/record?station=" + stationList[currentIndex])
-                    .then(res => res.text())
-                    .then(html => {
-                        const w = window.open("", "_blank");
-                        w.document.write(html);
-                    });
-            }
+    async function updateSize() {
+        if (!recording) return;
+        let res = await fetch("/record_size");
+        let data = await res.json();
+        if (data.active) {
+            document.getElementById("rec-size").innerText = data.size + " KB";
+            setTimeout(updateSize, 1000);
+        }
+    }
 
-            function randomStation() {
-                const randIndex = Math.floor(Math.random() * stationList.length);
-                goToStation(randIndex);
-            }
+    function randomStation() {
+        const randIndex = Math.floor(Math.random() * stationList.length);
+        goToStation(randIndex);
+    }
 
-            // Keypad shortcuts
-            document.addEventListener('keydown', function(e) {
-                const key = e.key;
-                if (key === "5") {  // record / stop record
-                    toggleRecord();
-                } else if (key === "1") {  // home
-                    window.location.href = "/";
-                } else if (key === "4") {  // previous
-                    goToStation(currentIndex - 1);
-                } else if (key === "0") {  // random
-                    randomStation();
-                } else if (key === "6") {  // next
-                    goToStation(currentIndex + 1);
-                }
-            });
-        </script>
+    // Keypad shortcuts
+    document.addEventListener('keydown', function(e) {
+        const key = e.key;
+        if (key === "5") {
+            toggleRecord();
+        } else if (key === "1") {
+            window.location.href = "/";
+        } else if (key === "4") {
+            goToStation(currentIndex - 1);
+        } else if (key === "0") {
+            randomStation();
+        } else if (key === "6") {
+            goToStation(currentIndex + 1);
+        }
+    });
+</script>
     </head>
     <body>
         <div class="container">
@@ -218,8 +317,10 @@ def player():
             </audio>
             <br>
             <button class="record" onclick="toggleRecord()">⏺ Record / Stop</button>
-            <br>
-            <small>Keypad shortcuts: 5=Record, 1=Home, 4=Prev, 0=Random, 6=Next</small>
+<div id="rec-status">Not recording</div>
+<div id="rec-size"></div>
+<br>
+<small>Keypad shortcuts: 5=Record/Stop, 1=Home, 4=Prev, 0=Random, 6=Next</small>
         </div>
     </body>
     </html>
@@ -267,56 +368,31 @@ def record():
 
     station = request.args.get("station")
     if station not in RADIO_STATIONS:
-        return "Station not found", 404
+        return jsonify({"status": "error", "message": "Station not found"}), 404
 
+    # If already recording, stop and return file
+    if record_process:
+        record_process.kill()
+        record_process = None
+        if record_file and os.path.exists(record_file):
+            size = os.path.getsize(record_file) // 1024
+            return jsonify({"status": "stopped", "file": record_file, "size": size})
+        return jsonify({"status": "stopped", "message": "No file"}), 200
+
+    # Start new recording
     url = RADIO_STATIONS[station]
-
     os.makedirs("recordings", exist_ok=True)
 
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     record_file = f"recordings/{station.replace(' ', '_')}_{timestamp}.mp3"
 
-    # Stop previous recording
-    if record_process:
-        record_process.kill()
-
     record_process = subprocess.Popen(
-        ["ffmpeg", "-i", url, "-map_metadata", "-1", "-f", "mp3","-y", record_file],
+        ["ffmpeg", "-i", url, "-map_metadata", "-1", "-f", "mp3", "-y", record_file],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL
     )
 
-    return render_template_string("""
-    <html>
-    <head>
-        <title>⏺ Recording</title>
-        <style>
-            body { font-family: Arial, sans-serif; background: black; color: white; text-align: center; }
-            .container { margin-top: 60px; }
-            .status { font-size: 18px; margin: 15px; }
-            button { padding: 12px 18px; margin: 8px; border: none; border-radius: 12px; font-size: 16px; cursor: pointer; background: #f44336; color: white; }
-        </style>
-        <script>
-            async function updateSize() {
-                let res = await fetch('/record_size');
-                let data = await res.json();
-                document.getElementById("size").innerText = data.size + " KB";
-                if (data.active) {
-                    setTimeout(updateSize, 1000);
-                }
-            }
-            updateSize();
-        </script>
-    </head>
-    <body>
-        <div class="container">
-            <h2>⏺ Recording: {{station}}</h2>
-            <div class="status">File Size: <span id="size">0 KB</span></div>
-            <a href="/stop_record"><button>⏹ Stop Recording</button></a>
-        </div>
-    </body>
-    </html>
-    """, station=station)
+    return jsonify({"status": "recording", "file": record_file})
 
 
 # 📏 Recording size API
