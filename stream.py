@@ -79,48 +79,72 @@ current_station = None
 record_file = None
 
 
-# 🏠 Home screen
+# 🏠 Home screen with pagination
 @app.route("/")
 def home():
+    page = int(request.args.get("page", 1))
+    per_page = 5  # stations per page
+    station_list = list(RADIO_STATIONS.keys())
+    total_pages = (len(station_list) + per_page - 1) // per_page
+    start = (page - 1) * per_page
+    end = start + per_page
+    stations_on_page = station_list[start:end]
+
     return render_template_string("""
     <html>
     <head>
         <title>📻 VRadio</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
-            body { font-family: Arial, sans-serif; background: #f4f4f4; text-align: center; }
-            h2 { margin-top: 20px; }
-            .station { 
-                background: #fff; 
-                padding: 15px; 
-                margin: 10px auto; 
-                width: 90%; 
-                max-width: 400px; 
-                border-radius: 12px; 
-                box-shadow: 0 3px 6px rgba(0,0,0,0.2);
-            }
-            button { 
-                padding: 10px 15px; 
-                margin: 5px; 
-                border: none; 
-                border-radius: 8px; 
-                font-size: 14px; 
-                cursor: pointer;
-                background: #4CAF50; 
-                color: white;
-            }
+            body { font-family: Arial, sans-serif; background: #000; color: #fff; text-align: center; padding: 10px; }
+            h2 { font-size: 22px; margin: 15px 0; }
+            .station { background: #111; padding: 20px; margin: 10px auto; width: 95%; border-radius: 12px; }
+            button { padding: 15px 25px; margin: 5px; font-size: 18px; border-radius: 12px; border: none; cursor: pointer; background: #ff5722; color: white; width: 90%; max-width: 300px; display:block; }
         </style>
+        <script>
+            const page = {{page}};
+            const totalPages = {{total_pages}};
+
+            function goPage(p) {
+                if (p < 1) p = totalPages;
+                if (p > totalPages) p = 1;
+                window.location.href = "/?page=" + p;
+            }
+
+            // Keypad support
+            document.addEventListener('keydown', function(e) {
+                const key = e.key;
+                if (key === "2") { // next page
+                    goPage(page + 1);
+                } else if (key === "8") { // previous page
+                    goPage(page - 1);
+                } else if (key >= "1" && key <= "5") { // select station 1-5
+                    const index = parseInt(key) - 1;
+                    const stations = {{ stations_on_page|tojson }};
+                    if (stations[index]) {
+                        window.location.href = "/player?station=" + stations[index];
+                    }
+                }
+            });
+        </script>
     </head>
     <body>
-        <h2>📻 Flask VRadio</h2>
-        {% for name in stations.keys() %}
+        <h2>📻 VRadio</h2>
+        {% for name in stations_on_page %}
         <div class="station">
-            <b>{{name}}</b><br>
-            <a href="/player?station={{name}}"><button>▶ Select</button></a>
+            <div style="font-size:20px; margin-bottom:10px;">{{name}}</div>
+            <a href="/player?station={{name}}"><button>▶ Play</button></a>
         </div>
         {% endfor %}
+        <div>
+            <button onclick="goPage(page-1)">⬅ Prev Page</button>
+            <button onclick="goPage(page+1)">Next Page ➡</button>
+            <div>Page {{page}} of {{total_pages}}</div>
+        </div>
+        <small>Keypad: 2=Next, 8=Prev, 1-5=Select Station</small>
     </body>
     </html>
-    """, stations=RADIO_STATIONS)
+    """, stations_on_page=stations_on_page, page=page, total_pages=total_pages)
 
 
 # 🎶 Player screen with keypad support
