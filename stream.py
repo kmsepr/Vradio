@@ -17,17 +17,23 @@ RADIO_STATIONS = {
     "air_kavarati": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio189/chunklist.m3u8",
     "air_calicut": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio082/chunklist.m3u8",
     "manjeri_fm": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio101/chunklist.m3u8",
-    # … keep the rest of your stations …
     "vom_radio": "https://radio.psm.mv/draair",
 }
 
-# 🎛 Global state
-ffmpeg_process = None
-record_process = None
-record_file = None
+# 🎛 Process managers (per station)
+ffmpeg_processes = {}  # playback
+record_processes = {}  # recording
+record_files = {}      # station -> file path
 
 
-# 🏠 Home with pagination + random play
+# 🔹 Helper to stop ffmpeg process
+def stop_process(proc):
+    if proc:
+        proc.kill()
+        proc.wait()
+
+
+# 🏠 Home page with pagination + random play
 @app.route("/")
 def home():
     page = int(request.args.get("page", 1))
@@ -92,7 +98,7 @@ def home():
     """, stations_on_page=stations_on_page, page=page, total_pages=total_pages, station_list=station_list)
 
 
-# 🎶 Player
+# 🎶 Player page
 @app.route("/player")
 def player():
     station = request.args.get("station")
@@ -120,24 +126,39 @@ def player():
 
     function goToStation(i){ if(i<0)i=stationList.length-1; if(i>=stationList.length)i=0; window.location.href="/player?station="+stationList[i]; }
 
-    async function startRecord(){
-        let res = await fetch("/record?station=" + stationList[currentIndex]);
-        let data = await res.json();
-        if(data.status==="recording"){ recording=true; document.getElementById("rec-status").innerText="⏺ Recording"; updateSize(); }
+    async function toggleRecord(){
+        if(!recording){
+            let res = await fetch("/record?station=" + stationList[currentIndex]);
+            let data = await res.json();
+            if(data.status==="recording"){ 
+                recording=true; 
+                document.getElementById("rec-status").innerText="⏺ Recording"; 
+                updateSize(); 
+                document.querySelector('.record').innerText="⏹ Stop & Download";
+            }
+        }else{
+            window.location.href="/stop_record?station="+stationList[currentIndex];
+        }
     }
-    function stopRecord(){ window.location.href="/stop_record"; }
 
     async function updateSize(){
         if(!recording) return;
-        let res = await fetch("/record_size");
+        let res = await fetch("/record_size?station="+stationList[currentIndex]);
         let data = await res.json();
-        if(data.active){ document.getElementById("rec-size").innerText=data.size+" KB"; setTimeout(updateSize,1000); }
+        if(data.active){ 
+            document.getElementById("rec-size").innerText=data.size+" KB"; 
+            setTimeout(updateSize,1000); 
+        } else {
+            recording=false;
+            document.getElementById("rec-status").innerText="Not recording";
+            document.querySelector('.record').innerText="⏺ Start Recording";
+        }
     }
 
     function randomStation(){ const r=Math.floor(Math.random()*stationList.length); goToStation(r); }
 
     document.addEventListener('keydown', function(e){
-        if(e.key==="5"){ if(!recording) startRecord(); else stopRecord(); }
+        if(e.key==="5"){ toggleRecord(); }
         else if(e.key==="1"){ window.location.href="/"; }
         else if(e.key==="4"){ goToStation(currentIndex-1); }
         else if(e.key==="6"){ goToStation(currentIndex+1); }
@@ -150,8 +171,7 @@ def player():
     <audio controls autoplay>
       <source src="/play?station={{station}}" type="audio/mpeg">
     </audio>
-    <button class="record" onclick="startRecord()">⏺ Start Recording</button>
-    <button onclick="stopRecord()">💾 Stop & Download</button>
+    <button class="record" onclick="toggleRecord()">⏺ Start Recording</button>
     <div id="rec-status">Not recording</div>
     <div id="rec-size"></div>
     <br><small>Keys: 5=Record/Stop, 1=Home, 4=Prev, 0=Random, 6=Next</small>
@@ -163,17 +183,18 @@ def player():
 # 🎶 Stream playback
 @app.route("/play")
 def play():
-    global ffmpeg_process
     station = request.args.get("station")
     if station not in RADIO_STATIONS:
         return "Station not found", 404
 
     url = RADIO_STATIONS[station]
-    if ffmpeg_process:
-        ffmpeg_process.kill()
 
-    ffmpeg_process = subprocess.Popen(
-        ["ffmpeg", "-i", url, "-c:a", "libmp3lame", "-b:a", "128k", "-f", "mp3", "-"],
+    if station in ffmpeg_processes:
+        stop_process(ffmpeg_processes[station])
+
+    ffmpeg_processes[station] = subprocess.Popen(
+        ["ffmpeg", "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "2",
+         "-i", url, "-c:a", "libmp3lame", "-b:a", "128k", "-f", "mp3", "-"],
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL
     )
@@ -181,13 +202,13 @@ def play():
     def generate():
         try:
             while True:
-                data = ffmpeg_process.stdout.read(4096)
+                data = ffmpeg_processes[station].stdout.read(4096)
                 if not data:
                     break
                 yield data
         finally:
-            if ffmpeg_process:
-                ffmpeg_process.kill()
+            stop_process(ffmpeg_processes.get(station))
+            ffmpeg_processes.pop(station, None)
 
     return Response(generate(), mimetype="audio/mpeg")
 
@@ -195,33 +216,35 @@ def play():
 # ⏺ Start recording
 @app.route("/record")
 def record():
-    global record_process, record_file
     station = request.args.get("station")
     if station not in RADIO_STATIONS:
         return jsonify({"error": "Station not found"}), 404
 
     os.makedirs("recordings", exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    record_file = f"recordings/{station}_{timestamp}.mp3"
+    file_path = f"recordings/{station}_{timestamp}.mp3"
     url = RADIO_STATIONS[station]
 
-    if record_process:
-        record_process.kill()
+    if station in record_processes:
+        stop_process(record_processes[station])
 
-    record_process = subprocess.Popen(
-        ["ffmpeg", "-i", url, "-vn", "-acodec", "libmp3lame", record_file],
+    record_processes[station] = subprocess.Popen(
+        ["ffmpeg", "-i", url, "-vn", "-acodec", "libmp3lame", file_path],
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
     )
+    record_files[station] = file_path
 
-    return jsonify({"status": "recording", "file": record_file})
+    return jsonify({"status": "recording", "file": file_path})
 
 
 # 📏 Recording size
 @app.route("/record_size")
 def record_size():
-    global record_file, record_process
-    if record_file and os.path.exists(record_file) and record_process:
-        size = os.path.getsize(record_file) // 1024
+    station = request.args.get("station")
+    file_path = record_files.get(station)
+    proc = record_processes.get(station)
+    if file_path and os.path.exists(file_path) and proc:
+        size = os.path.getsize(file_path) // 1024
         return jsonify({"size": size, "active": True})
     return jsonify({"size": 0, "active": False})
 
@@ -229,22 +252,26 @@ def record_size():
 # ⏹ Stop recording + auto download
 @app.route("/stop_record")
 def stop_record():
-    global record_process, record_file
-    if record_process:
-        record_process.kill()
-        record_process = None
-    if record_file and os.path.exists(record_file):
-        return send_file(record_file, as_attachment=True)
+    station = request.args.get("station")
+    proc = record_processes.get(station)
+    file_path = record_files.get(station)
+    if proc:
+        stop_process(proc)
+        record_processes.pop(station, None)
+    if file_path and os.path.exists(file_path):
+        record_files.pop(station, None)
+        return send_file(file_path, as_attachment=True)
     return "No recording found", 404
 
 
 # ⏹ Stop playback
 @app.route("/stop")
 def stop():
-    global ffmpeg_process
-    if ffmpeg_process:
-        ffmpeg_process.kill()
-        ffmpeg_process = None
+    station = request.args.get("station")
+    proc = ffmpeg_processes.get(station)
+    if proc:
+        stop_process(proc)
+        ffmpeg_processes.pop(station, None)
     return "⏹ Stopped playback"
 
 
