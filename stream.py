@@ -10,70 +10,11 @@ app = Flask(__name__)
 if not shutil.which("ffmpeg"):
     raise RuntimeError("ffmpeg not found. Please install ffmpeg.")
 
-# 📡 Full list of radio stations
+# 📡 Radio stations
 RADIO_STATIONS = {
-    "muthnabi_radio": "http://cast4.my-control-panel.com/proxy/muthnabi/stream",
-     "radio_nellikka": "https://usa20.fastcast4u.com:2130/stream",
-
-"air_kavarati": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio189/chunklist.m3u8",
-    "air_calicut": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio082/chunklist.m3u8",
-    "manjeri_fm": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio101/chunklist.m3u8",
-    "real_fm": "http://air.pc.cdn.bitgravity.com/air/live/pbaudio083/playlist.m3u8",
-    "safari_tv": "https://j78dp346yq5r-hls-live.5centscdn.com/safari/live.stream/chunks.m3u8",
-    "victers_tv": "https://932y4x26ljv8-hls-live.5centscdn.com/victers/tv.stream/victers/tv1/chunks.m3u8",
-    "kairali_we": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/wetv_nim_https/050522/wetv/playlist.m3u8",
-
-"mazhavil_manorama": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/mazhavilmanorama_nim_https/050522/mazhavilmanorama/playlist.m3u8",
-
-    "malayalam_1": "http://167.114.131.90:5412/stream",
-    "radio_digital_malayali": "https://radio.digitalmalayali.in/listen/stream/radio.mp3",
-    "malayalam_90s": "https://stream-159.zeno.fm/gm3g9amzm0hvv?zs-x-7jq8ksTOav9ZhlYHi9xw",
-    "aural_oldies": "https://stream-162.zeno.fm/tksfwb1mgzzuv?zs=SxeQj1-7R0alsZSWJie5eQ",
-    "radio_malayalam": "https://radiomalayalamfm.com/radio/8000/radio.mp3",
-    "swaranjali": "https://stream-161.zeno.fm/x7mve2vt01zuv?zs-D4nK05-7SSK2FZAsvumh2w",
-    "radio_beat_malayalam": "http://live.exertion.in:8050/radio.mp3",
-    "shahul_radio": "https://stream-150.zeno.fm/cynbm5ngx38uv?zs=Ktca5StNRWm-sdIR7GloVg",
-    "raja_radio": "http://159.203.111.241:8026/stream",
-    "nonstop_hindi": "http://s5.voscast.com:8216/stream",
-    "fm_gold": "https://airhlspush.pc.cdn.bitgravity.com/httppush/hispbaudio005/hispbaudio00564kbps.m3u8",
-    "motivational_series": "http://104.7.66.64:8010",
-    "deenagers_radio": "http://104.7.66.64:8003/",
-    "hajj_channel": "http://104.7.66.64:8005",
-    "abc_islam": "http://s10.voscast.com:9276/stream",
-    "eram_fm": "http://icecast2.edisimo.com:8000/eramfm.mp3",
-    "al_sumood_fm": "http://us3.internet-radio.com/proxy/alsumoodfm2020?mp=/stream",
-    "nur_ala_nur": "http://104.7.66.64:8011/",
-    "ruqya_radio": "http://104.7.66.64:8004",
-    "seiyun_radio": "http://s2.radio.co/s26c62011e/listen",
-    "noor_al_eman": "http://edge.mixlr.com/channel/boaht",
-    "sam_yemen": "https://edge.mixlr.com/channel/kijwr",
-    "afaq": "https://edge.mixlr.com/channel/rumps",
-    "alfasi_radio": "https://qurango.net/radio/mishary_alafasi",
-    "tafsir_quran": "https://radio.quranradiotafsir.com/9992/stream",
-    "sirat_al_mustaqim": "http://104.7.66.64:8091/stream",
-    "river_nile_radio": "http://104.7.66.64:8087",
-    "quran_radio_cairo": "http://n02.radiojar.com/8s5u5tpdtwzuv",
-    "quran_radio_nablus": "http://www.quran-radio.org:8002/",
-    "al_nour": "http://audiostreaming.itworkscdn.com:9066/",
-    "allahu_akbar_radio": "http://66.45.232.132:9996/stream",
-    "omar_abdul_kafi_radio": "http://104.7.66.64:8007",
-    "urdu_islamic_lecture": "http://144.91.121.54:27001/channel_02.aac",
-    "hob_nabi": "http://216.245.210.78:8098/stream",
-    "sanaa_radio": "http://dc5.serverse.com/proxy/pbmhbvxs/stream",
-    "rubat_ataq": "http://stream.zeno.fm/5tpfc8d7xqruv",
-    "al_jazeera": "http://live-hls-audio-web-aja.getaj.net/VOICE-AJA/index.m3u8",
-
-
-
-
-    "bloomberg_tv": "https://bloomberg-bloomberg-3-br.samsung.wurl.tv/manifest/playlist.m3u8",
-    "france_24": "https://live.france24.com/hls/live/2037218/F24_EN_HI_HLS/master_500.m3u8",
-
-"vom_radio": "https://radio.psm.mv/draair",
+    "Muthnabi Radio": "http://cast4.my-control-panel.com/proxy/muthnabi/stream",
+    "Kuran Radio": "http://qurango.net/radio/mishary",
 }
-
-
-STATIONS_PER_PAGE = 10  # how many stations per page
 
 # Track processes
 ffmpeg_process = None
@@ -85,19 +26,6 @@ record_file = None
 # 🏠 Home screen
 @app.route("/")
 def home():
-    # current page
-    page = int(request.args.get("page", 1))
-
-    # get station list
-    station_names = list(RADIO_STATIONS.keys())
-    total_pages = (len(station_names) + STATIONS_PER_PAGE - 1) // STATIONS_PER_PAGE
-
-    # slice for current page
-    start = (page - 1) * STATIONS_PER_PAGE
-    end = start + STATIONS_PER_PAGE
-    paged_stations = station_names[start:end]
-
-    # render
     return render_template_string("""
     <html>
     <head>
@@ -124,142 +52,53 @@ def home():
                 background: #4CAF50; 
                 color: white;
             }
-            .nav {
-                margin: 20px;
-            }
-            .nav a {
-                padding: 8px 12px;
-                margin: 4px;
-                text-decoration: none;
-                background: #007bff;
-                color: white;
-                border-radius: 6px;
-            }
         </style>
     </head>
     <body>
-        <h2>📻 Flask VRadio (Page {{page}} / {{total}})</h2>
-        
-        {% for name in stations %}
+        <h2>📻 Flask VRadio</h2>
+        {% for name in stations.keys() %}
         <div class="station">
             <b>{{name}}</b><br>
             <a href="/player?station={{name}}"><button>▶ Select</button></a>
         </div>
         {% endfor %}
-
-        <div class="nav">
-            {% if page > 1 %}
-                <a href="/?page=1">⏮ First (1)</a>
-                <a href="/?page={{page-1}}">◀ Prev (4)</a>
-            {% endif %}
-            {% if page < total %}
-                <a href="/?page={{page+1}}">Next ▶ (6)</a>
-                <a href="/?page={{total}}">Last ⏭ (3)</a>
-            {% endif %}
-            <a href="/random">🎲 Random (5)</a>
-        </div>
-
-        <script>
-            document.addEventListener("keydown", function(e) {
-                if (e.key === "1") {
-                    window.location.href = "/?page=1";
-                } else if (e.key === "4" && {{page}} > 1) {
-                    window.location.href = "/?page={{page-1}}";
-                } else if (e.key === "6" && {{page}} < {{total}}) {
-                    window.location.href = "/?page={{page+1}}";
-                } else if (e.key === "3") {
-                    window.location.href = "/?page={{total}}";
-                } else if (e.key === "5") {
-                    window.location.href = "/random";
-                }
-            });
-        </script>
     </body>
     </html>
-    """, stations=paged_stations, page=page, total=total_pages)
+    """, stations=RADIO_STATIONS)
 
 
 # 🎶 Player screen
 @app.route("/player")
 def player():
-    station = request.args.get("station", list(RADIO_STATIONS.keys())[0])
-    stations = list(RADIO_STATIONS.keys())
-    current_index = stations.index(station)
-    prev_station = stations[current_index - 1] if current_index > 0 else stations[-1]
-    next_station = stations[(current_index + 1) % len(stations)]
-
+    station = request.args.get("station")
+    if station not in RADIO_STATIONS:
+        return "Station not found", 404
     return render_template_string("""
     <html>
     <head>
-        <title>Now Playing - {{station}}</title>
+        <title>▶ {{station}}</title>
         <style>
-            body { font-family: Arial, sans-serif; text-align: center; background: #f4f4f4; }
-            h2 { margin-top: 20px; }
-            audio { margin-top: 20px; width: 80%; }
-            .controls { margin-top: 20px; }
-            button {
-                padding: 14px 20px;
-                margin: 6px;
-                border: none;
-                border-radius: 10px;
-                font-size: 16px;
-                cursor: pointer;
-                color: white;
-            }
-            .home { background: #9E9E9E; }
-            .play { background: #4CAF50; }
-            .rec { background: #f44336; }
+            body { font-family: Arial, sans-serif; background: black; color: white; text-align: center; }
+            .container { margin-top: 60px; }
+            audio { width: 90%; max-width: 400px; margin: 20px auto; display: block; }
+            button { padding: 12px 18px; margin: 8px; border: none; border-radius: 12px; font-size: 16px; cursor: pointer; }
+            .record { background: #ff9800; color: white; }
+            .stop { background: #f44336; color: white; }
         </style>
     </head>
     <body>
-        <h2>🎶 Now Playing: {{station}}</h2>
-        <audio id="player" src="{{RADIO_STATIONS[station]}}" controls autoplay></audio>
-
-        <div class="controls">
-            <button class="home" onclick="window.location.href='/'">🏠 Home (1)</button>
-            <button class="play" onclick="togglePlay()">⏯ Play/Pause (5)</button>
-            <button class="rec" onclick="toggleRecord()">⏺ Record/Stop (0)</button>
+        <div class="container">
+            <h2>{{station}}</h2>
+            <audio controls autoplay>
+                <source src="/play?station={{station}}" type="audio/mpeg">
+                Your browser does not support audio.
+            </audio>
+            <br>
+            <a href="/record?station={{station}}" target="_blank"><button class="record">⏺ Record</button></a>
         </div>
-
-        <script>
-            const player = document.getElementById("player");
-            let recording = false;
-
-            function togglePlay() {
-                if (player.paused) { player.play(); }
-                else { player.pause(); }
-            }
-
-            function toggleRecord() {
-                if (!recording) {
-                    window.location.href = "/record?station={{station}}";
-                } else {
-                    window.location.href = "/stop_record";
-                }
-                recording = !recording;
-            }
-
-            document.addEventListener("keydown", function(e) {
-                if (e.key === "1") {
-                    window.location.href = "/";
-                }
-                else if (e.key === "5") {
-                    togglePlay();
-                }
-                else if (e.key === "0") {
-                    toggleRecord();
-                }
-                else if (e.key === "4") {
-                    window.location.href = "/player?station={{prev_station}}";
-                }
-                else if (e.key === "6") {
-                    window.location.href = "/player?station={{next_station}}";
-                }
-            });
-        </script>
     </body>
     </html>
-    """, station=station, prev_station=prev_station, next_station=next_station, RADIO_STATIONS=RADIO_STATIONS)
+    """, station=station)
 
 
 # 🎶 Stream playback
