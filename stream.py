@@ -1,6 +1,7 @@
 import subprocess
 import shutil
 import os
+import random
 from datetime import datetime
 from flask import Flask, Response, request, render_template_string, send_file, jsonify
 
@@ -13,27 +14,73 @@ if not shutil.which("ffmpeg"):
 # 📡 Full list of radio stations
 RADIO_STATIONS = {
     "muthnabi_radio": "http://cast4.my-control-panel.com/proxy/muthnabi/stream",
-    "radio_nellikka": "https://usa20.fastcast4u.com:2130/stream",
-    "air_kavarati": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio189/chunklist.m3u8",
+     "radio_nellikka": "https://usa20.fastcast4u.com:2130/stream",
+
+"air_kavarati": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio189/chunklist.m3u8",
     "air_calicut": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio082/chunklist.m3u8",
     "manjeri_fm": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio101/chunklist.m3u8",
-    "vom_radio": "https://radio.psm.mv/draair",
+    "real_fm": "http://air.pc.cdn.bitgravity.com/air/live/pbaudio083/playlist.m3u8",
+    "safari_tv": "https://j78dp346yq5r-hls-live.5centscdn.com/safari/live.stream/chunks.m3u8",
+    "victers_tv": "https://932y4x26ljv8-hls-live.5centscdn.com/victers/tv.stream/victers/tv1/chunks.m3u8",
+    "kairali_we": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/wetv_nim_https/050522/wetv/playlist.m3u8",
+
+"mazhavil_manorama": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/mazhavilmanorama_nim_https/050522/mazhavilmanorama/playlist.m3u8",
+
+    "malayalam_1": "http://167.114.131.90:5412/stream",
+    "radio_digital_malayali": "https://radio.digitalmalayali.in/listen/stream/radio.mp3",
+    "malayalam_90s": "https://stream-159.zeno.fm/gm3g9amzm0hvv?zs-x-7jq8ksTOav9ZhlYHi9xw",
+    "aural_oldies": "https://stream-162.zeno.fm/tksfwb1mgzzuv?zs=SxeQj1-7R0alsZSWJie5eQ",
+    "radio_malayalam": "https://radiomalayalamfm.com/radio/8000/radio.mp3",
+    "swaranjali": "https://stream-161.zeno.fm/x7mve2vt01zuv?zs-D4nK05-7SSK2FZAsvumh2w",
+    "radio_beat_malayalam": "http://live.exertion.in:8050/radio.mp3",
+    "shahul_radio": "https://stream-150.zeno.fm/cynbm5ngx38uv?zs=Ktca5StNRWm-sdIR7GloVg",
+    "raja_radio": "http://159.203.111.241:8026/stream",
+    "nonstop_hindi": "http://s5.voscast.com:8216/stream",
+    "fm_gold": "https://airhlspush.pc.cdn.bitgravity.com/httppush/hispbaudio005/hispbaudio00564kbps.m3u8",
+    "motivational_series": "http://104.7.66.64:8010",
+    "deenagers_radio": "http://104.7.66.64:8003/",
+    "hajj_channel": "http://104.7.66.64:8005",
+    "abc_islam": "http://s10.voscast.com:9276/stream",
+    "eram_fm": "http://icecast2.edisimo.com:8000/eramfm.mp3",
+    "al_sumood_fm": "http://us3.internet-radio.com/proxy/alsumoodfm2020?mp=/stream",
+    "nur_ala_nur": "http://104.7.66.64:8011/",
+    "ruqya_radio": "http://104.7.66.64:8004",
+    "seiyun_radio": "http://s2.radio.co/s26c62011e/listen",
+    "noor_al_eman": "http://edge.mixlr.com/channel/boaht",
+    "sam_yemen": "https://edge.mixlr.com/channel/kijwr",
+    "afaq": "https://edge.mixlr.com/channel/rumps",
+    "alfasi_radio": "https://qurango.net/radio/mishary_alafasi",
+    "tafsir_quran": "https://radio.quranradiotafsir.com/9992/stream",
+    "sirat_al_mustaqim": "http://104.7.66.64:8091/stream",
+    "river_nile_radio": "http://104.7.66.64:8087",
+    "quran_radio_cairo": "http://n02.radiojar.com/8s5u5tpdtwzuv",
+    "quran_radio_nablus": "http://www.quran-radio.org:8002/",
+    "al_nour": "http://audiostreaming.itworkscdn.com:9066/",
+    "allahu_akbar_radio": "http://66.45.232.132:9996/stream",
+    "omar_abdul_kafi_radio": "http://104.7.66.64:8007",
+    "urdu_islamic_lecture": "http://144.91.121.54:27001/channel_02.aac",
+    "hob_nabi": "http://216.245.210.78:8098/stream",
+    "sanaa_radio": "http://dc5.serverse.com/proxy/pbmhbvxs/stream",
+    "rubat_ataq": "http://stream.zeno.fm/5tpfc8d7xqruv",
+    "al_jazeera": "http://live-hls-audio-web-aja.getaj.net/VOICE-AJA/index.m3u8",
+
+
+
+
+    "bloomberg_tv": "https://bloomberg-bloomberg-3-br.samsung.wurl.tv/manifest/playlist.m3u8",
+    "france_24": "https://live.france24.com/hls/live/2037218/F24_EN_HI_HLS/master_500.m3u8",
+
+"vom_radio": "https://radio.psm.mv/draair",
 }
 
-# 🎛 Process managers (per station)
-ffmpeg_processes = {}   # playback
-record_processes = {}   # recording
-record_files = {}       # station -> file path
+# Track processes
+ffmpeg_process = None
+record_process = None
+current_station = None
+record_file = None
 
 
-# 🔹 Helper to stop ffmpeg process
-def stop_process(proc):
-    if proc:
-        proc.kill()
-        proc.wait()
-
-
-# 🏠 Home page
+# 🏠 Home screen with pagination + random play
 @app.route("/")
 def home():
     page = int(request.args.get("page", 1))
@@ -46,151 +93,235 @@ def home():
 
     return render_template_string("""
     <html>
-    <head>
-    <title>📻 VRadio</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-    body { font-family: Arial, sans-serif; background:#121212; color:#fff; text-align:center; padding:2vh 2vw; }
-    h2 { font-size:5vw; margin-bottom:3vh; }
-    .station-card { background:#1e1e1e; margin:2vh auto; padding:2vh; border-radius:12px; width:95%; max-width:600px; }
-    .station-name { font-size:4vw; margin-bottom:2vh; }
-    .station-card button { padding:2vh 2vw; font-size:3.5vw; border-radius:10px; border:none; cursor:pointer; background:#ff5722; color:white; width:100%; }
-    .station-card button:hover { background:#e64a19; }
-    .random-btn { background:#4caf50; margin-bottom:2vh; padding:2vh 2vw; font-size:4vw; width:95%; max-width:600px; }
-    .random-btn:hover { background:#43a047; }
-    .pagination { margin-top:2vh; }
-    .pagination button { padding:1.5vh 2vw; margin:1vh; font-size:3vw; border:none; border-radius:10px; background:#333; color:#fff; cursor:pointer; }
-    .pagination button:hover { background:#555; }
-    </style>
-    <script>
-    const page = {{page}};
-    const totalPages = {{total_pages}};
-    const stationList = {{ station_list|tojson }};
-    function goPage(p){ if(p<1)p=totalPages;if(p>totalPages)p=1; window.location.href="/?page="+p; }
-    function randomPlay(){ const rand=Math.floor(Math.random()*stationList.length); window.location.href="/player?station="+stationList[rand]; }
-    document.addEventListener('keydown', function(e){
-      const key=e.key;
-      if(key==="4"){goPage(page-1);} 
-      else if(key==="6"){goPage(page+1);} 
-      else if(key>="1" && key<="5"){const index=parseInt(key)-1; const stations={{ stations_on_page|tojson }}; if(stations[index]) window.location.href="/player?station="+stations[index];}
-      else if(key==="0"){randomPlay();}
-    });
-    </script>
-    </head>
-    <body>
-    <h2>📻 VRadio</h2>
-    <button class="random-btn" onclick="randomPlay()">🎲 Random Play</button>
+<head>
+<title>📻 VRadio</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body { 
+    font-family: Arial, sans-serif; 
+    background: #121212; 
+    color: #fff; 
+    text-align: center; 
+    padding: 2vh 2vw;
+}
+h2 { 
+    font-size: 5vw;  /* scales with screen width */
+    margin-bottom: 3vh; 
+}
+.station-card { 
+    background: #1e1e1e; 
+    margin: 2vh auto; 
+    padding: 2vh; 
+    border-radius: 12px; 
+    width: 95%; 
+    max-width: 600px; 
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3); 
+}
+.station-name { 
+    font-size: 4vw; 
+    margin-bottom: 2vh; 
+}
+.station-card button { 
+    padding: 2vh 2vw; 
+    font-size: 3.5vw; 
+    border-radius: 10px; 
+    border: none; 
+    cursor: pointer; 
+    background: #ff5722; 
+    color: white; 
+    width: 100%; 
+    transition: 0.2s; 
+}
+.station-card button:hover { background: #e64a19; }
+.random-btn { 
+    background: #4caf50; 
+    margin-bottom: 2vh; 
+    padding: 2vh 2vw; 
+    font-size: 4vw; 
+    width: 95%; 
+    max-width: 600px; 
+}
+.random-btn:hover { background: #43a047; }
+.pagination { margin-top: 2vh; }
+.pagination button { 
+    padding: 1.5vh 2vw; 
+    margin: 1vh; 
+    font-size: 3vw; 
+    border-radius: 10px; 
+    border: none; 
+    cursor: pointer; 
+    background: #333; 
+    color: #fff; 
+}
+.pagination button:hover { background: #555; }
 
-    {% for name in stations_on_page %}
-    <div class="station-card">
-      <div class="station-name">{{name}}</div>
-      <button onclick="window.location.href='/player?station={{name}}'">▶ Play</button>
-    </div>
-    {% endfor %}
+/* 📱 Mobile tweak */
+@media (max-width: 600px) {
+  h2 { font-size: 6vw; }
+  .station-card button, .random-btn { font-size: 5vw; }
+}
+</style>
+<script>
+const page = {{page}};
+const totalPages = {{total_pages}};
+const stationList = {{ station_list|tojson }};
+function goPage(p){ if(p<1)p=totalPages;if(p>totalPages)p=1; window.location.href="/?page="+p; }
+function randomPlay(){ const rand=Math.floor(Math.random()*stationList.length); window.location.href="/player?station="+stationList[rand]; }
+document.addEventListener('keydown', function(e){
+  const key=e.key;
+  if(key==="4"){goPage(page-1);} else if(key==="6"){goPage(page+1);} 
+  else if(key>="1" && key<="5"){const index=parseInt(key)-1; const stations={{ stations_on_page|tojson }}; if(stations[index]) window.location.href="/player?station="+stations[index];}
+  else if(key==="0"){randomPlay();}
+});
+</script>
+</head>
+<body>
+<h2>📻 VRadio</h2>
+<button class="random-btn" onclick="randomPlay()">🎲 Random Play</button>
 
-    <div class="pagination">
-      <button onclick="goPage(page-1)">⬅ Prev</button>
-      <button onclick="goPage(page+1)">Next ➡</button>
-      <div>Page {{page}} of {{total_pages}}</div>
-    </div>
-    </body>
-    </html>
+{% for name in stations_on_page %}
+<div class="station-card">
+  <div class="station-name">{{name}}</div>
+  <button onclick="window.location.href='/player?station={{name}}'">▶ Play</button>
+</div>
+{% endfor %}
+
+<div class="pagination">
+  <button onclick="goPage(page-1)">⬅ Prev Page</button>
+  <button onclick="goPage(page+1)">Next Page ➡</button>
+  <div>Page {{page}} of {{total_pages}}</div>
+</div>
+
+<small>Keypad: 6=Next, 4=Prev, 0=Random</small>
+</body>
+</html>
     """, stations_on_page=stations_on_page, page=page, total_pages=total_pages, station_list=station_list)
 
 
-# 🎶 Player page
+# 🎶 Player screen with keypad support + random play
 @app.route("/player")
 def player():
     station = request.args.get("station")
     if station not in RADIO_STATIONS:
         return "Station not found", 404
 
+    # Convert station names to list for next/prev/random navigation
     station_list = list(RADIO_STATIONS.keys())
     current_index = station_list.index(station)
 
     return render_template_string("""
     <html>
     <head>
-    <title>▶ {{station}}</title>
-    <style>
-    body { font-family: Arial; background:black; color:white; text-align:center; padding:2vh; }
-    h2 { font-size:5vw; }
-    audio { width:95%; max-width:600px; margin:2vh auto; display:block; }
-    button { padding:2vh 2vw; margin:2vh; border:none; border-radius:12px; font-size:3.5vw; cursor:pointer; }
-    .record { background:#ff9800; color:white; }
-    </style>
-    <script>
+        <title>▶ {{station}}</title>
+        <style>
+body { 
+    font-family: Arial, sans-serif; 
+    background: black; 
+    color: white; 
+    text-align: center; 
+    padding: 2vh 2vw;
+}
+.container { margin-top: 5vh; }
+h2 { font-size: 5vw; }
+audio { 
+    width: 95%; 
+    max-width: 600px; 
+    margin: 2vh auto; 
+    display: block; 
+}
+button { 
+    padding: 2vh 2vw; 
+    margin: 2vh; 
+    border: none; 
+    border-radius: 12px; 
+    font-size: 3.5vw; 
+    cursor: pointer; 
+}
+.record { background: #ff9800; color: white; }
+
+/* 📱 Mobile tweak */
+@media (max-width: 600px) {
+  h2 { font-size: 6vw; }
+  button { font-size: 5vw; }
+}
+</style>
+        <script>
     const stationList = {{ station_list|tojson }};
     let currentIndex = {{ current_index }};
     let recording = false;
-    let recordFiles = {};  // temp store file names
+    let recordFile = null;
 
-    function goToStation(i){ if(i<0)i=stationList.length-1; if(i>=stationList.length)i=0; window.location.href="/player?station="+stationList[i]; }
-
-    async function toggleRecord(){
-        const station = stationList[currentIndex];
-        if(!recording){
-            let res = await fetch("/record?station=" + station);
-            let data = await res.json();
-            if(data.status==="recording"){ 
-                recording=true; 
-                document.getElementById("rec-status").innerText="⏺ Recording"; 
-                recordFiles[station] = data.file;
-                updateSize(); 
-                document.querySelector('.record').innerText="⏹ Stop Recording";
-            }
-        } else {
-            let res = await fetch("/stop_record?station=" + station);
-            if(res.ok){
-                let blob = await res.blob();
-                let url = window.URL.createObjectURL(blob);
-                let a = document.createElement("a");
-                a.href = url;
-                a.download = recordFiles[station].split('/').pop();
-                a.click();
-                window.URL.revokeObjectURL(url);
-            }
-            recording=false;
-            document.getElementById("rec-status").innerText="Not recording";
-            document.querySelector('.record').innerText="⏺ Start Recording";
-        }
+    function goToStation(index) {
+        if (index < 0) index = stationList.length - 1;
+        if (index >= stationList.length) index = 0;
+        window.location.href = "/player?station=" + stationList[index];
     }
 
-    async function updateSize(){
-        const station = stationList[currentIndex];
-        if(!recording) return;
-        let res = await fetch("/record_size?station="+station);
+    async function toggleRecord() {
+        let res = await fetch("/record?station=" + stationList[currentIndex]);
         let data = await res.json();
-        if(data.active){ 
-            document.getElementById("rec-size").innerText=data.size+" KB"; 
-            setTimeout(updateSize,1000); 
-        } else {
-            recording=false;
-            document.getElementById("rec-status").innerText="Not recording";
-            document.querySelector('.record').innerText="⏺ Start Recording";
+
+        if (data.status === "recording") {
+            recording = true;
+            recordFile = data.file;
+            document.getElementById("rec-status").innerText = "⏺ Recording...";
+            updateSize();
+        } else if (data.status === "stopped") {
+            recording = false;
+            document.getElementById("rec-status").innerText = "⏹ Stopped";
+            if (data.file) {
+                // auto-download after stop
+                window.location.href = "/stop_record";
+            }
         }
     }
 
-    function randomStation(){ const r=Math.floor(Math.random()*stationList.length); goToStation(r); }
+    async function updateSize() {
+        if (!recording) return;
+        let res = await fetch("/record_size");
+        let data = await res.json();
+        if (data.active) {
+            document.getElementById("rec-size").innerText = data.size + " KB";
+            setTimeout(updateSize, 1000);
+        }
+    }
 
-    document.addEventListener('keydown', function(e){
-        if(e.key==="5"){ toggleRecord(); }
-        else if(e.key==="1"){ window.location.href="/"; }
-        else if(e.key==="4"){ goToStation(currentIndex-1); }
-        else if(e.key==="6"){ goToStation(currentIndex+1); }
-        else if(e.key==="0"){ randomStation(); }
+    function randomStation() {
+        const randIndex = Math.floor(Math.random() * stationList.length);
+        goToStation(randIndex);
+    }
+
+    // Keypad shortcuts
+    document.addEventListener('keydown', function(e) {
+        const key = e.key;
+        if (key === "5") {
+            toggleRecord();
+        } else if (key === "1") {
+            window.location.href = "/";
+        } else if (key === "4") {
+            goToStation(currentIndex - 1);
+        } else if (key === "0") {
+            randomStation();
+        } else if (key === "6") {
+            goToStation(currentIndex + 1);
+        }
     });
-    </script>
+</script>
     </head>
     <body>
-    <h2>{{station}}</h2>
-    <audio controls autoplay>
-      <source src="/play?station={{station}}" type="audio/mpeg">
-    </audio>
-    <button class="record" onclick="toggleRecord()">⏺ Start Recording</button>
-    <div id="rec-status">Not recording</div>
-    <div id="rec-size"></div>
-    <br><small>Keys: 5=Record/Stop, 1=Home, 4=Prev, 0=Random, 6=Next</small>
+        <div class="container">
+            <h2>{{station}}</h2>
+            <audio controls autoplay>
+                <source src="/play?station={{station}}" type="audio/mpeg">
+                Your browser does not support audio.
+            </audio>
+            <br>
+            <button class="record" onclick="toggleRecord()">⏺ Record / Stop</button>
+<div id="rec-status">Not recording</div>
+<div id="rec-size"></div>
+<br>
+<small>Keypad shortcuts: 5=Record/Stop, 1=Home, 4=Prev, 0=Random, 6=Next</small>
+        </div>
     </body>
     </html>
     """, station=station, station_list=station_list, current_index=current_index)
@@ -205,12 +336,13 @@ def play():
 
     url = RADIO_STATIONS[station]
 
-    if station in ffmpeg_processes:
-        stop_process(ffmpeg_processes[station])
+    # Stop previous playback
+    global ffmpeg_process
+    if ffmpeg_process:
+        ffmpeg_process.kill()
 
-    ffmpeg_processes[station] = subprocess.Popen(
-        ["ffmpeg", "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "2",
-         "-i", url, "-c:a", "libmp3lame", "-b:a", "32k", "-f", "mp3", "-"],
+    ffmpeg_process = subprocess.Popen(
+        ["ffmpeg", "-i", url, "-c:a", "libmp3lame", "-b:a", "128k", "-f", "mp3", "-"],
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL
     )
@@ -218,77 +350,81 @@ def play():
     def generate():
         try:
             while True:
-                data = ffmpeg_processes[station].stdout.read(4096)
+                data = ffmpeg_process.stdout.read(4096)
                 if not data:
                     break
                 yield data
         finally:
-            stop_process(ffmpeg_processes.get(station))
-            ffmpeg_processes.pop(station, None)
+            if ffmpeg_process:
+                ffmpeg_process.kill()
 
     return Response(generate(), mimetype="audio/mpeg")
 
 
-# ⏺ Start recording
+# ⏺️ Record screen
 @app.route("/record")
 def record():
+    global record_process, record_file
+
     station = request.args.get("station")
     if station not in RADIO_STATIONS:
-        return jsonify({"error": "Station not found"}), 404
+        return jsonify({"status": "error", "message": "Station not found"}), 404
 
-    os.makedirs("recordings", exist_ok=True)
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    file_path = f"recordings/{station}_{timestamp}.mp3"
+    # If already recording, stop and return file
+    if record_process:
+        record_process.kill()
+        record_process = None
+        if record_file and os.path.exists(record_file):
+            size = os.path.getsize(record_file) // 1024
+            return jsonify({"status": "stopped", "file": record_file, "size": size})
+        return jsonify({"status": "stopped", "message": "No file"}), 200
+
+    # Start new recording
     url = RADIO_STATIONS[station]
+    os.makedirs("recordings", exist_ok=True)
 
-    if station in record_processes:
-        stop_process(record_processes[station])
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    record_file = f"recordings/{station.replace(' ', '_')}_{timestamp}.mp3"
 
-    record_processes[station] = subprocess.Popen(
-        ["ffmpeg", "-i", url, "-vn", "-acodec", "libmp3lame", file_path],
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+    record_process = subprocess.Popen(
+        ["ffmpeg", "-i", url, "-map_metadata", "-1", "-f", "mp3", "-y", record_file],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL
     )
-    record_files[station] = file_path
 
-    return jsonify({"status": "recording", "file": file_path})
+    return jsonify({"status": "recording", "file": record_file})
 
 
-# 📏 Recording size
+# 📏 Recording size API
 @app.route("/record_size")
 def record_size():
-    station = request.args.get("station")
-    file_path = record_files.get(station)
-    proc = record_processes.get(station)
-    if file_path and os.path.exists(file_path) and proc:
-        size = os.path.getsize(file_path) // 1024
+    global record_file, record_process
+    if record_file and os.path.exists(record_file) and record_process:
+        size = os.path.getsize(record_file) // 1024
         return jsonify({"size": size, "active": True})
     return jsonify({"size": 0, "active": False})
 
 
-# ⏹ Stop recording + download
+# ⏹️ Stop recording and download
 @app.route("/stop_record")
 def stop_record():
-    station = request.args.get("station")
-    proc = record_processes.get(station)
-    file_path = record_files.get(station)
-    if proc:
-        stop_process(proc)
-        record_processes.pop(station, None)
-    if file_path and os.path.exists(file_path):
-        record_files.pop(station, None)
-        return send_file(file_path, as_attachment=True)
+    global record_process, record_file
+    if record_process:
+        record_process.kill()
+        record_process = None
+    if record_file and os.path.exists(record_file):
+        return send_file(record_file, as_attachment=True)
     return "No recording found", 404
 
 
-# ⏹ Stop playback
+# ⏹️ Stop all playback
 @app.route("/stop")
 def stop():
-    station = request.args.get("station")
-    proc = ffmpeg_processes.get(station)
-    if proc:
-        stop_process(proc)
-        ffmpeg_processes.pop(station, None)
-    return "⏹ Stopped playback"
+    global ffmpeg_process
+    if ffmpeg_process:
+        ffmpeg_process.kill()
+        ffmpeg_process = None
+    return "⏹️ Stopped playback"
 
 
 if __name__ == "__main__":
