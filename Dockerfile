@@ -7,17 +7,17 @@ RUN apt-get update && apt-get install -y ffmpeg && rm -rf /var/lib/apt/lists/*
 # Set working directory
 WORKDIR /app
 
-# Copy requirements if you have one
+# Copy requirements
 COPY requirements.txt .
 
-# Install dependencies
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy app code
 COPY . .
 
-# Expose Flask port
+# Expose port 8000
 EXPOSE 8000
 
-# Run Flask app
-CMD ["python", "stream.py"]
+# Run app with Gunicorn on port 8000
+CMD ["gunicorn", "-k", "gevent", "-b", "0.0.0.0:8000", "stream:app"]
