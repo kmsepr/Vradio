@@ -2,162 +2,251 @@ import subprocess
 import shutil
 import os
 from datetime import datetime
-from flask import Flask, Response, request, send_file, jsonify, render_template_string
+from flask import Flask, Response, request, render_template_string, send_file, jsonify
 
 app = Flask(__name__)
 
-# ---------------- CHECK FFMPEG ----------------
+# ✅ Check ffmpeg
 if not shutil.which("ffmpeg"):
     raise RuntimeError("ffmpeg not found. Please install ffmpeg.")
 
-# ---------------- RADIO STATIONS ----------------
+# 📡 Full list of radio stations
 RADIO_STATIONS = {
     "muthnabi_radio": "http://cast4.my-control-panel.com/proxy/muthnabi/stream",
-     "radio_nellikka": "https://usa20.fastcast4u.com:2130/stream",
-
-"air_kavarati": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio189/chunklist.m3u8",
+    "radio_nellikka": "https://usa20.fastcast4u.com:2130/stream",
+    "air_kavarati": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio189/chunklist.m3u8",
     "air_calicut": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio082/chunklist.m3u8",
     "manjeri_fm": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio101/chunklist.m3u8",
-    "real_fm": "http://air.pc.cdn.bitgravity.com/air/live/pbaudio083/playlist.m3u8",
-    "safari_tv": "https://j78dp346yq5r-hls-live.5centscdn.com/safari/live.stream/chunks.m3u8",
-    "victers_tv": "https://932y4x26ljv8-hls-live.5centscdn.com/victers/tv.stream/victers/tv1/chunks.m3u8",
+    # … keep the rest of your stations …
+    "vom_radio": "https://radio.psm.mv/draair",
 }
 
-# ---------------- GLOBAL VARIABLES ----------------
-play_process = None
+# 🎛 Global state
+ffmpeg_process = None
 record_process = None
 record_file = None
 
-# ---------------- CONTROL PAGE ----------------
+
+# 🏠 Home with pagination + random play
 @app.route("/")
-def index():
-    stations_html = "".join([f"<option value='{s}'>{s}</option>" for s in RADIO_STATIONS])
-    html = f"""
+def home():
+    page = int(request.args.get("page", 1))
+    per_page = 5
+    station_list = list(RADIO_STATIONS.keys())
+    total_pages = (len(station_list) + per_page - 1) // per_page
+    start = (page - 1) * per_page
+    end = start + per_page
+    stations_on_page = station_list[start:end]
+
+    return render_template_string("""
     <html>
-    <head><title>Radio Stream</title></head>
-    <body style="font-family: Arial; text-align:center; margin-top:40px;">
-        <h2>📻 Radio Streamer</h2>
-        <label>Select Station:</label>
-        <select id="station">{stations_html}</select><br><br>
+    <head>
+    <title>📻 VRadio</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+    body { font-family: Arial, sans-serif; background:#121212; color:#fff; text-align:center; padding:2vh 2vw; }
+    h2 { font-size:5vw; margin-bottom:3vh; }
+    .station-card { background:#1e1e1e; margin:2vh auto; padding:2vh; border-radius:12px; width:95%; max-width:600px; }
+    .station-name { font-size:4vw; margin-bottom:2vh; }
+    .station-card button { padding:2vh 2vw; font-size:3.5vw; border-radius:10px; border:none; cursor:pointer; background:#ff5722; color:white; width:100%; }
+    .station-card button:hover { background:#e64a19; }
+    .random-btn { background:#4caf50; margin-bottom:2vh; padding:2vh 2vw; font-size:4vw; width:95%; max-width:600px; }
+    .random-btn:hover { background:#43a047; }
+    .pagination { margin-top:2vh; }
+    .pagination button { padding:1.5vh 2vw; margin:1vh; font-size:3vw; border:none; border-radius:10px; background:#333; color:#fff; cursor:pointer; }
+    .pagination button:hover { background:#555; }
+    </style>
+    <script>
+    const page = {{page}};
+    const totalPages = {{total_pages}};
+    const stationList = {{ station_list|tojson }};
+    function goPage(p){ if(p<1)p=totalPages;if(p>totalPages)p=1; window.location.href="/?page="+p; }
+    function randomPlay(){ const rand=Math.floor(Math.random()*stationList.length); window.location.href="/player?station="+stationList[rand]; }
+    document.addEventListener('keydown', function(e){
+      const key=e.key;
+      if(key==="4"){goPage(page-1);} 
+      else if(key==="6"){goPage(page+1);} 
+      else if(key>="1" && key<="5"){const index=parseInt(key)-1; const stations={{ stations_on_page|tojson }}; if(stations[index]) window.location.href="/player?station="+stations[index];}
+      else if(key==="0"){randomPlay();}
+    });
+    </script>
+    </head>
+    <body>
+    <h2>📻 VRadio</h2>
+    <button class="random-btn" onclick="randomPlay()">🎲 Random Play</button>
 
-        <button onclick="play()">▶️ Play</button>
-        <button onclick="stop()">⏹ Stop</button>
-        <button onclick="record()">⏺ Record</button>
-        <button onclick="stopRecord()">💾 Stop & Download</button>
+    {% for name in stations_on_page %}
+    <div class="station-card">
+      <div class="station-name">{{name}}</div>
+      <button onclick="window.location.href='/player?station={{name}}'">▶ Play</button>
+    </div>
+    {% endfor %}
 
-        <p id="status"></p>
-        <audio id="player" controls autoplay></audio>
-
-        <script>
-        function play() {{
-            let s = document.getElementById("station").value;
-            document.getElementById("player").src = "/play?station=" + s;
-            document.getElementById("status").innerText = "Playing " + s;
-        }}
-        function stop() {{
-            fetch("/stop").then(r => r.json()).then(data => {{
-                document.getElementById("player").src = "";
-                document.getElementById("status").innerText = data.status;
-            }});
-        }}
-        function record() {{
-            let s = document.getElementById("station").value;
-            fetch("/record?station=" + s).then(r => r.json()).then(data => {{
-                document.getElementById("status").innerText = "Recording...";
-            }});
-        }}
-        function stopRecord() {{
-            window.location.href = "/stop_record";
-        }}
-        </script>
+    <div class="pagination">
+      <button onclick="goPage(page-1)">⬅ Prev</button>
+      <button onclick="goPage(page+1)">Next ➡</button>
+      <div>Page {{page}} of {{total_pages}}</div>
+    </div>
     </body>
     </html>
-    """
-    return render_template_string(html)
+    """, stations_on_page=stations_on_page, page=page, total_pages=total_pages, station_list=station_list)
 
 
-# ---------------- PLAYBACK ----------------
+# 🎶 Player
+@app.route("/player")
+def player():
+    station = request.args.get("station")
+    if station not in RADIO_STATIONS:
+        return "Station not found", 404
+
+    station_list = list(RADIO_STATIONS.keys())
+    current_index = station_list.index(station)
+
+    return render_template_string("""
+    <html>
+    <head>
+    <title>▶ {{station}}</title>
+    <style>
+    body { font-family: Arial; background:black; color:white; text-align:center; padding:2vh; }
+    h2 { font-size:5vw; }
+    audio { width:95%; max-width:600px; margin:2vh auto; display:block; }
+    button { padding:2vh 2vw; margin:2vh; border:none; border-radius:12px; font-size:3.5vw; cursor:pointer; }
+    .record { background:#ff9800; color:white; }
+    </style>
+    <script>
+    const stationList = {{ station_list|tojson }};
+    let currentIndex = {{ current_index }};
+    let recording = false;
+
+    function goToStation(i){ if(i<0)i=stationList.length-1; if(i>=stationList.length)i=0; window.location.href="/player?station="+stationList[i]; }
+
+    async function startRecord(){
+        let res = await fetch("/record?station=" + stationList[currentIndex]);
+        let data = await res.json();
+        if(data.status==="recording"){ recording=true; document.getElementById("rec-status").innerText="⏺ Recording"; updateSize(); }
+    }
+    function stopRecord(){ window.location.href="/stop_record"; }
+
+    async function updateSize(){
+        if(!recording) return;
+        let res = await fetch("/record_size");
+        let data = await res.json();
+        if(data.active){ document.getElementById("rec-size").innerText=data.size+" KB"; setTimeout(updateSize,1000); }
+    }
+
+    function randomStation(){ const r=Math.floor(Math.random()*stationList.length); goToStation(r); }
+
+    document.addEventListener('keydown', function(e){
+        if(e.key==="5"){ if(!recording) startRecord(); else stopRecord(); }
+        else if(e.key==="1"){ window.location.href="/"; }
+        else if(e.key==="4"){ goToStation(currentIndex-1); }
+        else if(e.key==="6"){ goToStation(currentIndex+1); }
+        else if(e.key==="0"){ randomStation(); }
+    });
+    </script>
+    </head>
+    <body>
+    <h2>{{station}}</h2>
+    <audio controls autoplay>
+      <source src="/play?station={{station}}" type="audio/mpeg">
+    </audio>
+    <button class="record" onclick="startRecord()">⏺ Start Recording</button>
+    <button onclick="stopRecord()">💾 Stop & Download</button>
+    <div id="rec-status">Not recording</div>
+    <div id="rec-size"></div>
+    <br><small>Keys: 5=Record/Stop, 1=Home, 4=Prev, 0=Random, 6=Next</small>
+    </body>
+    </html>
+    """, station=station, station_list=station_list, current_index=current_index)
+
+
+# 🎶 Stream playback
 @app.route("/play")
 def play():
-    global play_process
+    global ffmpeg_process
     station = request.args.get("station")
-
-    if not station or station not in RADIO_STATIONS:
-        return "Station not found", 400
-
-    if play_process:
-        play_process.kill()
+    if station not in RADIO_STATIONS:
+        return "Station not found", 404
 
     url = RADIO_STATIONS[station]
-    play_process = subprocess.Popen([
-        "ffmpeg", "-i", url, "-vn", "-f", "mp3", "pipe:1"
-    ], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    if ffmpeg_process:
+        ffmpeg_process.kill()
+
+    ffmpeg_process = subprocess.Popen(
+        ["ffmpeg", "-i", url, "-c:a", "libmp3lame", "-b:a", "128k", "-f", "mp3", "-"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL
+    )
 
     def generate():
-        while True:
-            chunk = play_process.stdout.read(1024)
-            if not chunk:
-                break
-            yield chunk
+        try:
+            while True:
+                data = ffmpeg_process.stdout.read(4096)
+                if not data:
+                    break
+                yield data
+        finally:
+            if ffmpeg_process:
+                ffmpeg_process.kill()
 
     return Response(generate(), mimetype="audio/mpeg")
 
 
-@app.route("/stop")
-def stop():
-    global play_process
-    if play_process:
-        play_process.kill()
-        play_process = None
-    return jsonify({"status": "stopped playback"})
-
-
-# ---------------- RECORDING ----------------
+# ⏺ Start recording
 @app.route("/record")
 def record():
     global record_process, record_file
     station = request.args.get("station")
-
-    if not station or station not in RADIO_STATIONS:
-        return jsonify({"error": "Station not found"}), 400
+    if station not in RADIO_STATIONS:
+        return jsonify({"error": "Station not found"}), 404
 
     os.makedirs("recordings", exist_ok=True)
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    record_file = f"recordings/{station}_{ts}.mp3"
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    record_file = f"recordings/{station}_{timestamp}.mp3"
     url = RADIO_STATIONS[station]
 
     if record_process:
-        record_process.terminate()
+        record_process.kill()
 
-    record_process = subprocess.Popen([
-        "ffmpeg", "-i", url, "-vn", "-acodec", "libmp3lame", record_file
-    ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    record_process = subprocess.Popen(
+        ["ffmpeg", "-i", url, "-vn", "-acodec", "libmp3lame", record_file],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+    )
 
     return jsonify({"status": "recording", "file": record_file})
 
 
+# 📏 Recording size
 @app.route("/record_size")
 def record_size():
-    global record_file
-    if not record_file or not os.path.exists(record_file):
-        return jsonify({"size": 0})
-    size_kb = os.path.getsize(record_file) // 1024
-    return jsonify({"size": size_kb})
+    global record_file, record_process
+    if record_file and os.path.exists(record_file) and record_process:
+        size = os.path.getsize(record_file) // 1024
+        return jsonify({"size": size, "active": True})
+    return jsonify({"size": 0, "active": False})
 
 
+# ⏹ Stop recording + auto download
 @app.route("/stop_record")
 def stop_record():
     global record_process, record_file
     if record_process:
-        record_process.terminate()
+        record_process.kill()
         record_process = None
-
     if record_file and os.path.exists(record_file):
         return send_file(record_file, as_attachment=True)
-
     return "No recording found", 404
 
 
-# ---------------- MAIN ----------------
+# ⏹ Stop playback
+@app.route("/stop")
+def stop():
+    global ffmpeg_process
+    if ffmpeg_process:
+        ffmpeg_process.kill()
+        ffmpeg_process = None
+    return "⏹ Stopped playback"
+
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000, debug=True)
+    app.run(host="0.0.0.0", port=8000, threaded=True)
