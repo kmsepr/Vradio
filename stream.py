@@ -236,17 +236,24 @@ def record():
     return jsonify({"status": "recording", "file": record_file})
 
 
-# ⏹ Stop recording
 @app.route("/stop_record")
 def stop_record():
     station = request.args.get("station")
     if station not in record_processes:
         return "No recording found", 404
 
-    stop_process(record_processes[station])
-    record_processes.pop(station, None)
-    return send_file(record_files[station], as_attachment=True)
+    proc = record_processes.pop(station)
+    record_file = record_files[station]
 
+    # Stop ffmpeg safely
+    stop_process(proc)
+
+    # Check file exists
+    if not os.path.exists(record_file):
+        return "Recording failed", 500
+
+    # Send file for download
+    return send_file(record_file, as_attachment=True)
 
 # ⏹ Stop playback
 @app.route("/stop")
