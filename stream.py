@@ -75,9 +75,9 @@ RADIO_STATIONS = {
 
 # Track processes
 ffmpeg_process = None
-record_process = None
 current_station = None
 record_file = None
+recording = False
 
 
 # 🏠 Home screen with pagination + random play
@@ -348,14 +348,23 @@ def play():
     )
 
     def generate():
+        global recording, record_file
+        f = None
+        if recording and record_file:
+            f = open(record_file, "ab")
         try:
             while True:
                 data = ffmpeg_process.stdout.read(4096)
                 if not data:
                     break
+                if recording and f:
+                    f.write(data)
                 yield data
         finally:
-            if ffmpeg_process:
+            if f:
+                f.close()
+            # ✅ Only kill ffmpeg if not recording
+            if ffmpeg_process and not recording:
                 ffmpeg_process.kill()
 
     return Response(generate(), mimetype="audio/mpeg")
@@ -364,42 +373,31 @@ def play():
 # ⏺️ Record screen
 @app.route("/record")
 def record():
-    global record_process, record_file
+    global recording, record_file
 
+    if recording:
+        # stop recording
+        recording = False
+        size = os.path.getsize(record_file) // 1024 if record_file and os.path.exists(record_file) else 0
+        return jsonify({"status": "stopped", "file": record_file, "size": size})
+
+    # start recording
     station = request.args.get("station")
     if station not in RADIO_STATIONS:
         return jsonify({"status": "error", "message": "Station not found"}), 404
 
-    # If already recording, stop and return file
-    if record_process:
-        record_process.kill()
-        record_process = None
-        if record_file and os.path.exists(record_file):
-            size = os.path.getsize(record_file) // 1024
-            return jsonify({"status": "stopped", "file": record_file, "size": size})
-        return jsonify({"status": "stopped", "message": "No file"}), 200
-
-    # Start new recording
-    url = RADIO_STATIONS[station]
     os.makedirs("recordings", exist_ok=True)
-
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     record_file = f"recordings/{station.replace(' ', '_')}_{timestamp}.mp3"
-
-    record_process = subprocess.Popen(
-        ["ffmpeg", "-i", url, "-map_metadata", "-1", "-f", "mp3", "-y", record_file],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL
-    )
-
+    recording = True
     return jsonify({"status": "recording", "file": record_file})
 
 
 # 📏 Recording size API
 @app.route("/record_size")
 def record_size():
-    global record_file, record_process
-    if record_file and os.path.exists(record_file) and record_process:
+    global record_file, recording
+    if record_file and os.path.exists(record_file) and recording:
         size = os.path.getsize(record_file) // 1024
         return jsonify({"size": size, "active": True})
     return jsonify({"size": 0, "active": False})
@@ -408,10 +406,8 @@ def record_size():
 # ⏹️ Stop recording and download
 @app.route("/stop_record")
 def stop_record():
-    global record_process, record_file
-    if record_process:
-        record_process.kill()
-        record_process = None
+    global recording, record_file
+    recording = False
     if record_file and os.path.exists(record_file):
         return send_file(record_file, as_attachment=True)
     return "No recording found", 404
@@ -428,4 +424,4 @@ def stop():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000, threaded=True)
+    app.run(host="0.0.0.0", port=8000)
