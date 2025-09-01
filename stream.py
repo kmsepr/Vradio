@@ -1,52 +1,92 @@
-import subprocess
-import time
-import shutil
 import os
-from flask import Flask, Response, request, redirect, send_from_directory, render_template_string
+import subprocess
+import shutil
+from flask import Flask, render_template_string, request, redirect, Response, send_from_directory
 
 app = Flask(__name__)
 
-# ✅ Check if ffmpeg is available
+# ✅ Check ffmpeg
 if not shutil.which("ffmpeg"):
     raise RuntimeError("ffmpeg not found. Please install ffmpeg.")
 
-# 📡 Full list of radio stations
+# 📡 Radio stations
 RADIO_STATIONS = {
-    "muthnabi_radio": "http://cast4.my-control-panel.com/proxy/muthnabi/stream",
-    "islamic_radio": "https://node-33.zeno.fm/xyz123",
+    "Muthnabi Radio": "http://cast4.my-control-panel.com/proxy/muthnabi/stream",
+    "Kozhikode Radio": "http://sc-bb.1.fm:8017/",
 }
 
-# 🎙️ Folder for recordings
-RECORDINGS_DIR = "recordings"
-os.makedirs(RECORDINGS_DIR, exist_ok=True)
-
-recording_process = None
+# 🎙 Recording state
+record_process = None
 recording_file = None
+
 
 @app.route("/")
 def home():
     return render_template_string("""
-    <h2>📻 Radio Stations</h2>
-    <ul>
-    {% for key, url in stations.items() %}
-      <li><a href="/player/{{ key }}">{{ key }}</a></li>
-    {% endfor %}
-    </ul>
-    <h3>🎙️ Saved Recordings</h3>
-    <ul>
-    {% for f in files %}
-      <li><a href="/recordings/{{ f }}">{{ f }}</a></li>
-    {% endfor %}
-    </ul>
-    """, stations=RADIO_STATIONS, files=os.listdir(RECORDINGS_DIR))
+    <html>
+    <head>
+        <title>📻 Radio Player</title>
+        <style>
+            body { font-family: Arial; text-align: center; background: #f4f4f4; }
+            h2 { margin-top: 20px; }
+            .station { padding: 10px; margin: 8px; background: #fff;
+                       border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
+            a { text-decoration: none; color: #333; font-weight: bold; }
+        </style>
+    </head>
+    <body>
+        <h2>📻 Radio Stations</h2>
+        {% for name, url in stations.items() %}
+            <div class="station"><a href="/player?station={{name}}">▶ {{name}}</a></div>
+        {% endfor %}
+        <br><a href="/recordings">📂 View Recordings</a>
+    </body>
+    </html>
+    """, stations=RADIO_STATIONS)
 
 
-# 🎶 Proxy stream for playing
-@app.route("/stream/<station>")
-def stream(station):
-    url = RADIO_STATIONS.get(station)
-    if not url:
+@app.route("/player")
+def player():
+    station_name = request.args.get("station")
+    stream_url = RADIO_STATIONS.get(station_name)
+    if not stream_url:
         return "Station not found", 404
+
+    return render_template_string("""
+    <html>
+    <head>
+        <title>{{station}}</title>
+        <style>
+            body { font-family: Arial; text-align: center; background: #f4f4f4; }
+            h2 { margin-top: 20px; }
+            audio { width: 80%; margin: 20px; }
+            button { padding: 12px 18px; margin: 8px; border: none;
+                     border-radius: 10px; font-size: 16px; cursor: pointer; }
+            .controls { margin-top: 20px; }
+            .record { background: #ff9800; color: white; }
+        </style>
+    </head>
+    <body>
+        <h2>▶ Playing {{station}}</h2>
+        <audio id="player" controls autoplay>
+            <source src="/proxy?url={{stream}}" type="audio/mpeg">
+        </audio>
+        <div class="controls">
+            <form method="post" action="/toggle_record">
+                <input type="hidden" name="station" value="{{station}}">
+                <button type="submit" class="record">⏺ Record / ⏹ Stop</button>
+            </form>
+        </div>
+        <br>
+        <a href="/">⬅ Back</a>
+    </body>
+    </html>
+    """, station=station_name, stream=stream_url)
+
+
+@app.route("/proxy")
+def proxy():
+    url = request.args.get("url")
 
     def generate():
         process = subprocess.Popen(
@@ -55,7 +95,7 @@ def stream(station):
         )
         try:
             while True:
-                data = process.stdout.read(1024)
+                data = process.stdout.read(4096)
                 if not data:
                     break
                 yield data
@@ -65,68 +105,60 @@ def stream(station):
     return Response(generate(), mimetype="audio/mpeg")
 
 
-# 🎧 Player screen with controls
-@app.route("/player/<station>")
-def player(station):
-    if station not in RADIO_STATIONS:
-        return "Station not found", 404
+@app.route("/toggle_record", methods=["POST"])
+def toggle_record():
+    global record_process, recording_file
+    station = request.form.get("station")
+    url = RADIO_STATIONS.get(station)
+    if not url:
+        return redirect("/")
+
+    if record_process is None:
+        # Start recording
+        os.makedirs("recordings", exist_ok=True)
+        recording_file = f"recordings/{station.replace(' ', '_')}.mp3"
+        record_process = subprocess.Popen(
+            ["ffmpeg", "-i", url, "-c:a", "mp3", recording_file],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
+        print(f"▶ Started recording {station}")
+    else:
+        # Stop recording
+        record_process.terminate()
+        record_process = None
+        print(f"⏹ Stopped recording. Saved: {recording_file}")
+
+    return redirect(f"/player?station={station}")
+
+
+@app.route("/recordings")
+def list_recordings():
+    files = os.listdir("recordings") if os.path.exists("recordings") else []
     return render_template_string("""
-    <h2>▶️ Now Playing: {{ station }}</h2>
-    <audio controls autoplay src="/stream/{{ station }}"></audio><br><br>
-    <form action="/record/start/{{ station }}" method="post">
-        <button type="submit">⏺ Record</button>
-    </form>
-    <form action="/record/stop" method="post">
-        <button type="submit">⏹ Stop Recording</button>
-    </form>
-    <a href="/">⬅ Back</a>
-    """, station=station)
+    <html>
+    <head>
+        <title>📂 Recordings</title>
+        <style>
+            body { font-family: Arial; text-align: center; background: #f4f4f4; }
+            .rec { padding: 10px; margin: 8px; background: #fff;
+                   border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
+        </style>
+    </head>
+    <body>
+        <h2>📂 Saved Recordings</h2>
+        {% for f in files %}
+            <div class="rec"><a href="/download/{{f}}">⬇ {{f}}</a></div>
+        {% endfor %}
+        <br><a href="/">⬅ Back</a>
+    </body>
+    </html>
+    """, files=files)
 
 
-# 🎙️ Start recording while playing
-@app.route("/record/start/<station>", methods=["POST"])
-def start_recording(station):
-    global recording_process, recording_file
-
-    if station not in RADIO_STATIONS:
-        return "Station not found", 404
-
-    if recording_process is not None:
-        return "Already recording!", 400
-
-    url = RADIO_STATIONS[station]
-    timestamp = time.strftime("%Y%m%d_%H%M%S")
-    recording_file = f"{station}_{timestamp}.mp3"
-    filepath = os.path.join(RECORDINGS_DIR, recording_file)
-
-    recording_process = subprocess.Popen(
-        ["ffmpeg", "-i", url, "-c", "copy", filepath],
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-    )
-    return redirect(f"/player/{station}")
-
-
-# ⏹ Stop recording
-@app.route("/record/stop", methods=["POST"])
-def stop_recording():
-    global recording_process, recording_file
-
-    if recording_process is None:
-        return "No active recording", 400
-
-    recording_process.terminate()
-    recording_process = None
-    saved_file = recording_file
-    recording_file = None
-
-    return redirect(f"/recordings/{saved_file}")
-
-
-# 📂 Serve saved recordings
-@app.route("/recordings/<path:filename>")
-def get_recording(filename):
-    return send_from_directory(RECORDINGS_DIR, filename, as_attachment=True)
+@app.route("/download/<path:filename>")
+def download(filename):
+    return send_from_directory("recordings", filename, as_attachment=True)
 
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=8000)
+    app.run(host="0.0.0.0", port=8000, debug=True)
