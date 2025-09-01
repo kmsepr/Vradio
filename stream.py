@@ -243,7 +243,6 @@ def player():
 # 🎶 Stream playback
 @app.route("/play")
 def play():
-    global ffmpeg_process, current_station
     station = request.args.get("station")
     if station not in RADIO_STATIONS:
         return "Station not found", 404
@@ -251,24 +250,26 @@ def play():
     url = RADIO_STATIONS[station]
 
     # Stop previous playback
+    global ffmpeg_process
     if ffmpeg_process:
         ffmpeg_process.kill()
 
-    current_station = station
-
-    # Stream audio to browser
     ffmpeg_process = subprocess.Popen(
-        ["ffmpeg", "-i", url, "-c", "copy", "-f", "mp3", "pipe:1"],
+        ["ffmpeg", "-i", url, "-c:a", "libmp3lame", "-b:a", "128k", "-f", "mp3", "-"],
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL
     )
 
     def generate():
-        while True:
-            data = ffmpeg_process.stdout.read(1024)
-            if not data:
-                break
-            yield data
+        try:
+            while True:
+                data = ffmpeg_process.stdout.read(4096)
+                if not data:
+                    break
+                yield data
+        finally:
+            if ffmpeg_process:
+                ffmpeg_process.kill()
 
     return Response(generate(), mimetype="audio/mpeg")
 
