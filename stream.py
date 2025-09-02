@@ -66,6 +66,9 @@ RADIO_STATIONS = {
     "vom_radio": "https://radio.psm.mv/draair",
 }
 
+# ── Pagination ─────────────────────────────────────────────
+STATIONS_PER_PAGE = 10   # number of stations to show per page
+
 # ── State (single ffmpeg, in-memory recording) ────────────────────────────────
 
 current_station = None
