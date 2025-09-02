@@ -191,8 +191,7 @@ def player():
 <head>
     <title>▶ {{station}}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   # In your `player()` template, update <style> with:
-
+  
 <style>
 body { 
     font-family: Arial, sans-serif; 
@@ -211,15 +210,17 @@ audio {
     display: block;
 }
 button.record { 
-    padding: 1.5vh 4vw;   /* smaller padding */
-    font-size: 6vw;       /* smaller font */
-    border-radius: 10px;
+    display: block;
+    margin: 1.5vh auto;   /* center horizontally */
+    padding: 1vh 3vw;     /* smaller padding */
+    font-size: 5vw;       /* smaller font */
+    border-radius: 8px;
     border: none;
     background: #ff9800;
     color: white;
-    width: 80%;           /* narrower */
-    max-width: 300px;
-    margin-bottom: 1.5vh;
+    width: auto;          /* shrink to content */
+    min-width: 120px;     /* keep touchable */
+    max-width: 180px;
 }
 button.record:hover { background: #fb8000; }
 #rec-status, #rec-size { font-size: 5vw; margin: 0.5vh 0;}
@@ -227,8 +228,13 @@ small { font-size: 3.5vw; }
 @media (max-width: 480px) {
   h2 { font-size: 11vw; }
   audio { height: 65px; }
-  button.record { font-size: 8vw; padding: 2vh 5vw; max-width: 250px; }
-  #rec-status, #rec-size { font-size: 7vw; }
+  button.record { 
+      font-size: 6.5vw; 
+      padding: 1.2vh 4vw; 
+      min-width: 100px; 
+      max-width: 160px;
+  }
+  #rec-status, #rec-size { font-size: 6.5vw; }
   small { font-size: 5vw; }
 }
 </style>
