@@ -66,9 +66,6 @@ RADIO_STATIONS = {
     "vom_radio": "https://radio.psm.mv/draair",
 }
 
-# ── Pagination ─────────────────────────────────────────────
-STATIONS_PER_PAGE = 10   # number of stations to show per page
-
 # ── State (single ffmpeg, in-memory recording) ────────────────────────────────
 
 current_station = None
@@ -78,113 +75,119 @@ record_lock = Lock()           # guard record_buffer access
 
 # 🏠 Home screen with small cards for feature phones
 @app.route("/")
-def index():
+def home():
     page = int(request.args.get("page", 1))
-    station_names = list(RADIO_STATIONS.keys())
-    total_pages = (len(station_names) + STATIONS_PER_PAGE - 1) // STATIONS_PER_PAGE
+    per_page = 5
+    station_list = list(RADIO_STATIONS.keys())
+    total_pages = (len(station_list) + per_page - 1) // per_page
+    start = (page - 1) * per_page
+    end = start + per_page
+    stations_on_page = station_list[start:end]
 
-    start = (page - 1) * STATIONS_PER_PAGE
-    end = start + STATIONS_PER_PAGE
-    paged_stations = station_names[start:end]
-
-    links_html = "".join(
-        f"<a href='/stream/{name}'>{name.replace('_', ' ').title()}</a>"
-        for name in paged_stations
-    )
-
-    nav_html = ""
-    if page > 1:
-        nav_html += f"<a href='/?page=1'>⏮️ First</a>"
-        nav_html += f"<a href='/?page={page - 1}'>◀️ Prev</a>"
-    if page < total_pages:
-        nav_html += f"<a href='/?page={page + 1}'>Next ▶️</a>"
-        nav_html += f"<a href='/?page={total_pages}'>Last ⏭️</a>"
-
-    html = f"""
-    <html>
-    <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>🎧 Radio Streams</title>
-        <style>
-            body {{
-                font-family: sans-serif;
-                font-size: 14px;
-                padding: 10px;
-                margin: 0;
-                background: #f0f0f0;
-            }}
-            h2 {{
-                font-size: 16px;
-                text-align: center;
-                margin: 10px 0;
-            }}
-            a {{
-                display: block;
-                background: #007bff;
-                color: white;
-                text-decoration: none;
-                padding: 8px;
-                margin: 4px 0;
-                border-radius: 6px;
-                text-align: center;
-                font-size: 13px;
-            }}
-            .nav {{
-                display: flex;
-                justify-content: space-between;
-                flex-wrap: wrap;
-                margin-top: 10px;
-                gap: 4px;
-            }}
-            .info {{
-                font-size: 11px;
-                text-align: center;
-                margin-top: 8px;
-                color: #555;
-            }}
-        </style>
-    </head>
-    <body>
-        <h2>🎙️ Audio Streams (Page {page}/{total_pages})</h2>
-        {links_html}
-        <div class="nav">{nav_html}</div>
-        <div class="info">🔢 T9 Keys: 1=First, 4=Prev, 6=Next, 3=Last, 5=Random, 0=Exit</div>
-
-        <script>
-        document.addEventListener("keydown", function(e) {{
-            const key = e.key;
-            let page = {page};
-            let total = {total_pages};
-
-            if (key === "1") {{
-                window.location.href = "/?page=1";
-            }} else if (key === "2") {{
-                window.location.reload();
-            }} else if (key === "3") {{
-                window.location.href = "/?page=" + total;
-            }} else if (key === "4" && page > 1) {{
-                window.location.href = "/?page=" + (page - 1);
-            }} else if (key === "5") {{
-                const links = document.querySelectorAll("a[href^='/stream/']");
-                const random = links[Math.floor(Math.random() * links.length)];
-                if (random) random.click();
-            }} else if (key === "6" && page < total) {{
-                window.location.href = "/?page=" + (page + 1);
-            }} else if (key === "7") {{
-                window.scrollTo({{ top: 0, behavior: "smooth" }});
-            }} else if (key === "8") {{
-                window.scrollTo({{ top: document.body.scrollHeight, behavior: "smooth" }});
-            }} else if (key === "9") {{
-                window.location.href = "/?page=" + (page < total ? page + 1 : 1);
-            }} else if (key === "0") {{
-                window.location.href = "about:blank";
-            }}
-        }});
-        </script>
-    </body>
-    </html>
-    """
-    return html
+    return render_template_string("""
+<html>
+<head>
+<title>📻 VRadio</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body { 
+    font-family: Arial, sans-serif; 
+    background: #121212; 
+    color: #fff; 
+    text-align: center;
+    padding: 2vh 2vw;
+}
+h2 { 
+    font-size: 6vw;
+    margin-bottom: 3vh;
+}
+.station-card { 
+    background: #1e1e1e;
+    margin: 1vh auto;
+    padding: 1vh;
+    border-radius: 8px;
+    width: 95%;
+    max-width: 240px;
+    font-size: 3vw;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.25); 
+}
+.station-name { 
+    font-size: 4vw;
+    margin-bottom: 1vh;
+}
+.station-card button { 
+    padding: 0.7vh 2vw;
+    font-size: 3.5vw;
+    border-radius: 7px;
+    border: none;
+    cursor: pointer;
+    background: #ff5722;
+    color: white;
+    width: 100%;
+    transition: 0.2s;
+}
+.station-card button:hover { background: #e64a19; }
+.random-btn { 
+    background: #4caf50;
+    margin-bottom: 2vh;
+    padding: 1.5vh 3vw;
+    font-size: 3.5vw;
+    width: 95%;
+    max-width: 240px;
+}
+.random-btn:hover { background: #43a047; }
+.pagination { margin-top: 2vh; }
+.pagination button { 
+    padding: 1vh 2vw;
+    margin: 0.5vh;
+    font-size: 3vw;
+    border-radius: 7px;
+    border: none;
+    cursor: pointer;
+    background: #333;
+    color: #fff;
+}
+.pagination button:hover { background: #555; }
+@media (max-width: 480px) {
+  h2 { font-size: 8vw; }
+  .station-card, .station-card button { font-size: 5vw; max-width: 180px; padding: 0.5vh 2vw; }
+  .station-name { font-size: 6vw; }
+  .random-btn { font-size: 5vw; max-width: 180px; }
+  .pagination button { font-size: 5vw; }
+}
+</style>
+<script>
+const page = {{page}};
+const totalPages = {{total_pages}};
+const stationList = {{ station_list|tojson }};
+function goPage(p){ if(p<1)p=totalPages;if(p>totalPages)p=1; window.location.href="/?page="+p; }
+function randomPlay(){ const rand=Math.floor(Math.random()*stationList.length); window.location.href="/player?station="+stationList[rand]; }
+document.addEventListener('keydown', function(e){
+  const key=e.key;
+  if(key==="4"){goPage(page-1);} else if(key==="6"){goPage(page+1);} 
+  else if(key>="1" && key<="5"){const index=parseInt(key)-1; const stations={{ stations_on_page|tojson }}; if(stations[index]) window.location.href="/player?station="+stations[index];}
+  else if(key==="0"){randomPlay();}
+});
+</script>
+</head>
+<body>
+<h2>📻 VRadio</h2>
+<button class="random-btn" onclick="randomPlay()">🎲 Random Play</button>
+{% for name in stations_on_page %}
+<div class="station-card">
+  <div class="station-name">{{name}}</div>
+  <button onclick="window.location.href='/player?station={{name}}'">▶ Play</button>
+</div>
+{% endfor %}
+<div class="pagination">
+  <button onclick="goPage(page-1)">⬅ Prev Page</button>
+  <button onclick="goPage(page+1)">Next Page ➡</button>
+  <div>Page {{page}} of {{total_pages}}</div>
+</div>
+<small>Keypad: 6=Next, 4=Prev, 0=Random</small>
+</body>
+</html>
+""", stations_on_page=stations_on_page, page=page, total_pages=total_pages, station_list=station_list)
 
 # 🎶 Player screen with big UI
 @app.route("/player")
@@ -307,10 +310,10 @@ small { font-size: 4vw; }
 <body>
     <div class="container">
         <h2>{{station}}</h2>
-        <audio autoplay id="audioPlayer">
-    <source src="/play?station={{station}}" type="audio/mpeg">
-    Your browser does not support audio.
-</audio>
+        <audio controls autoplay>
+            <source src="/play?station={{station}}" type="audio/mpeg">
+            Your browser does not support audio.
+        </audio>
         <br>
         <button class="record" onclick="toggleRecord()">⏺ Record / Stop</button>
         <div id="rec-status">Not recording</div>
