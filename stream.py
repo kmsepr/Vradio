@@ -429,8 +429,9 @@ def record():
     elif action == "stop":
         if ffmpeg_process:
             ffmpeg_process.kill()
+            ffmpeg_process = None  # ✅ Reset before respawning
 
-        # restart ffmpeg without tee (playback only)
+        # restart playback-only stream
         ffmpeg_process = subprocess.Popen(
             ["ffmpeg", "-i", RADIO_STATIONS[station], "-map_metadata", "-1", "-f", "mp3", "pipe:1"],
             stdout=subprocess.PIPE,
@@ -451,6 +452,14 @@ def record_size():
         return jsonify({"size": size, "active": True, "file": record_file})
     return jsonify({"size": 0, "active": False})
 
+
+# 💾 Stop & Download recording
+@app.route("/stop_record")
+def stop_record():
+    global record_file
+    if record_file and os.path.exists(record_file):
+        return send_file(record_file, as_attachment=True)
+    return "No recording found", 404
 
 # ⏹️ Stop all playback
 @app.route("/stop")
