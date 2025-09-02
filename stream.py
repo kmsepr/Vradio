@@ -310,10 +310,10 @@ small { font-size: 4vw; }
 <body>
     <div class="container">
         <h2>{{station}}</h2>
-        <audio controls autoplay>
-            <source src="/play?station={{station}}" type="audio/mpeg">
-            Your browser does not support audio.
-        </audio>
+        <audio autoplay id="audioPlayer">
+    <source src="/play?station={{station}}" type="audio/mpeg">
+    Your browser does not support audio.
+</audio>
         <br>
         <button class="record" onclick="toggleRecord()">⏺ Record / Stop</button>
         <div id="rec-status">Not recording</div>
