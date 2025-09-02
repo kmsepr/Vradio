@@ -339,7 +339,7 @@ def start_ffmpeg(url: str):
             pass
         ffmpeg_process = None
 
-    # One ffmpeg -> mp3 -> stdout
+    # Try direct copy first (AAC is widely supported)
     ffmpeg_process = subprocess.Popen(
         [
             "ffmpeg",
@@ -348,10 +348,9 @@ def start_ffmpeg(url: str):
             "-reconnect_at_eof", "1",
             "-i", url,
             "-vn",
-            "-c:a", "libmp3lame",
-            "-b:a", "40k",
-            "-f", "mp3",
-            "-"  # stdout
+            "-c:a", "copy",        # ✅ no re-encode, just copy audio
+            "-f", "mp4",           # ✅ container for AAC (works in <audio>)
+            "-"
         ],
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
@@ -392,7 +391,7 @@ def play():
             # We leave /stop to kill explicitly.
             pass
 
-    return Response(generate(), mimetype="audio/mpeg")
+    return Response(generate(), mimetype="audio/mp4")  # ✅ AAC-in-MP4
 
 # 🎙 Toggle recording (no files written; buffer in RAM)
 @app.route("/record")
