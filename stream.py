@@ -1,5 +1,5 @@
-import subprocess
 import shutil
+import subprocess, time
 import os
 from io import BytesIO
 from datetime import datetime
@@ -67,9 +67,8 @@ RADIO_STATIONS = {
 }
 
 # ── State (single ffmpeg, in-memory recording) ────────────────────────────────
-ffmpeg_process = None
-current_station = None
 
+current_station = None
 recording_active = False
 record_buffer = None           # BytesIO when recording
 record_lock = Lock()           # guard record_buffer access
@@ -327,85 +326,67 @@ small { font-size: 4vw; }
 """, station=station, station_list=station_list, current_index=current_index)
 # Home and Player routes are unchanged from your code (omitted here for brevity)
 # Keep your exact templates/scripts; they work with the same endpoints:
-#   /play, /record, /record_size, /stop_record, /stop
+#   /play, /record, /record_size, /stop_recorsubprocess
 
-# 🧰 helper: start ffmpeg once
-def start_ffmpeg(url: str):
-    global ffmpeg_process
-    if ffmpeg_process:
+def generate_stream(url, record=False):
+    global record_buffer, recording_active
+
+    while True:
+        process = subprocess.Popen(
+            [
+                "ffmpeg",
+                "-reconnect", "1",
+                "-reconnect_streamed", "1",
+                "-reconnect_delay_max", "10",
+                "-i", url,
+                "-vn",
+                "-ac", "1",          # mono
+                "-b:a", "40k",       # low bitrate
+                "-f", "mp3",
+                "-"
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            bufsize=4096
+        )
+
+        print(f"🎵 Streaming from: {url}")
         try:
-            ffmpeg_process.kill()
-        except Exception:
-            pass
-        ffmpeg_process = None
-
-    # Try direct copy first (AAC is widely supported)
-    ffmpeg_process = subprocess.Popen(
-        [
-            "ffmpeg",
-            "-reconnect", "1",
-            "-reconnect_streamed", "1",
-            "-reconnect_at_eof", "1",
-            "-i", url,
-            "-vn",
-            "-c:a", "copy",        # ✅ no re-encode, just copy audio
-            "-f", "mp4",           # ✅ container for AAC (works in <audio>)
-            "-"
-        ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
-        bufsize=0
-    )
-
-# 🎶 Stream playback (single source; Python-side tee to recorder)
-@app.route("/play")
-def play():
-    global current_station
-
-    station = request.args.get("station")
-    if station not in RADIO_STATIONS:
-        return "Station not found", 404
-
-    url = RADIO_STATIONS[station]
-    current_station = station
-
-    start_ffmpeg(url)
-
-    def generate():
-        global ffmpeg_process
-        try:
-            while True:
-                if not ffmpeg_process or not ffmpeg_process.stdout:
-                    break
-                chunk = ffmpeg_process.stdout.read(4096)
-                if not chunk:
-                    break
-                # Tee to in-memory buffer if recording
-                if recording_active:
+            for chunk in iter(lambda: process.stdout.read(4096), b""):
+                if record and recording_active:
                     with record_lock:
                         if record_buffer is not None:
                             record_buffer.write(chunk)
                 yield chunk
+        except GeneratorExit:
+            process.kill()
+            break
+        except Exception as e:
+            print(f"⚠️ Stream error: {e}")
         finally:
-            # Do NOT kill ffmpeg here if someone else still needs it.
-            # We leave /stop to kill explicitly.
-            pass
+            process.kill()
+            print("🔁 Restarting FFmpeg in 3s...")
+            time.sleep(3)
 
-    return Response(generate(), mimetype="audio/mp4")  # ✅ AAC-in-MP4
+@app.route("/play")
+def play():
+    station = request.args.get("station")
+    if station not in RADIO_STATIONS:
+        return "Station not found", 404
+    url = RADIO_STATIONS[station]
+    return Response(generate_stream(url, record=True), mimetype="audio/mpeg")
 
 # 🎙 Toggle recording (no files written; buffer in RAM)
 @app.route("/record")
 def record():
-    global recording_active, record_buffer
+    global recording_active, record_buffer, current_station
 
     station = request.args.get("station")
     if station not in RADIO_STATIONS:
         return jsonify({"status": "error", "message": "Station not found"}), 404
 
-    # Ensure we're streaming the requested station
-    if current_station != station:
-        # Start stream for this station if needed
-        start_ffmpeg(RADIO_STATIONS[station])
+    # Track which station is currently recording
+    current_station = station  
 
     if not recording_active:
         # Start: create a fresh in-memory buffer
@@ -432,10 +413,9 @@ def record_size():
             size_kb = record_buffer.tell() // 1024
     return jsonify({"size": size_kb, "active": active})
 
-# ⏹️ Stop recording and download (send buffer; no disk writes)
 @app.route("/stop_record")
 def stop_record():
-    global record_buffer
+    global record_buffer, current_station
     with record_lock:
         if record_buffer is None or record_buffer.tell() == 0:
             return "No recording found", 404
@@ -446,9 +426,13 @@ def stop_record():
         record_buffer.close()
         record_buffer = None
 
-    # Timestamped download name (but not saved server-side)
+    # Timestamped download name
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"{(current_station or 'recording')}_{stamp}.mp3"
+
+    # ✅ Reset station after stopping
+    current_station = None  
+
     return send_file(
         data,
         mimetype="audio/mpeg",
@@ -456,17 +440,6 @@ def stop_record():
         download_name=filename
     )
 
-# ⏹️ Stop playback (explicit)
-@app.route("/stop")
-def stop():
-    global ffmpeg_process
-    if ffmpeg_process:
-        try:
-            ffmpeg_process.kill()
-        except Exception:
-            pass
-        ffmpeg_process = None
-    return "⏹️ Stopped playback"
 
 # ── Your existing Home / Player UI routes go here unchanged ───────────────────
 # (Keep your same @app.route("/") home() and @app.route("/player") player() functions)
