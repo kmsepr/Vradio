@@ -95,65 +95,54 @@ body {
     background: #121212; 
     color: #fff; 
     text-align: center;
-    padding: 2vh 2vw;
+    padding: 1vh 1vw;
 }
 h2 { 
-    font-size: 6vw;
-    margin-bottom: 3vh;
+    font-size: 5vw;
+    margin-bottom: 2vh;
 }
 .station-card { 
     background: #1e1e1e;
-    margin: 1vh auto;
-    padding: 1vh;
-    border-radius: 8px;
-    width: 95%;
-    max-width: 240px;
-    font-size: 3vw;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.25); 
+    margin: 0.5vh auto;
+    padding: 0.5vh;
+    border-radius: 6px;
+    width: 90%;
+    max-width: 200px;
+    font-size: 2.8vw;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2); 
 }
 .station-name { 
-    font-size: 4vw;
-    margin-bottom: 1vh;
+    font-size: 3.5vw;
+    margin-bottom: 0.5vh;
 }
 .station-card button { 
-    padding: 0.7vh 2vw;
-    font-size: 3.5vw;
-    border-radius: 7px;
-    border: none;
-    cursor: pointer;
+    padding: 0.4vh 1vw;
+    font-size: 3vw;
+    border-radius: 6px;
     background: #ff5722;
-    color: white;
     width: 100%;
-    transition: 0.2s;
 }
-.station-card button:hover { background: #e64a19; }
 .random-btn { 
     background: #4caf50;
-    margin-bottom: 2vh;
-    padding: 1.5vh 3vw;
-    font-size: 3.5vw;
-    width: 95%;
-    max-width: 240px;
-}
-.random-btn:hover { background: #43a047; }
-.pagination { margin-top: 2vh; }
-.pagination button { 
+    margin-bottom: 1.5vh;
     padding: 1vh 2vw;
-    margin: 0.5vh;
-    font-size: 3vw;
-    border-radius: 7px;
-    border: none;
-    cursor: pointer;
-    background: #333;
-    color: #fff;
+    font-size: 3.5vw;
+    width: 90%;
+    max-width: 200px;
 }
-.pagination button:hover { background: #555; }
+.pagination { margin-top: 1.5vh; font-size: 3vw; }
+.pagination button { 
+    padding: 0.6vh 1vw;
+    font-size: 3vw;
+    border-radius: 6px;
+    background: #333;
+}
 @media (max-width: 480px) {
-  h2 { font-size: 8vw; }
-  .station-card, .station-card button { font-size: 5vw; max-width: 180px; padding: 0.5vh 2vw; }
-  .station-name { font-size: 6vw; }
-  .random-btn { font-size: 5vw; max-width: 180px; }
-  .pagination button { font-size: 5vw; }
+  h2 { font-size: 7vw; }
+  .station-card, .station-card button { font-size: 4.5vw; max-width: 150px; }
+  .station-name { font-size: 5vw; }
+  .random-btn { font-size: 4.5vw; max-width: 150px; }
+  .pagination button { font-size: 4.5vw; }
 }
 </style>
 <script>
@@ -202,7 +191,9 @@ def player():
 <head>
     <title>▶ {{station}}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
+   # In your `player()` template, update <style> with:
+
+<style>
 body { 
     font-family: Arial, sans-serif; 
     background: black; 
@@ -215,30 +206,30 @@ h2 { font-size: 9vw; }
 audio { 
     width: 96%;
     max-width: 500px;
-    height: 62px;
-    margin: 3vh auto;
+    height: 55px;
+    margin: 2vh auto;
     display: block;
 }
 button.record { 
-    padding: 3vh 7vw;
-    font-size: 9vw;
-    border-radius: 15px;
+    padding: 1.5vh 4vw;   /* smaller padding */
+    font-size: 6vw;       /* smaller font */
+    border-radius: 10px;
     border: none;
     background: #ff9800;
     color: white;
-    width: 96%;
-    max-width: 500px;
-    margin-bottom: 2vh;
+    width: 80%;           /* narrower */
+    max-width: 300px;
+    margin-bottom: 1.5vh;
 }
 button.record:hover { background: #fb8000; }
-#rec-status, #rec-size { font-size: 6vw; margin: 1vh 0;}
-small { font-size: 4vw; }
+#rec-status, #rec-size { font-size: 5vw; margin: 0.5vh 0;}
+small { font-size: 3.5vw; }
 @media (max-width: 480px) {
-  h2 { font-size: 12vw; }
-  audio { height: 70px; }
-  button.record { font-size: 12vw; padding: 4vh 8vw; }
-  #rec-status, #rec-size { font-size: 9vw; }
-  small { font-size: 6vw; }
+  h2 { font-size: 11vw; }
+  audio { height: 65px; }
+  button.record { font-size: 8vw; padding: 2vh 5vw; max-width: 250px; }
+  #rec-status, #rec-size { font-size: 7vw; }
+  small { font-size: 5vw; }
 }
 </style>
 <script>
