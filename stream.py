@@ -328,8 +328,10 @@ small { font-size: 4vw; }
 # Keep your exact templates/scripts; they work with the same endpoints:
 #   /play, /record, /record_size, /stop_recorsubprocess
 
-def generate_stream(url, record=False):
-    global record_buffer, recording_active
+def generate_stream(url, station):
+    global record_buffer, recording_active, current_station
+
+    current_station = station  # track active station
 
     while True:
         process = subprocess.Popen(
@@ -340,8 +342,8 @@ def generate_stream(url, record=False):
                 "-reconnect_delay_max", "10",
                 "-i", url,
                 "-vn",
-                "-ac", "1",          # mono
-                "-b:a", "40k",       # low bitrate
+                "-ac", "1",
+                "-b:a", "40k",
                 "-f", "mp3",
                 "-"
             ],
@@ -350,10 +352,11 @@ def generate_stream(url, record=False):
             bufsize=4096
         )
 
-        print(f"🎵 Streaming from: {url}")
+        print(f"🎵 Playing: {station} ({url})")
         try:
             for chunk in iter(lambda: process.stdout.read(4096), b""):
-                if record and recording_active:
+                # only record if active AND same station
+                if recording_active and current_station == station:
                     with record_lock:
                         if record_buffer is not None:
                             record_buffer.write(chunk)
@@ -361,12 +364,11 @@ def generate_stream(url, record=False):
         except GeneratorExit:
             process.kill()
             break
-        except Exception as e:
-            print(f"⚠️ Stream error: {e}")
         finally:
             process.kill()
             print("🔁 Restarting FFmpeg in 3s...")
             time.sleep(3)
+
 
 @app.route("/play")
 def play():
@@ -374,7 +376,7 @@ def play():
     if station not in RADIO_STATIONS:
         return "Station not found", 404
     url = RADIO_STATIONS[station]
-    return Response(generate_stream(url, record=True), mimetype="audio/mpeg")
+    return Response(generate_stream(url, station), mimetype="audio/mpeg")
 
 # 🎙 Toggle recording (no files written; buffer in RAM)
 @app.route("/record")
