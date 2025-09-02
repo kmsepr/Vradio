@@ -14,18 +14,15 @@ if not shutil.which("ffmpeg"):
 # 📡 Full list of radio stations
 RADIO_STATIONS = {
     "muthnabi_radio": "http://cast4.my-control-panel.com/proxy/muthnabi/stream",
-     "radio_nellikka": "https://usa20.fastcast4u.com:2130/stream",
-
-"air_kavarati": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio189/chunklist.m3u8",
+    "radio_nellikka": "https://usa20.fastcast4u.com:2130/stream",
+    "air_kavarati": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio189/chunklist.m3u8",
     "air_calicut": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio082/chunklist.m3u8",
     "manjeri_fm": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio101/chunklist.m3u8",
     "real_fm": "http://air.pc.cdn.bitgravity.com/air/live/pbaudio083/playlist.m3u8",
     "safari_tv": "https://j78dp346yq5r-hls-live.5centscdn.com/safari/live.stream/chunks.m3u8",
     "victers_tv": "https://932y4x26ljv8-hls-live.5centscdn.com/victers/tv.stream/victers/tv1/chunks.m3u8",
     "kairali_we": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/wetv_nim_https/050522/wetv/playlist.m3u8",
-
-"mazhavil_manorama": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/mazhavilmanorama_nim_https/050522/mazhavilmanorama/playlist.m3u8",
-
+    "mazhavil_manorama": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/mazhavilmanorama_nim_https/050522/mazhavilmanorama/playlist.m3u8",
     "malayalam_1": "http://167.114.131.90:5412/stream",
     "radio_digital_malayali": "https://radio.digitalmalayali.in/listen/stream/radio.mp3",
     "malayalam_90s": "https://stream-159.zeno.fm/gm3g9amzm0hvv?zs-x-7jq8ksTOav9ZhlYHi9xw",
@@ -63,14 +60,9 @@ RADIO_STATIONS = {
     "sanaa_radio": "http://dc5.serverse.com/proxy/pbmhbvxs/stream",
     "rubat_ataq": "http://stream.zeno.fm/5tpfc8d7xqruv",
     "al_jazeera": "http://live-hls-audio-web-aja.getaj.net/VOICE-AJA/index.m3u8",
-
-
-
-
     "bloomberg_tv": "https://bloomberg-bloomberg-3-br.samsung.wurl.tv/manifest/playlist.m3u8",
     "france_24": "https://live.france24.com/hls/live/2037218/F24_EN_HI_HLS/master_500.m3u8",
-
-"vom_radio": "https://radio.psm.mv/draair",
+    "vom_radio": "https://radio.psm.mv/draair",
 }
 
 # Track processes
@@ -79,8 +71,7 @@ record_process = None
 current_station = None
 record_file = None
 
-
-# 🏠 Home screen with pagination + random play
+# 🏠 Home screen with small cards for feature phones
 @app.route("/")
 def home():
     page = int(request.args.get("page", 1))
@@ -92,7 +83,7 @@ def home():
     stations_on_page = station_list[start:end]
 
     return render_template_string("""
-    <html>
+<html>
 <head>
 <title>📻 VRadio</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -101,64 +92,66 @@ body {
     font-family: Arial, sans-serif; 
     background: #121212; 
     color: #fff; 
-    text-align: center; 
+    text-align: center;
     padding: 2vh 2vw;
 }
 h2 { 
-    font-size: 5vw;  /* scales with screen width */
-    margin-bottom: 3vh; 
+    font-size: 6vw;
+    margin-bottom: 3vh;
 }
 .station-card { 
-    background: #1e1e1e; 
-    margin: 2vh auto; 
-    padding: 2vh; 
-    border-radius: 12px; 
-    width: 95%; 
-    max-width: 600px; 
-    box-shadow: 0 4px 6px rgba(0,0,0,0.3); 
+    background: #1e1e1e;
+    margin: 1vh auto;
+    padding: 1vh;
+    border-radius: 8px;
+    width: 95%;
+    max-width: 240px;
+    font-size: 3vw;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.25); 
 }
 .station-name { 
-    font-size: 4vw; 
-    margin-bottom: 2vh; 
+    font-size: 4vw;
+    margin-bottom: 1vh;
 }
 .station-card button { 
-    padding: 2vh 2vw; 
-    font-size: 3.5vw; 
-    border-radius: 10px; 
-    border: none; 
-    cursor: pointer; 
-    background: #ff5722; 
-    color: white; 
-    width: 100%; 
-    transition: 0.2s; 
+    padding: 0.7vh 2vw;
+    font-size: 3.5vw;
+    border-radius: 7px;
+    border: none;
+    cursor: pointer;
+    background: #ff5722;
+    color: white;
+    width: 100%;
+    transition: 0.2s;
 }
 .station-card button:hover { background: #e64a19; }
 .random-btn { 
-    background: #4caf50; 
-    margin-bottom: 2vh; 
-    padding: 2vh 2vw; 
-    font-size: 4vw; 
-    width: 95%; 
-    max-width: 600px; 
+    background: #4caf50;
+    margin-bottom: 2vh;
+    padding: 1.5vh 3vw;
+    font-size: 3.5vw;
+    width: 95%;
+    max-width: 240px;
 }
 .random-btn:hover { background: #43a047; }
 .pagination { margin-top: 2vh; }
 .pagination button { 
-    padding: 1.5vh 2vw; 
-    margin: 1vh; 
-    font-size: 3vw; 
-    border-radius: 10px; 
-    border: none; 
-    cursor: pointer; 
-    background: #333; 
-    color: #fff; 
+    padding: 1vh 2vw;
+    margin: 0.5vh;
+    font-size: 3vw;
+    border-radius: 7px;
+    border: none;
+    cursor: pointer;
+    background: #333;
+    color: #fff;
 }
 .pagination button:hover { background: #555; }
-
-/* 📱 Mobile tweak */
-@media (max-width: 600px) {
-  h2 { font-size: 6vw; }
-  .station-card button, .random-btn { font-size: 5vw; }
+@media (max-width: 480px) {
+  h2 { font-size: 8vw; }
+  .station-card, .station-card button { font-size: 5vw; max-width: 180px; padding: 0.5vh 2vw; }
+  .station-name { font-size: 6vw; }
+  .random-btn { font-size: 5vw; max-width: 180px; }
+  .pagination button { font-size: 5vw; }
 }
 </style>
 <script>
@@ -178,42 +171,36 @@ document.addEventListener('keydown', function(e){
 <body>
 <h2>📻 VRadio</h2>
 <button class="random-btn" onclick="randomPlay()">🎲 Random Play</button>
-
 {% for name in stations_on_page %}
 <div class="station-card">
   <div class="station-name">{{name}}</div>
   <button onclick="window.location.href='/player?station={{name}}'">▶ Play</button>
 </div>
 {% endfor %}
-
 <div class="pagination">
   <button onclick="goPage(page-1)">⬅ Prev Page</button>
   <button onclick="goPage(page+1)">Next Page ➡</button>
   <div>Page {{page}} of {{total_pages}}</div>
 </div>
-
 <small>Keypad: 6=Next, 4=Prev, 0=Random</small>
 </body>
 </html>
-    """, stations_on_page=stations_on_page, page=page, total_pages=total_pages, station_list=station_list)
+""", stations_on_page=stations_on_page, page=page, total_pages=total_pages, station_list=station_list)
 
-
-# 🎶 Player screen with keypad support + random play
+# 🎶 Player screen with big UI
 @app.route("/player")
 def player():
     station = request.args.get("station")
     if station not in RADIO_STATIONS:
         return "Station not found", 404
-
-    # Convert station names to list for next/prev/random navigation
     station_list = list(RADIO_STATIONS.keys())
     current_index = station_list.index(station)
-
     return render_template_string("""
-    <html>
-    <head>
-        <title>▶ {{station}}</title>
-        <style>
+<html>
+<head>
+    <title>▶ {{station}}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
 body { 
     font-family: Arial, sans-serif; 
     background: black; 
@@ -222,55 +209,58 @@ body {
     padding: 2vh 2vw;
 }
 .container { margin-top: 5vh; }
-h2 { font-size: 5vw; }
+h2 { font-size: 9vw; }
 audio { 
-    width: 95%; 
-    max-width: 600px; 
-    margin: 2vh auto; 
-    display: block; 
+    width: 96%;
+    max-width: 500px;
+    height: 62px;
+    margin: 3vh auto;
+    display: block;
 }
-button { 
-    padding: 2vh 2vw; 
-    margin: 2vh; 
-    border: none; 
-    border-radius: 12px; 
-    font-size: 3.5vw; 
-    cursor: pointer; 
+button.record { 
+    padding: 3vh 7vw;
+    font-size: 9vw;
+    border-radius: 15px;
+    border: none;
+    background: #ff9800;
+    color: white;
+    width: 96%;
+    max-width: 500px;
+    margin-bottom: 2vh;
 }
-.record { background: #ff9800; color: white; }
-
-/* 📱 Mobile tweak */
-@media (max-width: 600px) {
-  h2 { font-size: 6vw; }
-  button { font-size: 5vw; }
+button.record:hover { background: #fb8000; }
+#rec-status, #rec-size { font-size: 6vw; margin: 1vh 0;}
+small { font-size: 4vw; }
+@media (max-width: 480px) {
+  h2 { font-size: 12vw; }
+  audio { height: 70px; }
+  button.record { font-size: 12vw; padding: 4vh 8vw; }
+  #rec-status, #rec-size { font-size: 9vw; }
+  small { font-size: 6vw; }
 }
 </style>
-        <script>
+<script>
     const stationList = {{ station_list|tojson }};
     let currentIndex = {{ current_index }};
     let recording = false;
     let recordFile = null;
     const audio = document.querySelector('audio');
-
     function goToStation(index) {
         if (index < 0) index = stationList.length - 1;
         if (index >= stationList.length) index = 0;
         window.location.href = "/player?station=" + stationList[index];
     }
-
     function togglePlayStop() {
         if (audio.paused) {
             audio.play();
         } else {
             audio.pause();
-            audio.currentTime = 0; // Stop and reset
+            audio.currentTime = 0;
         }
     }
-
     async function toggleRecord() {
         let res = await fetch("/record?station=" + stationList[currentIndex]);
         let data = await res.json();
-
         if (data.status === "recording") {
             recording = true;
             recordFile = data.file;
@@ -280,12 +270,10 @@ button {
             recording = false;
             document.getElementById("rec-status").innerText = "⏹ Stopped";
             if (data.file) {
-                // auto-download after stop
                 window.location.href = "/stop_record";
             }
         }
     }
-
     async function updateSize() {
         if (!recording) return;
         let res = await fetch("/record_size");
@@ -295,19 +283,16 @@ button {
             setTimeout(updateSize, 1000);
         }
     }
-
     function randomStation() {
         const randIndex = Math.floor(Math.random() * stationList.length);
         goToStation(randIndex);
     }
-
-    // Keypad shortcuts
     document.addEventListener('keydown', function(e) {
         const key = e.key;
         if (key === "5") {
-            togglePlayStop();   // Play/Stop
+            togglePlayStop();
         } else if (key === "*") {
-            toggleRecord();     // Record/Stop
+            toggleRecord();
         } else if (key === "1") {
             window.location.href = "/";
         } else if (key === "4") {
@@ -319,25 +304,24 @@ button {
         }
     });
 </script>
-    </head>
-    <body>
-        <div class="container">
-            <h2>{{station}}</h2>
-            <audio controls autoplay>
-                <source src="/play?station={{station}}" type="audio/mpeg">
-                Your browser does not support audio.
-            </audio>
-            <br>
-            <button class="record" onclick="toggleRecord()">⏺ Record / Stop</button>
-            <div id="rec-status">Not recording</div>
-            <div id="rec-size"></div>
-            <br>
-            <small>Keypad shortcuts: 5=Play/Stop, *=Record/Stop, 1=Home, 4=Prev, 0=Random, 6=Next</small>
-        </div>
-    </body>
-    </html>
-    """, station=station, station_list=station_list, current_index=current_index)
-
+</head>
+<body>
+    <div class="container">
+        <h2>{{station}}</h2>
+        <audio controls autoplay>
+            <source src="/play?station={{station}}" type="audio/mpeg">
+            Your browser does not support audio.
+        </audio>
+        <br>
+        <button class="record" onclick="toggleRecord()">⏺ Record / Stop</button>
+        <div id="rec-status">Not recording</div>
+        <div id="rec-size"></div>
+        <br>
+        <small>Keypad shortcuts: 5=Play/Stop, *=Record/Stop, 1=Home, 4=Prev, 0=Random, 6=Next</small>
+    </div>
+</body>
+</html>
+""", station=station, station_list=station_list, current_index=current_index)
 
 # 🎶 Stream playback
 @app.route("/play")
@@ -345,20 +329,18 @@ def play():
     station = request.args.get("station")
     if station not in RADIO_STATIONS:
         return "Station not found", 404
-
     url = RADIO_STATIONS[station]
-
-    # Stop previous playback
     global ffmpeg_process
     if ffmpeg_process:
         ffmpeg_process.kill()
-
-    ffmpeg_process = subprocess.Popen(
-        ["ffmpeg", "-i", url, "-c:a", "libmp3lame", "-b:a", "40k", "-f", "mp3", "-"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL
-    )
-
+    try:
+        ffmpeg_process = subprocess.Popen(
+            ["ffmpeg", "-i", url, "-c:a", "libmp3lame", "-b:a", "40k", "-f", "mp3", "-"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL
+        )
+    except Exception as e:
+        return f"Error: {e}", 500
     def generate():
         try:
             while True:
@@ -369,19 +351,15 @@ def play():
         finally:
             if ffmpeg_process:
                 ffmpeg_process.kill()
-
     return Response(generate(), mimetype="audio/mpeg")
-
 
 # ⏺️ Record screen
 @app.route("/record")
 def record():
     global record_process, record_file
-
     station = request.args.get("station")
     if station not in RADIO_STATIONS:
         return jsonify({"status": "error", "message": "Station not found"}), 404
-
     # If already recording, stop and return file
     if record_process:
         record_process.kill()
@@ -390,22 +368,20 @@ def record():
             size = os.path.getsize(record_file) // 1024
             return jsonify({"status": "stopped", "file": record_file, "size": size})
         return jsonify({"status": "stopped", "message": "No file"}), 200
-
     # Start new recording
     url = RADIO_STATIONS[station]
     os.makedirs("recordings", exist_ok=True)
-
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     record_file = f"recordings/{station.replace(' ', '_')}_{timestamp}.mp3"
-
-    record_process = subprocess.Popen(
-        ["ffmpeg", "-i", url, "-map_metadata", "-1", "-f", "mp3", "-y", record_file],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL
-    )
-
+    try:
+        record_process = subprocess.Popen(
+            ["ffmpeg", "-i", url, "-map_metadata", "-1", "-f", "mp3", "-y", record_file],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
     return jsonify({"status": "recording", "file": record_file})
-
 
 # 📏 Recording size API
 @app.route("/record_size")
@@ -416,7 +392,6 @@ def record_size():
         return jsonify({"size": size, "active": True})
     return jsonify({"size": 0, "active": False})
 
-
 # ⏹️ Stop recording and download
 @app.route("/stop_record")
 def stop_record():
@@ -425,9 +400,11 @@ def stop_record():
         record_process.kill()
         record_process = None
     if record_file and os.path.exists(record_file):
-        return send_file(record_file, as_attachment=True)
+        try:
+            return send_file(record_file, as_attachment=True)
+        except Exception as e:
+            return f"Error sending file: {e}", 500
     return "No recording found", 404
-
 
 # ⏹️ Stop all playback
 @app.route("/stop")
@@ -437,7 +414,6 @@ def stop():
         ffmpeg_process.kill()
         ffmpeg_process = None
     return "⏹️ Stopped playback"
-
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000, threaded=True)
