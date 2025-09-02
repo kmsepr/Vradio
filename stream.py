@@ -346,10 +346,10 @@ button {
     """, station=station, station_list=station_list, current_index=current_index)
 
 
-# 🎶 Stream playback with optional recording (separate processes)
+# 🎶 Stream playback with optional recording (using single FFMPEG process)
 @app.route("/play")
 def play():
-    global ffmpeg_process, record_file, record_process
+    global ffmpeg_process, record_file
 
     station = request.args.get("station")
     record = request.args.get("record", "0") == "1"
@@ -359,43 +359,38 @@ def play():
 
     url = RADIO_STATIONS[station]
 
-    # Stop previous playback
+    # Stop previous playback if any
     if ffmpeg_process:
         ffmpeg_process.kill()
         ffmpeg_process = None
 
-    # Stop previous recording if any
-    if record_process:
-        record_process.kill()
-        record_process = None
-
-    # Start recording if requested
+    # If recording enabled, tee to file + browser
     if record:
         os.makedirs("recordings", exist_ok=True)
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         record_file = f"recordings/{station}_{timestamp}.mp3"
 
-        record_process = subprocess.Popen(
+        # FFMPEG tee: browser (pipe:1) + file
+        ffmpeg_process = subprocess.Popen(
             [
                 "ffmpeg",
                 "-i", url,
                 "-map_metadata", "-1",
                 "-c:a", "libmp3lame",
                 "-b:a", "128k",
-                record_file
+                "-f", "tee",
+                f"[f=mp3]pipe:1|[f=mp3]{record_file}"
             ],
-            stdout=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL
         )
     else:
         record_file = None
-
-    # Stream to browser
-    ffmpeg_process = subprocess.Popen(
-        ["ffmpeg", "-i", url, "-map_metadata", "-1", "-f", "mp3", "pipe:1"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL
-    )
+        ffmpeg_process = subprocess.Popen(
+            ["ffmpeg", "-i", url, "-map_metadata", "-1", "-c:a", "libmp3lame", "-b:a", "128k", "-f", "mp3", "pipe:1"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL
+        )
 
     def generate():
         try:
@@ -415,7 +410,7 @@ def play():
 # ⏺️ Start/Stop recording toggle
 @app.route("/record")
 def record():
-    global record_file, record_process
+    global record_file, ffmpeg_process
 
     station = request.args.get("station")
     action = request.args.get("action", "start")  # "start" or "stop"
@@ -423,42 +418,35 @@ def record():
     if not station or station not in RADIO_STATIONS:
         return jsonify({"status": "error", "message": "Station not found"}), 404
 
-    url = RADIO_STATIONS[station]
-
     if action == "start":
+        # tell frontend to reload player with record=1
         os.makedirs("recordings", exist_ok=True)
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         record_file = f"recordings/{station}_{timestamp}.mp3"
 
-        # Start recording process
-        record_process = subprocess.Popen(
-            [
-                "ffmpeg",
-                "-i", url,
-                "-map_metadata", "-1",
-                "-c:a", "libmp3lame",
-                "-b:a", "128k",
-                record_file
-            ],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
-        )
-
         return jsonify({
             "status": "recording",
-            "file": record_file,
-            "url": f"/play?station={station}&record=1"
+            "url": f"/play?station={station}&record=1",
+            "file": record_file
         })
 
     elif action == "stop":
-        if record_process:
-            record_process.kill()
-            record_process = None
+        # Stop FFMPEG if recording was active
+        if ffmpeg_process:
+            ffmpeg_process.kill()
+            ffmpeg_process = None
+
+        # restart playback-only stream
+        ffmpeg_process = subprocess.Popen(
+            ["ffmpeg", "-i", RADIO_STATIONS[station], "-map_metadata", "-1", "-c:a", "libmp3lame", "-b:a", "128k", "-f", "mp3", "pipe:1"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL
+        )
 
         if record_file and os.path.exists(record_file):
             return jsonify({"status": "stopped", "file": record_file})
 
-        return jsonify({"status": "error", "message": "No recording active"}), 404
+    return jsonify({"status": "error", "message": "No recording active"}), 404
 
 # 📏 Recording size
 @app.route("/record_size")
