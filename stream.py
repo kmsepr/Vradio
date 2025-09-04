@@ -405,6 +405,27 @@ def tv():
     url = RADIO_STATIONS[station]
     return Response(generate_stream(url, station, "video"), mimetype="video/mp2t")
 
+@app.route("/tv_player")
+def tv_player():
+    station = request.args.get("station")
+    if station not in RADIO_STATIONS:
+        return "Station not found", 404
+    
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>TV Player - {station}</title>
+    </head>
+    <body style="background:#000;display:flex;justify-content:center;align-items:center;height:100vh;">
+        <video controls autoplay style="max-width:100%;max-height:100%;" >
+            <source src="/tv?station={station}" type="video/mp2t">
+            Your browser does not support video.
+        </video>
+    </body>
+    </html>
+    """
+
 # 🎙 Toggle recording (no files written; buffer in RAM)
 @app.route("/record")
 def record():
