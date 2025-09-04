@@ -325,35 +325,54 @@ small { font-size: 3.5vw; }
 # Keep your exact templates/scripts; they work with the same endpoints:
 #   /play, /record, /record_size, /stop_recorsubprocess
 
-def generate_stream(url, station):
+def generate_stream(url, station, mode="audio"):
     global record_buffer, recording_active, current_station
-
     current_station = station  # track active station
+
+    ffmpeg_cmd = [
+        "ffmpeg",
+        "-reconnect", "1",
+        "-reconnect_streamed", "1",
+        "-reconnect_delay_max", "10",
+        "-i", url
+    ]
+
+    if mode == "audio":  
+        # Radio-like audio stream
+        ffmpeg_cmd += [
+            "-vn",            # no video
+            "-ac", "1",       # mono
+            "-b:a", "40k",    # bitrate
+            "-f", "mp3",
+            "-"
+        ]
+        mime = "audio/mpeg"
+    else:
+        # TV mode → transcode to 360p HLS
+        ffmpeg_cmd += [
+            "-vf", "scale=-2:360",   # resize keeping aspect ratio, height=360p
+            "-c:v", "libx264",       # video codec
+            "-preset", "veryfast",
+            "-c:a", "aac",           # audio codec
+            "-b:a", "64k",
+            "-f", "mpegts",          # transport stream
+            "-"
+        ]
+        mime = "video/mp2t"
 
     while True:
         process = subprocess.Popen(
-            [
-                "ffmpeg",
-                "-reconnect", "1",
-                "-reconnect_streamed", "1",
-                "-reconnect_delay_max", "10",
-                "-i", url,
-                "-vn",
-                "-ac", "1",
-                "-b:a", "40k",
-                "-f", "mp3",
-                "-"
-            ],
+            ffmpeg_cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
             bufsize=4096
         )
 
-        print(f"🎵 Playing: {station} ({url})")
+        print(f"🎵▶ Streaming {mode.upper()}: {station} ({url})")
         try:
             for chunk in iter(lambda: process.stdout.read(4096), b""):
-                # only record if active AND same station
-                if recording_active and current_station == station:
+                # record only audio streams
+                if mode == "audio" and recording_active and current_station == station:
                     with record_lock:
                         if record_buffer is not None:
                             record_buffer.write(chunk)
@@ -367,13 +386,24 @@ def generate_stream(url, station):
             time.sleep(3)
 
 
+# keep existing audio route
 @app.route("/play")
 def play():
     station = request.args.get("station")
     if station not in RADIO_STATIONS:
         return "Station not found", 404
     url = RADIO_STATIONS[station]
-    return Response(generate_stream(url, station), mimetype="audio/mpeg")
+    return Response(generate_stream(url, station, "audio"), mimetype="audio/mpeg")
+
+
+# new TV route
+@app.route("/tv")
+def tv():
+    station = request.args.get("station")
+    if station not in RADIO_STATIONS:
+        return "Station not found", 404
+    url = RADIO_STATIONS[station]
+    return Response(generate_stream(url, station, "video"), mimetype="video/mp2t")
 
 # 🎙 Toggle recording (no files written; buffer in RAM)
 @app.route("/record")
