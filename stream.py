@@ -136,9 +136,49 @@ def play():
         return "Station not found", 404
     return Response(generate_stream(RADIO_STATIONS[station], station, "audio"), mimetype="audio/mpeg")
 
-# 📺 HLS TV route
 @app.route("/tv")
 def tv():
+    station = request.args.get("station")
+    if station not in RADIO_STATIONS:
+        return "Station not found", 404
+
+    # HTML page with video player
+    return render_template_string("""
+<html>
+<head>
+  <title>{{station}} - Live TV</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { background: #121212; color: white; text-align: center; font-family: Arial; }
+    video { width: 90%; max-width: 600px; margin-top: 20px; border-radius: 8px; }
+    a { display: block; margin-top: 15px; color: #4caf50; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+</head>
+<body>
+  <h2>📺 Now Playing: {{station}}</h2>
+  <video id="video" controls autoplay></video>
+  <a href="/tv_hls?station={{station}}">Open raw .m3u8 (VLC)</a>
+
+  <script>
+    const video = document.getElementById('video');
+    const src = "/tv_hls?station={{station}}";
+    if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = src;
+    } else if (Hls.isSupported()) {
+        const hls = new Hls();
+        hls.loadSource(src);
+        hls.attachMedia(video);
+    } else {
+        alert("Your browser does not support HLS");
+    }
+  </script>
+</body>
+</html>
+""", station=station)
+
+@app.route("/tv_hls")
+def tv_hls():
     station = request.args.get("station")
     if station not in RADIO_STATIONS:
         return "Station not found", 404
@@ -165,7 +205,14 @@ def tv():
         proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         hls_processes[station] = proc
 
-    return send_file(os.path.join(hls_dirs[station], "index.m3u8"), mimetype="application/vnd.apple.mpegurl")
+        # Wait until playlist exists
+        for _ in range(20):  # ~2 sec
+            if os.path.exists(playlist) and os.path.getsize(playlist) > 0:
+                break
+            time.sleep(0.1)
+
+    return send_file(os.path.join(hls_dirs[station], "index.m3u8"),
+                     mimetype="application/vnd.apple.mpegurl")
 
 # Serve .ts files
 @app.route("/tv/<station>/<path:filename>")
