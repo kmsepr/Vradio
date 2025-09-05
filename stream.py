@@ -6,7 +6,6 @@ from datetime import datetime
 from threading import Lock
 from flask import Flask, Response, request, render_template_string, send_file, jsonify
 import tempfile
-import threading
 
 app = Flask(__name__)
 
@@ -47,7 +46,6 @@ def generate_stream(url, station, mode="audio"):
 
     if mode == "audio":
         ffmpeg_cmd += ["-vn", "-ac", "1", "-b:a", "40k", "-f", "mp3", "-"]
-        mime = "audio/mpeg"
     else:
         ffmpeg_cmd += [
             "-vf", "scale=-2:360",
@@ -55,7 +53,6 @@ def generate_stream(url, station, mode="audio"):
             "-c:a", "aac", "-b:a", "64k",
             "-f", "mpegts", "-"
         ]
-        mime = "video/mp2t"
 
     while True:
         process = subprocess.Popen(
@@ -82,7 +79,54 @@ def generate_stream(url, station, mode="audio"):
 
 @app.route("/")
 def home():
-    return "<h2>📺 Radio/TV Server Running</h2><p>Use /play or /tv routes.</p>"
+    station_list = list(RADIO_STATIONS.keys())
+    return render_template_string("""
+<html>
+<head>
+<title>📺 VRadio/TV</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #121212;
+  color: #fff;
+  text-align: center;
+}
+h2 { margin: 20px 0; }
+.station-card {
+  background: #1e1e1e;
+  margin: 8px auto;
+  padding: 10px;
+  border-radius: 6px;
+  width: 90%;
+  max-width: 300px;
+}
+button {
+  margin: 5px;
+  padding: 8px 12px;
+  font-size: 16px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+}
+.play-btn { background: #4caf50; color: white; }
+.tv-btn { background: #2196f3; color: white; }
+.direct-btn { background: #ff9800; color: white; }
+</style>
+</head>
+<body>
+  <h2>📻 VRadio / 📺 VTV</h2>
+  {% for s in stations %}
+    <div class="station-card">
+      <div><b>{{s}}</b></div>
+      <button class="play-btn" onclick="window.location.href='/play?station={{s}}'">▶ Audio</button>
+      <button class="tv-btn" onclick="window.location.href='/tv?station={{s}}'">📺 TV (HLS)</button>
+      <button class="direct-btn" onclick="window.location.href='/tv_direct?station={{s}}'">⚡ Direct</button>
+    </div>
+  {% endfor %}
+</body>
+</html>
+""", stations=station_list)
 
 # 🎶 Audio route
 @app.route("/play")
@@ -92,7 +136,7 @@ def play():
         return "Station not found", 404
     return Response(generate_stream(RADIO_STATIONS[station], station, "audio"), mimetype="audio/mpeg")
 
-# 📺 HLS TV route (low latency)
+# 📺 HLS TV route
 @app.route("/tv")
 def tv():
     station = request.args.get("station")
@@ -113,9 +157,9 @@ def tv():
             "-c:v", "libx264", "-preset", "veryfast", "-crf", "23",
             "-c:a", "aac", "-b:a", "64k",
             "-f", "hls",
-            "-hls_time", "2",              # ⏱ 2s chunks
-            "-hls_list_size", "6",         # keep last 6
-            "-hls_flags", "append_list+delete_segments",  # start faster
+            "-hls_time", "2",
+            "-hls_list_size", "6",
+            "-hls_flags", "append_list+delete_segments",
             playlist
         ]
         proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -133,58 +177,13 @@ def tv_segments(station, filename):
         return "Segment not found", 404
     return send_file(path)
 
-# 📺 Direct MPEG-TS route (ultra low-latency, no HLS)
+# 📺 Direct MPEG-TS route
 @app.route("/tv_direct")
 def tv_direct():
     station = request.args.get("station")
     if station not in RADIO_STATIONS:
         return "Station not found", 404
     return Response(generate_stream(RADIO_STATIONS[station], station, "video"), mimetype="video/mp2t")
-
-# 🎙 Recording toggle
-@app.route("/record")
-def record():
-    global recording_active, record_buffer, current_station
-    station = request.args.get("station")
-    if station not in RADIO_STATIONS:
-        return jsonify({"status": "error", "message": "Station not found"}), 404
-    current_station = station
-    if not recording_active:
-        with record_lock:
-            record_buffer = BytesIO()
-        recording_active = True
-        return jsonify({"status": "recording", "file": None})
-    else:
-        recording_active = False
-        size_kb = 0
-        with record_lock:
-            if record_buffer is not None:
-                size_kb = record_buffer.tell() // 1024
-        return jsonify({"status": "stopped", "file": "/stop_record", "size": size_kb})
-
-@app.route("/record_size")
-def record_size():
-    active = recording_active
-    size_kb = 0
-    with record_lock:
-        if active and record_buffer is not None:
-            size_kb = record_buffer.tell() // 1024
-    return jsonify({"size": size_kb, "active": active})
-
-@app.route("/stop_record")
-def stop_record():
-    global record_buffer, current_station
-    with record_lock:
-        if record_buffer is None or record_buffer.tell() == 0:
-            return "No recording found", 404
-        record_buffer.seek(0)
-        data = BytesIO(record_buffer.read())
-        record_buffer.close()
-        record_buffer = None
-    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"{(current_station or 'recording')}_{stamp}.mp3"
-    current_station = None
-    return send_file(data, mimetype="audio/mpeg", as_attachment=True, download_name=filename)
 
 # ── Run ──
 if __name__ == "__main__":
