@@ -65,8 +65,7 @@ RADIO_STATIONS = {
     "france_24": "https://live.france24.com/hls/live/2037218/F24_EN_HI_HLS/master_500.m3u8",
     "vom_radio": "https://radio.psm.mv/draair",
 
-"mm": "
-"http://surviving-audy-sadiqkm-fb03800f.koyeb.app/tv?station=mazhavil_manorama",
+"mm": "https://surviving-audy-sadiqkm-fb03800f.koyeb.app/tv?station=mazhavil_manorama",
 }
 
 # ── State (single ffmpeg, in-memory recording) ────────────────────────────────
