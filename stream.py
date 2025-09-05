@@ -200,19 +200,32 @@ def tv_hls():
             "-hls_time", "2",
             "-hls_list_size", "6",
             "-hls_flags", "append_list+delete_segments",
+            "-hls_segment_filename", os.path.join(tmpdir, "segment%03d.ts"),
             playlist
         ]
         proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         hls_processes[station] = proc
 
-        # Wait until playlist exists
-        for _ in range(20):  # ~2 sec
+        # wait for ffmpeg to create playlist
+        for _ in range(50):  # ~5s max
             if os.path.exists(playlist) and os.path.getsize(playlist) > 0:
                 break
             time.sleep(0.1)
 
-    return send_file(os.path.join(hls_dirs[station], "index.m3u8"),
-                     mimetype="application/vnd.apple.mpegurl")
+    playlist_path = os.path.join(hls_dirs[station], "index.m3u8")
+    if not os.path.exists(playlist_path):
+        return "HLS playlist not ready", 503
+
+    # 🔗 rewrite segment paths
+    with open(playlist_path, "r") as f:
+        content = f.read()
+    content = content.replace("segment", f"/tv/{station}/segment")
+
+    rewritten = os.path.join(hls_dirs[station], "rewritten.m3u8")
+    with open(rewritten, "w") as f:
+        f.write(content)
+
+    return send_file(rewritten, mimetype="application/vnd.apple.mpegurl")
 
 # Serve .ts files
 @app.route("/tv/<station>/<path:filename>")
