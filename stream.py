@@ -144,12 +144,13 @@ def play_page(station_name):
         </audio>
         <div class="controls">
             <button onclick="window.location.href='/play/{prev_station}'">⏮ Prev (4)</button>
+            <button onclick="togglePlay()">⏯ Play/Pause (5)</button>
             <button onclick="window.location.href='/play/{next_station}'">Next (6) ⏭</button>
             <button onclick="randomStation()">🎲 Random (0)</button>
             <button onclick="toggleSleep()" id="sleepBtn">⏱ Sleep (20m)</button>
         </div>
         <div class="timer">Sleep Timer: <span id="timeLeft">Off</span></div>
-        <div class="info">🔢 T9 Keys → 4=Prev | 6=Next | 0=Random | *=Sleep</div>
+        <div class="info">🔢 T9 Keys → 4=Prev | 5=Play/Pause | 6=Next | 0=Random | *=Sleep</div>
 
         <script>
         const STATIONS = {stations_json};
@@ -214,9 +215,15 @@ def play_page(station_name):
                 if(timerActive) stopTimer(); else startTimer();
             }}
 
+            function togglePlay() {{
+                if(player.paused) player.play();
+                else player.pause();
+            }}
+
             // T9 Key Controls
             document.addEventListener("keydown", function(e){{
                 if(e.key === "4") window.location.href='/play/{prev_station}';
+                else if(e.key === "5") togglePlay();
                 else if(e.key === "6") window.location.href='/play/{next_station}';
                 else if(e.key === "0") randomStation();
                 else if(e.key === "*") toggleSleep();
