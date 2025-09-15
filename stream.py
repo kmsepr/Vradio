@@ -1,5 +1,6 @@
 import subprocess
 import time
+import json
 import shutil
 from flask import Flask, Response, request, redirect
 
@@ -126,6 +127,8 @@ def direct_station_redirect(station_name):
     return redirect(url)
 
 
+# ... your other imports ...
+
 @app.route("/play/<station_name>")
 def play_page(station_name):
     station_names = list(RADIO_STATIONS.keys())
@@ -134,7 +137,8 @@ def play_page(station_name):
 
     idx = station_names.index(station_name)
     prev_station = station_names[idx - 1] if idx > 0 else station_names[-1]
-    next_station = (station_names[(idx + 1) % len(station_names)])
+    next_station = station_names[(idx + 1) % len(station_names)]
+    stations_json = json.dumps(station_names)
 
     html = f"""
     <html>
@@ -166,23 +170,24 @@ def play_page(station_name):
                 margin: 10px 0;
             }}
             button {{
-                flex: 1 1 45%;
-                padding: 10px;
+                flex: 1 1 30%;
+                padding: 8px 10px;
                 font-size: 13px;
                 border-radius: 8px;
                 border: none;
                 background: #007bff;
                 color: white;
+                min-width: 90px;
             }}
             .timer {{
-                margin-top: 10px;
+                margin-top: 8px;
                 font-size: 13px;
                 color: #0f0;
             }}
             .info {{
                 font-size: 11px;
                 color: #bbb;
-                margin-top: 12px;
+                margin-top: 10px;
             }}
         </style>
     </head>
@@ -191,19 +196,19 @@ def play_page(station_name):
 
         <audio id="player" controls autoplay>
             <source src="/stream/{station_name}" type="audio/mpeg">
+            Your browser does not support the audio element.
         </audio>
 
         <div class="controls">
             <button onclick="window.location.href='/play/{prev_station}'">⏮ Prev (4)</button>
             <button onclick="togglePlay()">⏯ Play/Pause (5)</button>
-            <button onclick="startTimer()">⏱ Sleep (20m)</button>
+            <button id="sleepBtn" onclick="toggleSleep()">⏱ Sleep (20m)</button>
             <button onclick="window.location.href='/play/{next_station}'">Next (6) ⏭</button>
             <button onclick="randomStation()">🎲 Random (0)</button>
         </div>
 
         <div class="timer">
             Sleep Timer: <span id="timeLeft">Off</span>
-            <button onclick="cancelTimer()">❌ Cancel</button>
         </div>
 
         <div class="info">
@@ -211,56 +216,88 @@ def play_page(station_name):
         </div>
 
         <script>
-            const player = document.getElementById("player");
-            let timerSeconds = 0;
-            let countdown;
-
-            function updateTimer() {{
-                if (timerSeconds <= 0) {{
-                    player.pause();
-                    document.getElementById("timeLeft").innerText = "Stopped";
-                    clearInterval(countdown);
-                    return;
-                }}
-                let min = Math.floor(timerSeconds / 60);
-                let sec = timerSeconds % 60;
-                document.getElementById("timeLeft").innerText =
-                    String(min).padStart(2, '0') + ":" + String(sec).padStart(2, '0');
-                timerSeconds--;
-            }}
-
-            function startTimer() {{
-                timerSeconds = 20 * 60; // 20 min
-                clearInterval(countdown);
-                countdown = setInterval(updateTimer, 1000);
-                updateTimer();
-            }}
-
-            function cancelTimer() {{
-                clearInterval(countdown);
-                document.getElementById("timeLeft").innerText = "Off";
-            }}
-
-            function togglePlay() {{
-                if (player.paused) player.play();
-                else player.pause();
-            }}
+            const STATIONS = {stations_json};
+            const CURRENT = "{station_name}";
 
             function randomStation() {{
-                fetch("/all_stations.json")
-                    .then(r => r.json())
-                    .then(data => {{
-                        const random = data[Math.floor(Math.random() * data.length)];
-                        window.location.href = "/play/" + random;
-                    }});
+                // pick a random station other than the current one if possible
+                const others = STATIONS.filter(s => s !== CURRENT);
+                const pick = others.length ? others[Math.floor(Math.random() * others.length)]
+                                           : STATIONS[Math.floor(Math.random() * STATIONS.length)];
+                window.location.href = "/play/" + pick;
             }}
 
-            // T9 Key Controls
-            document.addEventListener("keydown", function(e) {{
-                if (e.key === "5") togglePlay();
-                else if (e.key === "4") window.location.href='/play/{prev_station}';
-                else if (e.key === "6") window.location.href='/play/{next_station}';
-                else if (e.key === "0") randomStation();
+            document.addEventListener("DOMContentLoaded", function() {{
+                const player = document.getElementById("player");
+                const sleepBtn = document.getElementById("sleepBtn");
+                let timerSeconds = 0;
+                let countdown = null;
+                let timerActive = false;
+
+                function formatTime(s) {{
+                    const m = Math.floor(s / 60);
+                    const sec = s % 60;
+                    return String(m).padStart(2, '0') + ":" + String(sec).padStart(2, '0');
+                }}
+
+                function updateTimerUI() {{
+                    if (!timerActive) return;
+                    document.getElementById("timeLeft").innerText = formatTime(timerSeconds);
+                    sleepBtn.innerText = "⏱ Sleep On (" + formatTime(timerSeconds) + ")";
+                }}
+
+                function tick() {{
+                    if (!timerActive) return;
+                    if (timerSeconds <= 0) {{
+                        player.pause();
+                        stopTimer();
+                        document.getElementById("timeLeft").innerText = "Stopped";
+                        return;
+                    }}
+                    timerSeconds--;
+                    updateTimerUI();
+                }}
+
+                window.startTimer = function() {{
+                    timerSeconds = 20 * 60; // 20 minutes
+                    timerActive = true;
+                    clearInterval(countdown);
+                    updateTimerUI();
+                    countdown = setInterval(tick, 1000);
+                }};
+
+                window.stopTimer = function() {{
+                    timerActive = false;
+                    clearInterval(countdown);
+                    countdown = null;
+                    document.getElementById("timeLeft").innerText = "Off";
+                    sleepBtn.innerText = "⏱ Sleep (20m)";
+                }};
+
+                window.toggleSleep = function() {{
+                    if (timerActive) {{
+                        window.stopTimer();
+                    }} else {{
+                        window.startTimer();
+                    }}
+                }};
+
+                window.togglePlay = function() {{
+                    if (player.paused) player.play(); else player.pause();
+                }};
+
+                // T9 Key Controls
+                document.addEventListener("keydown", function(e) {{
+                    if (e.key === "5") {{
+                        togglePlay();
+                    }} else if (e.key === "4") {{
+                        window.location.href = '/play/{prev_station}';
+                    }} else if (e.key === "6") {{
+                        window.location.href = '/play/{next_station}';
+                    }} else if (e.key === "0") {{
+                        randomStation();
+                    }}
+                }});
             }});
         </script>
     </body>
