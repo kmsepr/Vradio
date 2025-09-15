@@ -29,7 +29,7 @@ STATIONS_PER_PAGE = 10
 # Stream generator
 # -------------------------------
 def generate_stream(url):
-    q = queue.Queue(maxsize=50)  # Increased buffer
+    q = queue.Queue(maxsize=50)
 
     def ffmpeg_worker():
         process = subprocess.Popen(
@@ -53,7 +53,7 @@ def generate_stream(url):
             ],
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
-            bufsize=4096,  # Smaller chunk for smoother streaming
+            bufsize=4096,
         )
 
         try:
@@ -97,6 +97,8 @@ def play_station(station_name):
     if station_name not in RADIO_STATIONS:
         return "⚠️ Station not found", 404
 
+    station_names = list(RADIO_STATIONS.keys())
+    current_index = station_names.index(station_name)
     display_name = station_name.replace("_", " ").title()
     stream_url = f"/stream/{station_name}"
 
@@ -105,14 +107,20 @@ def play_station(station_name):
     <html>
     <head>
         <meta charset="UTF-8">
-        <title>{display_name}</title>
+        <title>Vradio - {display_name}</title>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
             body {{ font-family: sans-serif; text-align:center; padding:20px; background:#fff; }}
-            h2 {{ font-size:24px; margin-bottom:10px; }}
+            h1 {{ font-size:28px; margin-bottom:5px; color:#007bff; }}
+            h2 {{ font-size:22px; margin-bottom:10px; }}
             .info {{ margin:10px 0; color:#555; font-size:16px; }}
+            .control-btn {{
+                display:inline-block; padding:8px 12px; margin:5px;
+                background:#007bff; color:white; border-radius:5px; font-size:14px; text-decoration:none;
+                cursor:pointer;
+            }}
             .timer-btn {{
-                display:inline-block; padding:8px 12px; margin-top:12px;
+                display:inline-block; padding:8px 12px; margin:5px;
                 background:#28a745; color:white; border-radius:5px; font-size:14px; text-decoration:none;
                 cursor:pointer;
             }}
@@ -121,13 +129,21 @@ def play_station(station_name):
         </style>
     </head>
     <body>
+        <h1>🎙️ Vradio</h1>
         <h2>🎧 Now Playing</h2>
-        <div class="info"><strong>{display_name}</strong></div>
+        <div class="info"><strong id="stationName">{display_name}</strong></div>
 
         <audio id="player" controls autoplay>
             <source src="{stream_url}" type="audio/mpeg">
             Your browser does not support the audio element.
         </audio>
+
+        <div style="margin-top:10px;">
+            <a class="control-btn" onclick="prevStation()">⏮ Previous</a>
+            <a class="control-btn" onclick="togglePlayPause()" id="playPauseBtn">⏸ Pause</a>
+            <a class="control-btn" onclick="nextStation()">⏭ Next</a>
+            <a class="control-btn" onclick="randomStation()">🔀 Random</a>
+        </div>
 
         <div>
             <a class="timer-btn" onclick="setSleepTimer()">⏲ Sleep Timer</a>
@@ -135,8 +151,48 @@ def play_station(station_name):
         <div id="timerInfo" class="timer-info"></div>
 
         <script>
+            const stations = {station_names};
+            let currentIndex = {current_index};
+            const player = document.getElementById("player");
+            const stationNameElem = document.getElementById("stationName");
             let sleepTimer = null;
             let countdownInterval = null;
+
+            function updatePlayer(index) {{
+                currentIndex = index;
+                const station = stations[currentIndex];
+                stationNameElem.textContent = station.replace(/_/g, " ").toUpperCase();
+                player.src = "/stream/" + station;
+                player.play();
+                document.getElementById("playPauseBtn").textContent = "⏸ Pause";
+            }}
+
+            function prevStation() {{
+                let idx = currentIndex - 1;
+                if (idx < 0) idx = stations.length - 1;
+                updatePlayer(idx);
+            }}
+
+            function nextStation() {{
+                let idx = currentIndex + 1;
+                if (idx >= stations.length) idx = 0;
+                updatePlayer(idx);
+            }}
+
+            function randomStation() {{
+                let idx = Math.floor(Math.random() * stations.length);
+                updatePlayer(idx);
+            }}
+
+            function togglePlayPause() {{
+                if (player.paused) {{
+                    player.play();
+                    document.getElementById("playPauseBtn").textContent = "⏸ Pause";
+                }} else {{
+                    player.pause();
+                    document.getElementById("playPauseBtn").textContent = "▶️ Play";
+                }}
+            }}
 
             function setSleepTimer() {{
                 let minutes = prompt("Enter minutes until stop:", "30");
@@ -145,10 +201,8 @@ def play_station(station_name):
                     clearInterval(countdownInterval);
                     clearTimeout(sleepTimer);
 
-                    const player = document.getElementById("player");
-
                     sleepTimer = setTimeout(() => {{
-                        if (player) player.pause();
+                        player.pause();
                         document.getElementById("timerInfo").textContent = "⏹ Sleep timer reached.";
                         alert("⏹ Sleep timer reached. Audio stopped.");
                     }}, secondsLeft * 1000);
@@ -161,6 +215,14 @@ def play_station(station_name):
                     }}, 1000);
                 }}
             }}
+
+            // T9 key control
+            document.addEventListener("keydown", function(e) {{
+                const key = e.key;
+                if (key === "4") prevStation();
+                else if (key === "5") togglePlayPause();
+                else if (key === "6") nextStation();
+            }});
         </script>
     </body>
     </html>
@@ -197,7 +259,7 @@ def index():
     <html>
     <head>
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>🎧 Radio Streams</title>
+        <title>🎙️ Vradio</title>
         <style>
             body {{ font-family:sans-serif; font-size:14px; padding:10px; margin:0; background:#f0f0f0; }}
             h2 {{ font-size:16px; text-align:center; margin:10px 0; }}
@@ -207,7 +269,7 @@ def index():
         </style>
     </head>
     <body>
-        <h2>🎙️ Audio Streams (Page {page}/{total_pages})</h2>
+        <h2>🎙️ Vradio (Page {page}/{total_pages})</h2>
         {links_html}
         <div class="nav">{nav_html}</div>
         <div class="info">🔢 T9 Keys: 1=First, 4=Prev, 6=Next, 3=Last, 5=Random, 0=Exit</div>
