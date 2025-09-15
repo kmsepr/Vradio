@@ -149,7 +149,7 @@ def play_page(station_name):
             <button onclick="randomStation()">🎲 Random (0)</button>
             <button onclick="toggleSleep()" id="sleepBtn">⏱ Sleep (20m)</button>
         </div>
-        <div class="timer">Sleep Timer: <span id="timeLeft">Off</span></div>
+       
         <div class="info">🔢 T9 Keys → 4=Prev | 5=Play/Pause | 6=Next | 0=Random | *=Sleep</div>
 
         <script>
@@ -178,7 +178,7 @@ def play_page(station_name):
 
             function updateTimerUI() {{
                 if(timerActive){{
-                    document.getElementById("timeLeft").innerText = formatTime(timerSeconds);
+                    
                     sleepBtn.innerText = "⏱ Sleep On (" + formatTime(timerSeconds) + ")";
                 }}
             }}
@@ -188,7 +188,7 @@ def play_page(station_name):
                 if(timerSeconds <= 0){{
                     player.pause();
                     stopTimer();
-                    document.getElementById("timeLeft").innerText = "Stopped";
+                    
                     return;
                 }}
                 timerSeconds--;
@@ -207,7 +207,7 @@ def play_page(station_name):
                 timerActive = false;
                 clearInterval(countdown);
                 countdown = null;
-                document.getElementById("timeLeft").innerText = "Off";
+                
                 sleepBtn.innerText = "⏱ Sleep (20m)";
             }}
 
