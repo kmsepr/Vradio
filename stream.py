@@ -129,6 +129,8 @@ def direct_station_redirect(station_name):
 
 # ... your other imports ...
 
+import json
+
 @app.route("/play/<station_name>")
 def play_page(station_name):
     station_names = list(RADIO_STATIONS.keys())
@@ -196,13 +198,12 @@ def play_page(station_name):
 
         <audio id="player" controls autoplay>
             <source src="/stream/{station_name}" type="audio/mpeg">
-            Your browser does not support the audio element.
         </audio>
 
         <div class="controls">
             <button onclick="window.location.href='/play/{prev_station}'">⏮ Prev (4)</button>
             <button onclick="togglePlay()">⏯ Play/Pause (5)</button>
-            <button id="sleepBtn" onclick="toggleSleep()">⏱ Sleep (20m)</button>
+            <button onclick="toggleSleep()" id="sleepBtn">⏱ Sleep (20m)</button>
             <button onclick="window.location.href='/play/{next_station}'">Next (6) ⏭</button>
             <button onclick="randomStation()">🎲 Random (0)</button>
         </div>
@@ -212,7 +213,7 @@ def play_page(station_name):
         </div>
 
         <div class="info">
-            🔢 T9 Keys → 4=Prev | 5=Play/Pause | 6=Next | 0=Random
+            🔢 T9 Keys → 4=Prev | 5=Play/Pause | 6=Next | 7=Sleep | 0=Random
         </div>
 
         <script>
@@ -220,7 +221,6 @@ def play_page(station_name):
             const CURRENT = "{station_name}";
 
             function randomStation() {{
-                // pick a random station other than the current one if possible
                 const others = STATIONS.filter(s => s !== CURRENT);
                 const pick = others.length ? others[Math.floor(Math.random() * others.length)]
                                            : STATIONS[Math.floor(Math.random() * STATIONS.length)];
@@ -241,9 +241,10 @@ def play_page(station_name):
                 }}
 
                 function updateTimerUI() {{
-                    if (!timerActive) return;
-                    document.getElementById("timeLeft").innerText = formatTime(timerSeconds);
-                    sleepBtn.innerText = "⏱ Sleep On (" + formatTime(timerSeconds) + ")";
+                    if (timerActive) {{
+                        document.getElementById("timeLeft").innerText = formatTime(timerSeconds);
+                        sleepBtn.innerText = "⏱ Sleep On (" + formatTime(timerSeconds) + ")";
+                    }}
                 }}
 
                 function tick() {{
@@ -258,33 +259,33 @@ def play_page(station_name):
                     updateTimerUI();
                 }}
 
-                window.startTimer = function() {{
+                function startTimer() {{
                     timerSeconds = 20 * 60; // 20 minutes
                     timerActive = true;
                     clearInterval(countdown);
                     updateTimerUI();
                     countdown = setInterval(tick, 1000);
-                }};
+                }}
 
-                window.stopTimer = function() {{
+                function stopTimer() {{
                     timerActive = false;
                     clearInterval(countdown);
                     countdown = null;
                     document.getElementById("timeLeft").innerText = "Off";
                     sleepBtn.innerText = "⏱ Sleep (20m)";
-                }};
+                }}
 
                 window.toggleSleep = function() {{
                     if (timerActive) {{
-                        window.stopTimer();
+                        stopTimer();
                     }} else {{
-                        window.startTimer();
+                        startTimer();
                     }}
-                }};
+                }}
 
                 window.togglePlay = function() {{
                     if (player.paused) player.play(); else player.pause();
-                }};
+                }}
 
                 // T9 Key Controls
                 document.addEventListener("keydown", function(e) {{
@@ -296,6 +297,8 @@ def play_page(station_name):
                         window.location.href = '/play/{next_station}';
                     }} else if (e.key === "0") {{
                         randomStation();
+                    }} else if (e.key === "7") {{
+                        toggleSleep();
                     }}
                 }});
             }});
