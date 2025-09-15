@@ -256,7 +256,7 @@ def index():
     <html>
     <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-        <title>🎙️ Vradio</title>
+        <title>📻 Vradio</title>
         <style>
             body {{ font-family:sans-serif; font-size:12px; padding:5px; margin:0; background:#f0f0f0; }}
             h2 {{ font-size:14px; text-align:center; margin:5px 0; }}
@@ -264,3 +264,33 @@ def index():
             .info {{ font-size:11px; text-align:center; margin-top:4px; color:#555; }}
         </style>
     </head>
+<body>
+        <h2>📻 Vradio (Page {page}/{total_pages})</h2>
+        {links_html}
+        <div class="nav">{nav_html}</div>
+        <div class="info">T9 Keys: 1=First, 2=Reload, 3=Last, 4=Prev Page, 5=Random Station, 6=Next Page</div>
+
+        <script>
+        const allStations = {station_list_json};
+        document.addEventListener("keydown", function(e) {{
+            const key = e.key;
+            let currentPage = {page};
+            let totalPages = {total_pages};
+
+            if (key === "1") window.location.href = "/?page=1";
+            else if (key === "2") window.location.reload();
+            else if (key === "3") window.location.href = "/?page=" + totalPages;
+            else if (key === "4" && currentPage > 1) window.location.href = "/?page=" + (currentPage - 1);
+            else if (key === "5") {{
+                const randomStation = allStations[Math.floor(Math.random() * allStations.length)];
+                window.location.href = "/play/" + randomStation;
+            }}
+            else if (key === "6" && currentPage < totalPages) window.location.href = "/?page=" + (currentPage + 1);
+        }});
+        </script>
+    </body>
+    </html>
+    """
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8000)
