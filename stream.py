@@ -114,16 +114,24 @@ def play_station(station_name):
             .timer-btn {{
                 display:inline-block; padding:8px 12px; margin-top:12px;
                 background:#28a745; color:white; border-radius:5px; font-size:14px; text-decoration:none;
+                cursor:pointer;
             }}
             .timer-info {{ font-size:14px; color:#333; margin-top:6px; }}
+            audio {{ width:100%; margin-top:10px; border-radius:6px; }}
         </style>
     </head>
     <body>
         <h2>🎧 Now Playing</h2>
         <div class="info"><strong>{display_name}</strong></div>
 
-        <a href="{stream_url}" target="_blank" class="timer-btn" style="background:#007bff;">🔗 Play Stream</a>
-        <a href="#" class="timer-btn" onclick="setSleepTimer()">⏲ Sleep Timer</a>
+        <audio id="player" controls autoplay>
+            <source src="{stream_url}" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+
+        <div>
+            <a class="timer-btn" onclick="setSleepTimer()">⏲ Sleep Timer</a>
+        </div>
         <div id="timerInfo" class="timer-info"></div>
 
         <script>
@@ -137,9 +145,12 @@ def play_station(station_name):
                     clearInterval(countdownInterval);
                     clearTimeout(sleepTimer);
 
+                    const player = document.getElementById("player");
+
                     sleepTimer = setTimeout(() => {{
-                        alert("⏹ Sleep timer reached.");
-                        document.getElementById("timerInfo").textContent = "";
+                        if (player) player.pause();
+                        document.getElementById("timerInfo").textContent = "⏹ Sleep timer reached.";
+                        alert("⏹ Sleep timer reached. Audio stopped.");
                     }}, secondsLeft * 1000);
 
                     countdownInterval = setInterval(() => {{
