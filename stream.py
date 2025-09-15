@@ -370,7 +370,7 @@ def index():
         </style>
     </head>
     <body>
-        <h2>🎙️ Audio Streams (Page {page}/{total_pages})</h2>
+        <h2>📻 Vradio (Page {page}/{total_pages})</h2>
         {links_html}
         <div class="nav">{nav_html}</div>
         <div class="info">🔢 T9 Keys: 1=First, 4=Prev, 6=Next, 3=Last, 5=Random, 0=Exit</div>
@@ -390,7 +390,7 @@ def index():
             }} else if (key === "4" && page > 1) {{
                 window.location.href = "/?page=" + (page - 1);
             }} else if (key === "5") {{
-                const links = document.querySelectorAll("a[href^='/stream/']");
+                const links = document.querySelectorAll("a[href^='/play/']");
                 const random = links[Math.floor(Math.random() * links.length)];
                 if (random) random.click();
             }} else if (key === "6" && page < total) {{
