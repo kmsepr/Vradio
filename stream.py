@@ -108,63 +108,79 @@ def play_station(station_name):
     <head>
         <meta charset="UTF-8">
         <title>Vradio - {display_name}</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
         <style>
-            body {{ font-family: sans-serif; text-align:center; padding:20px; background:#fff; }}
-            h1 {{ font-size:28px; margin-bottom:5px; color:#007bff; }}
-            h2 {{ font-size:22px; margin-bottom:10px; }}
-            .info {{ margin:10px 0; color:#555; font-size:16px; }}
-            .control-btn {{
-                display:inline-block; padding:8px 12px; margin:5px;
-                background:#007bff; color:white; border-radius:5px; font-size:14px; text-decoration:none;
-                cursor:pointer;
+            body {{
+                font-family: sans-serif;
+                padding: 5px;
+                margin: 0;
+                background: #fff;
+                font-size: 12px;
             }}
-            .timer-btn {{
-                display:inline-block; padding:8px 12px; margin:5px;
-                background:#28a745; color:white; border-radius:5px; font-size:14px; text-decoration:none;
-                cursor:pointer;
+            h1 {{
+                font-size: 16px;
+                margin: 5px 0;
+                color: #007bff;
             }}
-            .timer-info {{ font-size:14px; color:#333; margin-top:6px; }}
-            audio {{ width:100%; margin-top:10px; border-radius:6px; }}
+            h2 {{
+                font-size: 14px;
+                margin: 5px 0;
+            }}
+            .info {{
+                margin: 5px 0;
+                color: #555;
+            }}
+            audio {{
+                width: 100%;
+                margin: 5px 0;
+            }}
+            .btn {{
+                display: block;
+                width: 100%;
+                text-align: center;
+                padding: 6px 0;
+                margin: 2px 0;
+                border-radius: 4px;
+                text-decoration: none;
+                color: white;
+                font-size: 12px;
+                cursor: pointer;
+            }}
+            .control-btn {{ background:#007bff; }}
+            .timer-btn {{ background:#28a745; }}
+            .timer-info {{ font-size: 12px; color: #333; margin-top: 4px; }}
         </style>
     </head>
     <body>
-        <h1>🎙️ Vradio</h1>
-        <h2>🎧 Now Playing</h2>
-        <div class="info"><strong id="stationName">{display_name}</strong></div>
+        <h1>📻 Vradio</h1>
+        <h2>🎧 {display_name}</h2>
 
         <audio id="player" controls autoplay>
             <source src="{stream_url}" type="audio/mpeg">
             Your browser does not support the audio element.
         </audio>
 
-        <div style="margin-top:10px;">
-            <a class="control-btn" onclick="prevStation()">⏮ Previous</a>
-            <a class="control-btn" onclick="togglePlayPause()" id="playPauseBtn">⏸ Pause</a>
-            <a class="control-btn" onclick="nextStation()">⏭ Next</a>
-            <a class="control-btn" onclick="randomStation()">🔀 Random</a>
-        </div>
+        <a class="btn control-btn" onclick="prevStation()">⏮ Previous</a>
+        <a class="btn control-btn" onclick="togglePlayPause()" id="playPauseBtn">⏸ Pause</a>
+        <a class="btn control-btn" onclick="nextStation()">⏭ Next</a>
+        <a class="btn control-btn" onclick="randomStation()">🔀 Random</a>
+        <a class="btn timer-btn" onclick="setSleepTimer()">⏲ Sleep Timer</a>
 
-        <div>
-            <a class="timer-btn" onclick="setSleepTimer()">⏲ Sleep Timer</a>
-        </div>
         <div id="timerInfo" class="timer-info"></div>
 
         <script>
             const stations = {station_names};
             let currentIndex = {current_index};
             const player = document.getElementById("player");
-            const stationNameElem = document.getElementById("stationName");
-            let sleepTimer = null;
-            let countdownInterval = null;
+            const playPauseBtn = document.getElementById("playPauseBtn");
 
             function updatePlayer(index) {{
                 currentIndex = index;
                 const station = stations[currentIndex];
-                stationNameElem.textContent = station.replace(/_/g, " ").toUpperCase();
+                document.querySelector("h2").textContent = "🎧 " + station.replace(/_/g, " ").toUpperCase();
                 player.src = "/stream/" + station;
                 player.play();
-                document.getElementById("playPauseBtn").textContent = "⏸ Pause";
+                playPauseBtn.textContent = "⏸ Pause";
             }}
 
             function prevStation() {{
@@ -187,36 +203,36 @@ def play_station(station_name):
             function togglePlayPause() {{
                 if (player.paused) {{
                     player.play();
-                    document.getElementById("playPauseBtn").textContent = "⏸ Pause";
+                    playPauseBtn.textContent = "⏸ Pause";
                 }} else {{
                     player.pause();
-                    document.getElementById("playPauseBtn").textContent = "▶️ Play";
+                    playPauseBtn.textContent = "▶️ Play";
                 }}
             }}
 
             function setSleepTimer() {{
-                let minutes = prompt("Enter minutes until stop:", "30");
+                let minutes = prompt("Minutes until stop:", "30");
                 if (minutes && !isNaN(minutes) && minutes > 0) {{
                     let secondsLeft = parseInt(minutes) * 60;
-                    clearInterval(countdownInterval);
-                    clearTimeout(sleepTimer);
+                    clearTimeout(window.sleepTimer);
+                    clearInterval(window.countdownInterval);
 
-                    sleepTimer = setTimeout(() => {{
+                    window.sleepTimer = setTimeout(() => {{
                         player.pause();
                         document.getElementById("timerInfo").textContent = "⏹ Sleep timer reached.";
                         alert("⏹ Sleep timer reached. Audio stopped.");
                     }}, secondsLeft * 1000);
 
-                    countdownInterval = setInterval(() => {{
+                    window.countdownInterval = setInterval(() => {{
                         secondsLeft--;
-                        if (secondsLeft <= 0) clearInterval(countdownInterval);
+                        if (secondsLeft <= 0) clearInterval(window.countdownInterval);
                         else document.getElementById("timerInfo").textContent =
-                            "⏳ Sleep timer: " + Math.floor(secondsLeft/60) + "m " + (secondsLeft%60) + "s left";
+                            "⏳ Sleep: " + Math.floor(secondsLeft/60) + "m " + (secondsLeft%60) + "s";
                     }}, 1000);
                 }}
             }}
 
-            // T9 key control
+            // T9 keys: 4=Prev,5=Play/Pause,6=Next
             document.addEventListener("keydown", function(e) {{
                 const key = e.key;
                 if (key === "4") prevStation();
@@ -259,7 +275,7 @@ def index():
     <html>
     <head>
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>🎙️ Vradio</title>
+        <title>📻 Vradio</title>
         <style>
             body {{ font-family:sans-serif; font-size:14px; padding:10px; margin:0; background:#f0f0f0; }}
             h2 {{ font-size:16px; text-align:center; margin:10px 0; }}
