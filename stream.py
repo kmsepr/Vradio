@@ -124,12 +124,7 @@ def direct_station_redirect(station_name):
     url = RADIO_STATIONS.get(station_name)
     if not url:
         return "⚠️ Station not found", 404
-    return redirect(url)
-
-
-# ... your other imports ...
-
-import json
+    return redirect(url
 
 @app.route("/play/<station_name>")
 def play_page(station_name):
