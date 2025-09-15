@@ -32,25 +32,8 @@ def generate_stream(url):
     q = queue.Queue(maxsize=50)
 
     def ffmpeg_worker():
-        process = subprocess.Popen(
-            [
-                "ffmpeg",
-                "-reconnect", "1",
-                "-reconnect_streamed", "1",
-                "-reconnect_delay_max", "15",
-                "-fflags", "+nobuffer+flush_packets+discardcorrupt",
-                "-flags", "low_delay",
-                "-analyzeduration", "700000",
-                "-probesize", "300000",
-                "-thread_queue_size", "1024",
-                "-i", url,
-                "-vn",
-                "-ac", "1",
-                "-b:a", "24k",
-                "-bufsize", "192k",
-                "-f", "mp3",
-                "-"
-            ],
+        subprocess.Popen(
+        ["ffmpeg", "-i", url, "-c:a", "libmp3lame", "-b:a", "40k", "-f", "mp3", "-"],
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
             bufsize=4096,
@@ -107,7 +90,7 @@ def play_station(station_name):
     <html>
     <head>
         <meta charset="UTF-8">
-        <title>Vradio - {display_name}</title>
+        <title>🎙️ Vradio - {display_name}</title>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
         <style>
             body {{
@@ -121,14 +104,12 @@ def play_station(station_name):
                 font-size: 16px;
                 margin: 5px 0;
                 color: #007bff;
+                text-align: center;
             }}
             h2 {{
                 font-size: 14px;
                 margin: 5px 0;
-            }}
-            .info {{
-                margin: 5px 0;
-                color: #555;
+                text-align: center;
             }}
             audio {{
                 width: 100%;
@@ -148,11 +129,11 @@ def play_station(station_name):
             }}
             .control-btn {{ background:#007bff; }}
             .timer-btn {{ background:#28a745; }}
-            .timer-info {{ font-size: 12px; color: #333; margin-top: 4px; }}
+            .timer-info {{ font-size: 12px; color: #333; margin-top: 4px; text-align:center; }}
         </style>
     </head>
     <body>
-        <h1>📻 Vradio</h1>
+        <h1>🎙️ Vradio</h1>
         <h2>🎧 {display_name}</h2>
 
         <audio id="player" controls autoplay>
@@ -243,9 +224,9 @@ def play_station(station_name):
     </body>
     </html>
     """
-
+    
 # -------------------------------
-# Index page
+# Homepage
 # -------------------------------
 @app.route("/")
 def index():
@@ -259,59 +240,27 @@ def index():
     paged_stations = station_names[start:end]
 
     links_html = "".join(
-        f"<a href='play/{name}'>{name.replace('_', ' ').title()}</a>"
+        f"<a href='play/{name}' class='btn'>{name.replace('_', ' ').title()}</a>"
         for name in paged_stations
     )
 
     nav_html = ""
     if page > 1:
-        nav_html += f"<a href='/?page=1'>⏮️ First</a>"
-        nav_html += f"<a href='/?page={page - 1}'>◀️ Prev</a>"
+        nav_html += f"<a href='/?page=1' class='btn'>⏮️ First</a>"
+        nav_html += f"<a href='/?page={page - 1}' class='btn'>◀️ Prev</a>"
     if page < total_pages:
-        nav_html += f"<a href='/?page={page + 1}'>Next ▶️</a>"
-        nav_html += f"<a href='/?page={total_pages}'>Last ⏭️</a>"
+        nav_html += f"<a href='/?page={page + 1}' class='btn'>Next ▶️</a>"
+        nav_html += f"<a href='/?page={total_pages}' class='btn'>Last ⏭️</a>"
 
     return f"""
     <html>
     <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>📻 Vradio</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+        <title>🎙️ Vradio</title>
         <style>
-            body {{ font-family:sans-serif; font-size:14px; padding:10px; margin:0; background:#f0f0f0; }}
-            h2 {{ font-size:16px; text-align:center; margin:10px 0; }}
-            a {{ display:block; background:#007bff; color:white; text-decoration:none; padding:8px; margin:4px 0; border-radius:6px; text-align:center; font-size:13px; }}
-            .nav {{ display:flex; justify-content:space-between; flex-wrap:wrap; margin-top:10px; gap:4px; }}
-            .info {{ font-size:11px; text-align:center; margin-top:8px; color:#555; }}
+            body {{ font-family:sans-serif; font-size:12px; padding:5px; margin:0; background:#f0f0f0; }}
+            h2 {{ font-size:14px; text-align:center; margin:5px 0; }}
+            a.btn {{ display:block; background:#007bff; color:white; text-decoration:none; padding:6px 0; margin:2px 0; border-radius:4px; text-align:center; }}
+            .info {{ font-size:11px; text-align:center; margin-top:4px; color:#555; }}
         </style>
     </head>
-    <body>
-        <h2>🎙️ Vradio (Page {page}/{total_pages})</h2>
-        {links_html}
-        <div class="nav">{nav_html}</div>
-        <div class="info">🔢 T9 Keys: 1=First, 4=Prev, 6=Next, 3=Last, 5=Random, 0=Exit</div>
-
-        <script>
-        const allStations = {station_list_json};
-        document.addEventListener("keydown", function(e) {{
-            const key = e.key;
-            let page = {page};
-            let total = {total_pages};
-
-            if (key === "1") window.location.href = "/?page=1";
-            else if (key === "2") window.location.reload();
-            else if (key === "3") window.location.href = "/?page=" + total;
-            else if (key === "4" && page > 1) window.location.href = "/?page=" + (page - 1);
-            else if (key === "5") {{
-                const randomStation = allStations[Math.floor(Math.random() * allStations.length)];
-                window.location.href = "/play/" + randomStation;
-            }}
-            else if (key === "6" && page < total) window.location.href = "/?page=" + (page + 1);
-            else if (key === "0") window.location.href = "about:blank";
-        }});
-        </script>
-    </body>
-    </html>
-    """
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000)
