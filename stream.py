@@ -71,7 +71,7 @@ RADIO_STATIONS = {
 "vom_radio": "https://radio.psm.mv/draair",
 }
 
-STATIONS_PER_PAGE = 10
+STATIONS_PER_PAGE = 5
 KEEPALIVE_INTERVAL = 30  # seconds
 
 
@@ -134,7 +134,7 @@ def play_page(station_name):
 
     idx = station_names.index(station_name)
     prev_station = station_names[idx - 1] if idx > 0 else station_names[-1]
-    next_station = station_names[(idx + 1) % len(station_names)]
+    next_station = (station_names[(idx + 1) % len(station_names)])
 
     html = f"""
     <html>
@@ -144,78 +144,117 @@ def play_page(station_name):
         <style>
             body {{
                 font-family: sans-serif;
-                background: #111;
+                background: #000;
                 color: #fff;
                 text-align: center;
-                padding: 20px;
+                padding: 10px;
+                margin: 0;
             }}
             h2 {{
-                margin-bottom: 20px;
+                font-size: 16px;
+                margin: 12px 0;
             }}
             audio {{
                 width: 100%;
-                margin: 15px 0;
+                margin: 10px 0;
             }}
             button {{
-                padding: 10px 15px;
-                margin: 5px;
+                width: 45%;
+                padding: 12px;
+                margin: 6px 2%;
                 font-size: 14px;
                 border-radius: 8px;
                 border: none;
                 background: #007bff;
                 color: white;
             }}
-            .controls {{
-                margin-top: 15px;
+            .info {{
+                font-size: 11px;
+                color: #bbb;
+                margin-top: 12px;
+            }}
+            .timer {{
+                margin-top: 12px;
+                font-size: 13px;
+                color: #0f0;
             }}
         </style>
     </head>
     <body>
-        <h2>🎧 Now Playing:<br>{station_name.replace('_', ' ').title()}</h2>
+        <h2>🎧 {station_name.replace('_',' ').title()}</h2>
 
         <audio id="player" controls autoplay>
             <source src="/stream/{station_name}" type="audio/mpeg">
-            Your browser does not support the audio element.
         </audio>
 
-        <div class="controls">
-            <button onclick="window.location.href='/play/{prev_station}'">⏮ Prev</button>
-            <button onclick="togglePlay()">⏯ Play/Pause</button>
-            <button onclick="window.location.href='/play/{next_station}'">Next ⏭</button>
-            <button onclick="randomStation()">🎲 Random</button>
+        <div>
+            <button onclick="window.location.href='/play/{prev_station}'">⏮ Prev (4)</button>
+            <button onclick="togglePlay()">⏯ Play/Pause (5)</button>
+            <button onclick="window.location.href='/play/{next_station}'">Next (6) ⏭</button>
+            <button onclick="randomStation()">🎲 Random (0)</button>
+            <button onclick="startTimer()">⏱ Sleep (20m)</button>
+        </div>
+
+        <div class="timer">
+            Sleep Timer: <span id="timeLeft">Off</span>
+            <button onclick="cancelTimer()">❌ Cancel</button>
+        </div>
+
+        <div class="info">
+            🔢 T9 Keys → 4=Prev | 5=Play/Pause | 6=Next | 0=Random
         </div>
 
         <script>
             const player = document.getElementById("player");
+            let timerSeconds = 0;
+            let countdown;
+
+            function updateTimer() {{
+                if (timerSeconds <= 0) {{
+                    player.pause();
+                    document.getElementById("timeLeft").innerText = "Stopped";
+                    clearInterval(countdown);
+                    return;
+                }}
+                let min = Math.floor(timerSeconds / 60);
+                let sec = timerSeconds % 60;
+                document.getElementById("timeLeft").innerText =
+                    String(min).padStart(2, '0') + ":" + String(sec).padStart(2, '0');
+                timerSeconds--;
+            }}
+
+            function startTimer() {{
+                timerSeconds = 20 * 60; // 20 min
+                clearInterval(countdown);
+                countdown = setInterval(updateTimer, 1000);
+                updateTimer();
+            }}
+
+            function cancelTimer() {{
+                clearInterval(countdown);
+                document.getElementById("timeLeft").innerText = "Off";
+            }}
 
             function togglePlay() {{
-                if (player.paused) {{
-                    player.play();
-                }} else {{
-                    player.pause();
-                }}
+                if (player.paused) player.play();
+                else player.pause();
             }}
 
             function randomStation() {{
                 fetch("/all_stations.json")
-                    .then(res => res.json())
+                    .then(r => r.json())
                     .then(data => {{
                         const random = data[Math.floor(Math.random() * data.length)];
                         window.location.href = "/play/" + random;
                     }});
             }}
 
-            // 🔢 T9 Shortcuts
+            // T9 Key Controls
             document.addEventListener("keydown", function(e) {{
-                if (e.key === "5") {{
-                    togglePlay();
-                }} else if (e.key === "4") {{
-                    window.location.href = "/play/{prev_station}";
-                }} else if (e.key === "6") {{
-                    window.location.href = "/play/{next_station}";
-                }} else if (e.key === "0") {{
-                    randomStation();
-                }}
+                if (e.key === "5") togglePlay();
+                else if (e.key === "4") window.location.href='/play/{prev_station}';
+                else if (e.key === "6") window.location.href='/play/{next_station}';
+                else if (e.key === "0") randomStation();
             }});
         </script>
     </body>
