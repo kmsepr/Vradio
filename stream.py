@@ -331,7 +331,7 @@ def index():
     <html>
     <head>
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>🎧 Radio Streams</title>
+        <title>📻 Vradio</title>
         <style>
             body {{
                 font-family: sans-serif;
