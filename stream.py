@@ -213,7 +213,7 @@ def play_page(station_name):
         </div>
 
         <div class="info">
-            🔢 T9 Keys → 4=Prev | 5=Play/Pause | 6=Next | 7=Sleep | 0=Random
+            🔢 T9 Keys → 4=Prev | 5=Play/Pause | 6=Next | *=Sleep | 0=Random
         </div>
 
         <script>
@@ -297,7 +297,7 @@ def play_page(station_name):
                         window.location.href = '/play/{next_station}';
                     }} else if (e.key === "0") {{
                         randomStation();
-                    }} else if (e.key === "7") {{
+                    }} else if (e.key === "*") {{
                         toggleSleep();
                     }}
                 }});
@@ -378,39 +378,37 @@ def index():
         <h2>🎙️ Audio Streams (Page {page}/{total_pages})</h2>
         {links_html}
         <div class="nav">{nav_html}</div>
-        <div class="info">🔢 T9 Keys: 1=First, 4=Prev, 6=Next, 3=Last, 5=Random, 0=Exit</div>
+        <div class="info">🔢 T9 Keys: 1=First, 4=Prev, 6=Next, 3=Last, 0=Random, </div>
 
-        <script>
-        document.addEventListener("keydown", function(e) {{
-            const key = e.key;
-            let page = {page};
-            let total = {total_pages};
+     <script>
+document.addEventListener("keydown", function(e) {
+    const key = e.key;
+    let page = {page};
+    let total = {total_pages};
 
-            if (key === "1") {{
-                window.location.href = "/?page=1";
-            }} else if (key === "2") {{
-                window.location.reload();
-            }} else if (key === "3") {{
-                window.location.href = "/?page=" + total;
-            }} else if (key === "4" && page > 1) {{
-                window.location.href = "/?page=" + (page - 1);
-            }} else if (key === "5") {{
-                const links = document.querySelectorAll("a[href^='/stream/']");
-                const random = links[Math.floor(Math.random() * links.length)];
-                if (random) random.click();
-            }} else if (key === "6" && page < total) {{
-                window.location.href = "/?page=" + (page + 1);
-            }} else if (key === "7") {{
-                window.scrollTo({{ top: 0, behavior: "smooth" }});
-            }} else if (key === "8") {{
-                window.scrollTo({{ top: document.body.scrollHeight, behavior: "smooth" }});
-            }} else if (key === "9") {{
-                window.location.href = "/?page=" + (page < total ? page + 1 : 1);
-            }} else if (key === "0") {{
-                window.location.href = "about:blank";
-            }}
-        }});
-        </script>
+    if (key === "1") {
+        window.location.href = "/?page=1";
+    } else if (key === "2") {
+        window.location.reload();
+    } else if (key === "3") {
+        window.location.href = "/?page=" + total;
+    } else if (key === "4" && page > 1) {
+        window.location.href = "/?page=" + (page - 1);
+    } else if (key === "6" && page < total) {
+        window.location.href = "/?page=" + (page + 1);
+    } else if (key === "0") {
+        const links = document.querySelectorAll("a[href^='/play/']");
+        const random = links[Math.floor(Math.random() * links.length)];
+        if (random) random.click();
+    } else if (key === "*") {
+        window.scrollTo({{ top: 0, behavior: "smooth" }});  // top of page
+    } else if (key === "8") {
+        window.scrollTo({{ top: document.body.scrollHeight, behavior: "smooth" }}); // bottom
+    } else if (key === "9") {
+        window.location.href = "/?page=" + (page < total ? page + 1 : 1);
+    }
+});
+</script>
     </body>
     </html>
     """
