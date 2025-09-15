@@ -292,7 +292,7 @@ def play_page(station_name):
                         window.location.href = '/play/{next_station}';
                     }} else if (e.key === "0") {{
                         randomStation();
-                    }} else if (e.key === "7") {{
+                    }} else if (e.key === "*") {{
                         toggleSleep();
                     }}
                 }});
