@@ -282,21 +282,19 @@ def play_page(station_name):
                     if (player.paused) player.play(); else player.pause();
                 }}
 
-                // T9 Key Controls
-                document.addEventListener("keydown", function(e) {{
-                    if (e.key === "5") {{
-                        togglePlay();
-                    }} else if (e.key === "4") {{
-                        window.location.href = '/play/{prev_station}';
-                    }} else if (e.key === "6") {{
-                        window.location.href = '/play/{next_station}';
-                    }} else if (e.key === "0") {{
-                        randomStation();
-                    }} else if (e.key === "*") {{
-                        toggleSleep();
-                    }}
-                }});
-            }});
+document.addEventListener("keydown", function(e) {
+    if (e.key === "5") {
+        togglePlay();
+    } else if (e.key === "4") {
+        window.location.href = '/play/{prev_station}';
+    } else if (e.key === "6") {
+        window.location.href = '/play/{next_station}';
+    } else if (e.key === "0") {
+        randomStation();
+    } else if (e.key === "*") {   // Sleep key only here
+        toggleSleep();
+    }
+});
         </script>
     </body>
     </html>
@@ -395,7 +393,7 @@ def index():
                 if (random) random.click();
             }} else if (key === "6" && page < total) {{
                 window.location.href = "/?page=" + (page + 1);
-            }} else if (key === "7") {{
+            }} else if (key === "*") {{
                 window.scrollTo({{ top: 0, behavior: "smooth" }});
             }} else if (key === "8") {{
                 window.scrollTo({{ top: document.body.scrollHeight, behavior: "smooth" }});
