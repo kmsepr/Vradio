@@ -263,23 +263,24 @@ def index():
         <h2>🎙️ Audio Streams (Page {page}/{total_pages})</h2>
         {links_html}
         <div class="nav">{nav_html}</div>
-        <div class="info">🔢 T9 Keys: 1=First, 4=Prev, 6=Next, 3=Last, 0=Random, *=Sleep</div>
+        <div class="info">🔢 T9 Keys: 1=First, 4=Prev, 6=Next, 3=Last, 0=Random</div>
 
-        <script>
-        document.addEventListener("keydown", function(e){{
-            let page = {page};
-            let total = {total_pages};
-            if(e.key==="1") window.location.href="/?page=1";
-            else if(e.key==="3") window.location.href="/?page="+total;
-            else if(e.key==="4" && page>1) window.location.href="/?page="+(page-1);
-            else if(e.key==="6" && page<total) window.location.href="/?page="+(page+1);
-            else if(e.key==="0"){{
-                const links = document.querySelectorAll("a[href^='/play/']");
-                const random = links[Math.floor(Math.random()*links.length)];
-                if(random) random.click();
-            }}
-        }});
-        </script>
+<script>
+document.addEventListener("keydown", function(e){
+    let page = {page};
+    let total = {total_pages};
+
+    if(e.key==="1") window.location.href="/?page=1";
+    else if(e.key==="3") window.location.href="/?page="+total;
+    else if(e.key==="4" && page>1) window.location.href="/?page="+(page-1);
+    else if(e.key==="6" && page<total) window.location.href="/?page="+(page+1);
+    else if(e.key==="0"){
+        const links = document.querySelectorAll("a[href^='/play/']");
+        const random = links[Math.floor(Math.random()*links.length)];
+        if(random) random.click();
+    }
+});
+</script>
     </body>
     </html>
     """
