@@ -1,12 +1,11 @@
 import subprocess
 import time
-import json
 import shutil
 from flask import Flask, Response, request, redirect
 
 app = Flask(__name__)
 
-# ✅ Check if ffmpeg is available
+# Check ffmpeg
 if not shutil.which("ffmpeg"):
     raise RuntimeError("ffmpeg not found. Please install ffmpeg.")
 
@@ -73,31 +72,26 @@ RADIO_STATIONS = {
 }
 
 STATIONS_PER_PAGE = 5
-KEEPALIVE_INTERVAL = 30  # seconds
-
 
 def generate_stream(url):
     while True:
         process = subprocess.Popen(
-   [
-    "ffmpeg",
-    "-reconnect", "1",
-    "-reconnect_streamed", "1",
-    "-reconnect_delay_max", "10",
-    "-i", url,
-    "-vn",
-    "-ac", "1",
-    "-b:a", "40k",
-    "-f", "mp3",
-    "-"
-],
+            [
+                "ffmpeg",
+                "-reconnect", "1",
+                "-reconnect_streamed", "1",
+                "-reconnect_delay_max", "10",
+                "-i", url,
+                "-vn",
+                "-ac", "1",
+                "-b:a", "40k",
+                "-f", "mp3",
+                "-"
+            ],
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
-            bufsize=4096   # moderate buffer
+            bufsize=4096
         )
-
-        print(f"🎵 Streaming from: {url}")
-
         try:
             for chunk in iter(lambda: process.stdout.read(4096), b""):
                 yield chunk
@@ -105,42 +99,28 @@ def generate_stream(url):
             process.kill()
             break
         except Exception as e:
-            print(f"⚠️ Stream error: {e}")
+            print(f"Stream error: {e}")
         finally:
             process.kill()
-            print("🔁 Restarting FFmpeg in 3s...")
             time.sleep(3)
 
 @app.route("/stream/<station_name>")
 def stream_station(station_name):
     url = RADIO_STATIONS.get(station_name)
     if not url:
-        return "⚠️ Station not found", 404
+        return "Station not found", 404
     return Response(generate_stream(url), mimetype="audio/mpeg")
-
-
-@app.route("/<station_name>")
-def direct_station_redirect(station_name):
-    url = RADIO_STATIONS.get(station_name)
-    if not url:
-        return "⚠️ Station not found", 404
-    return redirect(url)
-
-
-# ... your other imports ...
-
-import json
 
 @app.route("/play/<station_name>")
 def play_page(station_name):
-    station_names = list(RADIO_STATIONS.keys())
-    if station_name not in station_names:
-        return "⚠️ Station not found", 404
+    stations = list(RADIO_STATIONS.keys())
+    if station_name not in stations:
+        return "Station not found", 404
 
-    idx = station_names.index(station_name)
-    prev_station = station_names[idx - 1] if idx > 0 else station_names[-1]
-    next_station = station_names[(idx + 1) % len(station_names)]
-    stations_json = json.dumps(station_names)
+    idx = stations.index(station_name)
+    prev_station = stations[idx - 1] if idx > 0 else stations[-1]
+    next_station = stations[(idx + 1) % len(stations)]
+    stations_json = stations  # JS can use directly
 
     html = f"""
     <html>
@@ -148,187 +128,123 @@ def play_page(station_name):
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>Now Playing</title>
         <style>
-            body {{
-                font-family: sans-serif;
-                background: #000;
-                color: #fff;
-                text-align: center;
-                padding: 10px;
-                margin: 0;
-            }}
-            h2 {{
-                font-size: 16px;
-                margin: 12px 0;
-            }}
-            audio {{
-                width: 100%;
-                margin: 10px 0;
-            }}
-            .controls {{
-                display: flex;
-                flex-wrap: wrap;
-                justify-content: center;
-                gap: 6px;
-                margin: 10px 0;
-            }}
-            button {{
-                flex: 1 1 30%;
-                padding: 8px 10px;
-                font-size: 13px;
-                border-radius: 8px;
-                border: none;
-                background: #007bff;
-                color: white;
-                min-width: 90px;
-            }}
-            .timer {{
-                margin-top: 8px;
-                font-size: 13px;
-                color: #0f0;
-            }}
-            .info {{
-                font-size: 11px;
-                color: #bbb;
-                margin-top: 10px;
-            }}
+            body {{ font-family: sans-serif; background: #000; color: #fff; text-align: center; margin:0; padding:10px; }}
+            h2 {{ font-size:16px; margin:12px 0; }}
+            audio {{ width:100%; margin:10px 0; }}
+            .controls {{ display:flex; flex-wrap:wrap; justify-content:center; gap:6px; margin:10px 0; }}
+            button {{ flex:1 1 30%; padding:8px 10px; font-size:13px; border-radius:8px; border:none; background:#007bff; color:white; min-width:90px; }}
+            .timer {{ margin-top:8px; font-size:13px; color:#0f0; }}
+            .info {{ font-size:11px; color:#bbb; margin-top:10px; }}
         </style>
     </head>
     <body>
         <h2>🎧 {station_name.replace('_',' ').title()}</h2>
-
         <audio id="player" controls autoplay>
             <source src="/stream/{station_name}" type="audio/mpeg">
         </audio>
-
         <div class="controls">
             <button onclick="window.location.href='/play/{prev_station}'">⏮ Prev (4)</button>
-            <button onclick="togglePlay()">⏯ Play/Pause (5)</button>
-            <button onclick="toggleSleep()" id="sleepBtn">⏱ Sleep (20m)</button>
             <button onclick="window.location.href='/play/{next_station}'">Next (6) ⏭</button>
             <button onclick="randomStation()">🎲 Random (0)</button>
+            <button onclick="toggleSleep()" id="sleepBtn">⏱ Sleep (20m)</button>
         </div>
-
-        <div class="timer">
-            Sleep Timer: <span id="timeLeft">Off</span>
-        </div>
-
-        <div class="info">
-            🔢 T9 Keys → 4=Prev | 5=Play/Pause | 6=Next | *=Sleep | 0=Random
-        </div>
+        <div class="timer">Sleep Timer: <span id="timeLeft">Off</span></div>
+        <div class="info">🔢 T9 Keys → 4=Prev | 6=Next | 0=Random | *=Sleep</div>
 
         <script>
-            const STATIONS = {stations_json};
-            const CURRENT = "{station_name}";
+        const STATIONS = {stations_json};
+        const CURRENT = "{station_name}";
 
-            function randomStation() {{
-                const others = STATIONS.filter(s => s !== CURRENT);
-                const pick = others.length ? others[Math.floor(Math.random() * others.length)]
-                                           : STATIONS[Math.floor(Math.random() * STATIONS.length)];
-                window.location.href = "/play/" + pick;
+        function randomStation() {{
+            const others = STATIONS.filter(s => s !== CURRENT);
+            const pick = others.length ? others[Math.floor(Math.random() * others.length)]
+                                       : STATIONS[Math.floor(Math.random() * STATIONS.length)];
+            window.location.href = "/play/" + pick;
+        }}
+
+        document.addEventListener("DOMContentLoaded", function() {{
+            const player = document.getElementById("player");
+            const sleepBtn = document.getElementById("sleepBtn");
+            let timerSeconds = 0;
+            let countdown = null;
+            let timerActive = false;
+
+            function formatTime(s) {{
+                const m = Math.floor(s / 60);
+                const sec = s % 60;
+                return String(m).padStart(2,'0') + ":" + String(sec).padStart(2,'0');
             }}
 
-            document.addEventListener("DOMContentLoaded", function() {{
-                const player = document.getElementById("player");
-                const sleepBtn = document.getElementById("sleepBtn");
-                let timerSeconds = 0;
-                let countdown = null;
-                let timerActive = false;
-
-                function formatTime(s) {{
-                    const m = Math.floor(s / 60);
-                    const sec = s % 60;
-                    return String(m).padStart(2, '0') + ":" + String(sec).padStart(2, '0');
+            function updateTimerUI() {{
+                if(timerActive){{
+                    document.getElementById("timeLeft").innerText = formatTime(timerSeconds);
+                    sleepBtn.innerText = "⏱ Sleep On (" + formatTime(timerSeconds) + ")";
                 }}
+            }}
 
-                function updateTimerUI() {{
-                    if (timerActive) {{
-                        document.getElementById("timeLeft").innerText = formatTime(timerSeconds);
-                        sleepBtn.innerText = "⏱ Sleep On (" + formatTime(timerSeconds) + ")";
-                    }}
+            function tick() {{
+                if(!timerActive) return;
+                if(timerSeconds <= 0){{
+                    player.pause();
+                    stopTimer();
+                    document.getElementById("timeLeft").innerText = "Stopped";
+                    return;
                 }}
+                timerSeconds--;
+                updateTimerUI();
+            }}
 
-                function tick() {{
-                    if (!timerActive) return;
-                    if (timerSeconds <= 0) {{
-                        player.pause();
-                        stopTimer();
-                        document.getElementById("timeLeft").innerText = "Stopped";
-                        return;
-                    }}
-                    timerSeconds--;
-                    updateTimerUI();
-                }}
+            function startTimer() {{
+                timerSeconds = 20*60; 
+                timerActive = true;
+                clearInterval(countdown);
+                updateTimerUI();
+                countdown = setInterval(tick,1000);
+            }}
 
-                function startTimer() {{
-                    timerSeconds = 20 * 60; // 20 minutes
-                    timerActive = true;
-                    clearInterval(countdown);
-                    updateTimerUI();
-                    countdown = setInterval(tick, 1000);
-                }}
+            function stopTimer() {{
+                timerActive = false;
+                clearInterval(countdown);
+                countdown = null;
+                document.getElementById("timeLeft").innerText = "Off";
+                sleepBtn.innerText = "⏱ Sleep (20m)";
+            }}
 
-                function stopTimer() {{
-                    timerActive = false;
-                    clearInterval(countdown);
-                    countdown = null;
-                    document.getElementById("timeLeft").innerText = "Off";
-                    sleepBtn.innerText = "⏱ Sleep (20m)";
-                }}
+            window.toggleSleep = function(){{
+                if(timerActive) stopTimer(); else startTimer();
+            }}
 
-                window.toggleSleep = function() {{
-                    if (timerActive) {{
-                        stopTimer();
-                    }} else {{
-                        startTimer();
-                    }}
-                }}
-
-                window.togglePlay = function() {{
-                    if (player.paused) player.play(); else player.pause();
-                }}
-
-                // T9 Key Controls
-                document.addEventListener("keydown", function(e) {{
-                    if (e.key === "5") {{
-                        togglePlay();
-                    }} else if (e.key === "4") {{
-                        window.location.href = '/play/{prev_station}';
-                    }} else if (e.key === "6") {{
-                        window.location.href = '/play/{next_station}';
-                    }} else if (e.key === "0") {{
-                        randomStation();
-                    }} else if (e.key === "*") {{
-                        toggleSleep();
-                    }}
-                }});
+            // T9 Key Controls
+            document.addEventListener("keydown", function(e){{
+                if(e.key === "4") window.location.href='/play/{prev_station}';
+                else if(e.key === "6") window.location.href='/play/{next_station}';
+                else if(e.key === "0") randomStation();
+                else if(e.key === "*") toggleSleep();
             }});
+        }});
         </script>
     </body>
     </html>
     """
     return html
+
 @app.route("/")
 def index():
     page = int(request.args.get("page", 1))
-    station_names = list(RADIO_STATIONS.keys())
-    total_pages = (len(station_names) + STATIONS_PER_PAGE - 1) // STATIONS_PER_PAGE
+    stations = list(RADIO_STATIONS.keys())
+    total_pages = (len(stations)+STATIONS_PER_PAGE-1)//STATIONS_PER_PAGE
 
-    start = (page - 1) * STATIONS_PER_PAGE
-    end = start + STATIONS_PER_PAGE
-    paged_stations = station_names[start:end]
+    start = (page-1)*STATIONS_PER_PAGE
+    end = start+STATIONS_PER_PAGE
+    paged_stations = stations[start:end]
 
-    links_html = "".join(
-        f"<a href='/play/{name}'>{name.replace('_', ' ').title()}</a>"
-        for name in paged_stations
-    )
+    links_html = "".join(f"<a href='/play/{s}'>{s.replace('_',' ').title()}</a>" for s in paged_stations)
 
     nav_html = ""
-    if page > 1:
-        nav_html += f"<a href='/?page=1'>⏮️ First</a>"
-        nav_html += f"<a href='/?page={page - 1}'>◀️ Prev</a>"
-    if page < total_pages:
-        nav_html += f"<a href='/?page={page + 1}'>Next ▶️</a>"
-        nav_html += f"<a href='/?page={total_pages}'>Last ⏭️</a>"
+    if page>1:
+        nav_html += f"<a href='/?page=1'>⏮️ First</a><a href='/?page={page-1}'>◀️ Prev</a>"
+    if page<total_pages:
+        nav_html += f"<a href='/?page={page+1}'>Next ▶️</a><a href='/?page={total_pages}'>Last ⏭️</a>"
 
     html = f"""
     <html>
@@ -336,84 +252,38 @@ def index():
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>📻 Vradio</title>
         <style>
-            body {{
-                font-family: sans-serif;
-                font-size: 14px;
-                padding: 10px;
-                margin: 0;
-                background: #f0f0f0;
-            }}
-            h2 {{
-                font-size: 16px;
-                text-align: center;
-                margin: 10px 0;
-            }}
-            a {{
-                display: block;
-                background: #007bff;
-                color: white;
-                text-decoration: none;
-                padding: 8px;
-                margin: 4px 0;
-                border-radius: 6px;
-                text-align: center;
-                font-size: 13px;
-            }}
-            .nav {{
-                display: flex;
-                justify-content: space-between;
-                flex-wrap: wrap;
-                margin-top: 10px;
-                gap: 4px;
-            }}
-            .info {{
-                font-size: 11px;
-                text-align: center;
-                margin-top: 8px;
-                color: #555;
-            }}
+            body {{ font-family:sans-serif; font-size:14px; padding:10px; margin:0; background:#f0f0f0; }}
+            h2 {{ font-size:16px; text-align:center; margin:10px 0; }}
+            a {{ display:block; background:#007bff; color:white; text-decoration:none; padding:8px; margin:4px 0; border-radius:6px; text-align:center; font-size:13px; }}
+            .nav {{ display:flex; justify-content:space-between; flex-wrap:wrap; margin-top:10px; gap:4px; }}
+            .info {{ font-size:11px; text-align:center; margin-top:8px; color:#555; }}
         </style>
     </head>
     <body>
         <h2>🎙️ Audio Streams (Page {page}/{total_pages})</h2>
         {links_html}
         <div class="nav">{nav_html}</div>
-        <div class="info">🔢 T9 Keys: 1=First, 4=Prev, 6=Next, 3=Last, 0=Random, </div>
+        <div class="info">🔢 T9 Keys: 1=First, 4=Prev, 6=Next, 3=Last, 0=Random, *=Sleep</div>
 
-     <script>
-document.addEventListener("keydown", function(e) {
-    const key = e.key;
-    let page = {page};
-    let total = {total_pages};
-
-    if (key === "1") {
-        window.location.href = "/?page=1";
-    } else if (key === "2") {
-        window.location.reload();
-    } else if (key === "3") {
-        window.location.href = "/?page=" + total;
-    } else if (key === "4" && page > 1) {
-        window.location.href = "/?page=" + (page - 1);
-    } else if (key === "6" && page < total) {
-        window.location.href = "/?page=" + (page + 1);
-    } else if (key === "0") {
-        const links = document.querySelectorAll("a[href^='/play/']");
-        const random = links[Math.floor(Math.random() * links.length)];
-        if (random) random.click();
-    } else if (key === "*") {
-        window.scrollTo({{ top: 0, behavior: "smooth" }});  // top of page
-    } else if (key === "8") {
-        window.scrollTo({{ top: document.body.scrollHeight, behavior: "smooth" }}); // bottom
-    } else if (key === "9") {
-        window.location.href = "/?page=" + (page < total ? page + 1 : 1);
-    }
-});
-</script>
+        <script>
+        document.addEventListener("keydown", function(e){{
+            let page = {page};
+            let total = {total_pages};
+            if(e.key==="1") window.location.href="/?page=1";
+            else if(e.key==="3") window.location.href="/?page="+total;
+            else if(e.key==="4" && page>1) window.location.href="/?page="+(page-1);
+            else if(e.key==="6" && page<total) window.location.href="/?page="+(page+1);
+            else if(e.key==="0"){{
+                const links = document.querySelectorAll("a[href^='/play/']");
+                const random = links[Math.floor(Math.random()*links.length)];
+                if(random) random.click();
+            }}
+        }});
+        </script>
     </body>
     </html>
     """
     return html
-
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000)
