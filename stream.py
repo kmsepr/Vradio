@@ -149,7 +149,7 @@ def play_page(station_name):
             <button onclick="toggleSleep()" id="sleepBtn">⏱ Sleep (20m)</button>
         </div>
         <div class="timer">Sleep Timer: <span id="timeLeft">Off</span></div>
-        <div class="info">🔢 T9 Keys → 4=Prev | 5=Play/Pause | 6=Next | 0=Random | *=Sleep</div>
+        <div class="info">🔢 T9 Keys → 4=Prev | 6=Next | 0=Random | *=Sleep</div>
 
         <script>
         const STATIONS = {stations_json};
@@ -220,10 +220,6 @@ def play_page(station_name):
                 else if(e.key === "6") window.location.href='/play/{next_station}';
                 else if(e.key === "0") randomStation();
                 else if(e.key === "*") toggleSleep();
-                else if(e.key === "5") {{
-                    if(player.paused) player.play();
-                    else player.pause();
-                }}
             }});
         }});
         </script>
