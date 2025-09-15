@@ -220,6 +220,13 @@ def play_page(station_name):
                 else if(e.key === "6") window.location.href='/play/{next_station}';
                 else if(e.key === "0") randomStation();
                 else if(e.key === "*") toggleSleep();
+                else if(e.key==="5"){
+    const player =    document.getElementById("player");
+    if(player){
+        if(player.paused) player.play();
+        else player.pause();
+    }
+}
             }});
         }});
         </script>
