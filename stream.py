@@ -221,7 +221,7 @@ def play_page(station_name):
     </body>
     </html>
     """
-    returst
+    return html
 
 @app.route("/")
 def index():
