@@ -158,25 +158,31 @@ def play_page(station_name):
                 width: 100%;
                 margin: 10px 0;
             }}
+            .controls {{
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 6px;
+                margin: 10px 0;
+            }}
             button {{
-                width: 45%;
-                padding: 12px;
-                margin: 6px 2%;
-                font-size: 14px;
+                flex: 1 1 45%;
+                padding: 10px;
+                font-size: 13px;
                 border-radius: 8px;
                 border: none;
                 background: #007bff;
                 color: white;
             }}
+            .timer {{
+                margin-top: 10px;
+                font-size: 13px;
+                color: #0f0;
+            }}
             .info {{
                 font-size: 11px;
                 color: #bbb;
                 margin-top: 12px;
-            }}
-            .timer {{
-                margin-top: 12px;
-                font-size: 13px;
-                color: #0f0;
             }}
         </style>
     </head>
@@ -187,12 +193,12 @@ def play_page(station_name):
             <source src="/stream/{station_name}" type="audio/mpeg">
         </audio>
 
-        <div>
+        <div class="controls">
             <button onclick="window.location.href='/play/{prev_station}'">⏮ Prev (4)</button>
             <button onclick="togglePlay()">⏯ Play/Pause (5)</button>
+            <button onclick="startTimer()">⏱ Sleep (20m)</button>
             <button onclick="window.location.href='/play/{next_station}'">Next (6) ⏭</button>
             <button onclick="randomStation()">🎲 Random (0)</button>
-            <button onclick="startTimer()">⏱ Sleep (20m)</button>
         </div>
 
         <div class="timer">
@@ -261,7 +267,6 @@ def play_page(station_name):
     </html>
     """
     return html
-
 @app.route("/")
 def index():
     page = int(request.args.get("page", 1))
