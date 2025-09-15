@@ -1,51 +1,45 @@
 # -------------------------------
-# Stage 1: Builder
-# -------------------------------
-FROM python:3.11-slim AS builder
-
-# Install build dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        build-essential \
-        curl \
-        git \
-    && rm -rf /var/lib/apt/lists/*
-
-# Set workdir
-WORKDIR /app
-
-# Copy requirements and install into /install
-COPY requirements.txt .
-RUN pip install --prefix=/install --no-cache-dir -r requirements.txt \
-    gunicorn gevent flask
-
-# -------------------------------
-# Stage 2: Runtime
+# Base image
 # -------------------------------
 FROM python:3.11-slim
 
-# Set environment
+# -------------------------------
+# Environment setup
+# -------------------------------
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PORT=8000 \
-    PATH="/install/bin:$PATH"
+    PORT=8000
 
-# Install runtime dependencies (FFmpeg + minimal libs)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        ffmpeg \
-        libgcc-s1 \
-        libstdc++6 \
-    && rm -rf /var/lib/apt/lists/*
+# -------------------------------
+# Install system dependencies including ffmpeg
+# -------------------------------
+RUN apt-get update && \
+    apt-get install -y ffmpeg && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-# Set workdir
+# -------------------------------
+# Set working directory
+# -------------------------------
 WORKDIR /app
 
-# Copy installed Python packages from builder
-COPY --from=builder /install /install
-# Copy app code
-COPY . /app
+# -------------------------------
+# Copy project files
+# -------------------------------
+COPY . .
 
-# Expose port
+# -------------------------------
+# Install Python dependencies
+# -------------------------------
+RUN pip install --upgrade pip
+RUN pip install -r requirements.txt
+
+# -------------------------------
+# Expose the port
+# -------------------------------
 EXPOSE 8000
 
-# Start the app
-CMD ["gunicorn", "-b", "0.0.0.0:8000", "-k", "gevent", "stream:app"]
+# -------------------------------
+# Command to run the app
+# -------------------------------
+CMD ["gunicorn", "--worker-class", "gevent", "--bind", "0.0.0.0:8000", "stream:app"]
