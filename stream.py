@@ -260,7 +260,7 @@ def index():
         </style>
     </head>
     <body>
-        <h2>📻 Vradio (Page {page}/{total_pages})</h2>
+        <h2>🎙️ Audio Streams (Page {page}/{total_pages})</h2>
         {links_html}
         <div class="nav">{nav_html}</div>
         <div class="info">🔢 T9 Keys: 1=First, 4=Prev, 6=Next, 3=Last, 0=Random</div>
@@ -287,4 +287,4 @@ def index():
     return html
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000
+    app.run(host="0.0.0.0", port=8000)
