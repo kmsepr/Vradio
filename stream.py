@@ -282,19 +282,20 @@ def play_page(station_name):
                     if (player.paused) player.play(); else player.pause();
                 }}
 
-document.addEventListener("keydown", function(e) {
-    if (e.key === "5") {
-        togglePlay();
-    } else if (e.key === "4") {
-        window.location.href = '/play/{prev_station}';
-    } else if (e.key === "6") {
-        window.location.href = '/play/{next_station}';
-    } else if (e.key === "0") {
-        randomStation();
-    } else if (e.key === "*") {   // Sleep key only here
-        toggleSleep();
-    }
-});
+                document.addEventListener("keydown", function(e) {{
+                    if (e.key === "5") {{
+                        togglePlay();
+                    }} else if (e.key === "4") {{
+                        window.location.href = '/play/{prev_station}';
+                    }} else if (e.key === "6") {{
+                        window.location.href = '/play/{next_station}';
+                    }} else if (e.key === "0") {{
+                        randomStation();
+                    }} else if (e.key === "*") {{
+                        toggleSleep();
+                    }}
+                }});
+            }});
         </script>
     </body>
     </html>
