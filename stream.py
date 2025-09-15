@@ -126,6 +126,103 @@ def direct_station_redirect(station_name):
     return redirect(url)
 
 
+@app.route("/play/<station_name>")
+def play_page(station_name):
+    station_names = list(RADIO_STATIONS.keys())
+    if station_name not in station_names:
+        return "⚠️ Station not found", 404
+
+    idx = station_names.index(station_name)
+    prev_station = station_names[idx - 1] if idx > 0 else station_names[-1]
+    next_station = station_names[(idx + 1) % len(station_names)]
+
+    html = f"""
+    <html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Now Playing</title>
+        <style>
+            body {{
+                font-family: sans-serif;
+                background: #111;
+                color: #fff;
+                text-align: center;
+                padding: 20px;
+            }}
+            h2 {{
+                margin-bottom: 20px;
+            }}
+            audio {{
+                width: 100%;
+                margin: 15px 0;
+            }}
+            button {{
+                padding: 10px 15px;
+                margin: 5px;
+                font-size: 14px;
+                border-radius: 8px;
+                border: none;
+                background: #007bff;
+                color: white;
+            }}
+            .controls {{
+                margin-top: 15px;
+            }}
+        </style>
+    </head>
+    <body>
+        <h2>🎧 Now Playing:<br>{station_name.replace('_', ' ').title()}</h2>
+
+        <audio id="player" controls autoplay>
+            <source src="/stream/{station_name}" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+
+        <div class="controls">
+            <button onclick="window.location.href='/play/{prev_station}'">⏮ Prev</button>
+            <button onclick="togglePlay()">⏯ Play/Pause</button>
+            <button onclick="window.location.href='/play/{next_station}'">Next ⏭</button>
+            <button onclick="randomStation()">🎲 Random</button>
+        </div>
+
+        <script>
+            const player = document.getElementById("player");
+
+            function togglePlay() {{
+                if (player.paused) {{
+                    player.play();
+                }} else {{
+                    player.pause();
+                }}
+            }}
+
+            function randomStation() {{
+                fetch("/all_stations.json")
+                    .then(res => res.json())
+                    .then(data => {{
+                        const random = data[Math.floor(Math.random() * data.length)];
+                        window.location.href = "/play/" + random;
+                    }});
+            }}
+
+            // 🔢 T9 Shortcuts
+            document.addEventListener("keydown", function(e) {{
+                if (e.key === "5") {{
+                    togglePlay();
+                }} else if (e.key === "4") {{
+                    window.location.href = "/play/{prev_station}";
+                }} else if (e.key === "6") {{
+                    window.location.href = "/play/{next_station}";
+                }} else if (e.key === "0") {{
+                    randomStation();
+                }}
+            }});
+        </script>
+    </body>
+    </html>
+    """
+    returst
+
 @app.route("/")
 def index():
     page = int(request.args.get("page", 1))
@@ -137,7 +234,7 @@ def index():
     paged_stations = station_names[start:end]
 
     links_html = "".join(
-        f"<a href='/stream/{name}'>{name.replace('_', ' ').title()}</a>"
+        f"<a href='/play/{name}'>{name.replace('_', ' ').title()}</a>"
         for name in paged_stations
     )
 
