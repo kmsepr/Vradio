@@ -1,23 +1,48 @@
-# Use official lightweight Python image
+# -------------------------------
+# Base image
+# -------------------------------
 FROM python:3.11-slim
 
-# Install FFmpeg
-RUN apt-get update && apt-get install -y ffmpeg && rm -rf /var/lib/apt/lists/*
+# -------------------------------
+# Environment
+# -------------------------------
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PORT=8000
 
-# Set working directory
+# -------------------------------
+# Install system dependencies
+# -------------------------------
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        ffmpeg \
+        curl \
+        git \
+        build-essential \
+        && rm -rf /var/lib/apt/lists/*
+
+# -------------------------------
+# Set workdir
+# -------------------------------
 WORKDIR /app
 
-# Copy requirements
-COPY requirements.txt .
+# -------------------------------
+# Copy app
+# -------------------------------
+COPY . /app
 
+# -------------------------------
 # Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# -------------------------------
+RUN pip install --no-cache-dir -r requirements.txt \
+    gunicorn gevent flask
 
-# Copy app code
-COPY . .
-
-# Expose port 8000
+# -------------------------------
+# Expose port
+# -------------------------------
 EXPOSE 8000
 
-# Run app with Gunicorn on port 8000
-CMD ["gunicorn", "-k", "gevent", "-b", "0.0.0.0:8000", "stream:app"]
+# -------------------------------
+# Start app
+# -------------------------------
+CMD ["gunicorn", "-b", "0.0.0.0:8000", "-k", "gevent", "stream:app"]
