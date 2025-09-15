@@ -124,7 +124,7 @@ def direct_station_redirect(station_name):
     url = RADIO_STATIONS.get(station_name)
     if not url:
         return "⚠️ Station not found", 404
-    return redirect(url
+    return redirect(url)   
 
 @app.route("/play/<station_name>")
 def play_page(station_name):
@@ -208,7 +208,7 @@ def play_page(station_name):
         </div>
 
         <div class="info">
-            🔢 T9 Keys → 4=Prev | 5=Play/Pause | 6=Next | 7=Sleep | 0=Random
+            🔢 T9 Keys → 4=Prev | 5=Play/Pause | 6=Next | *=Sleep | 0=Random
         </div>
 
         <script>
