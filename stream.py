@@ -12,18 +12,15 @@ if not shutil.which("ffmpeg"):
 # 📡 Full list of radio stations
 RADIO_STATIONS = {
     "muthnabi_radio": "http://cast4.my-control-panel.com/proxy/muthnabi/stream",
-     "radio_nellikka": "https://usa20.fastcast4u.com:2130/stream",
-
-"air_kavarati": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio189/chunklist.m3u8",
+    "radio_nellikka": "https://usa20.fastcast4u.com:2130/stream",
+    "air_kavarati": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio189/chunklist.m3u8",
     "air_calicut": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio082/chunklist.m3u8",
     "manjeri_fm": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio101/chunklist.m3u8",
     "real_fm": "http://air.pc.cdn.bitgravity.com/air/live/pbaudio083/playlist.m3u8",
     "safari_tv": "https://j78dp346yq5r-hls-live.5centscdn.com/safari/live.stream/chunks.m3u8",
     "victers_tv": "https://932y4x26ljv8-hls-live.5centscdn.com/victers/tv.stream/victers/tv1/chunks.m3u8",
     "kairali_we": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/wetv_nim_https/050522/wetv/playlist.m3u8",
-
-"mazhavil_manorama": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/mazhavilmanorama_nim_https/050522/mazhavilmanorama/playlist.m3u8",
-
+    "mazhavil_manorama": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/mazhavilmanorama_nim_https/050522/mazhavilmanorama/playlist.m3u8",
     "malayalam_1": "http://167.114.131.90:5412/stream",
     "radio_digital_malayali": "https://radio.digitalmalayali.in/listen/stream/radio.mp3",
     "malayalam_90s": "https://stream-159.zeno.fm/gm3g9amzm0hvv?zs-x-7jq8ksTOav9ZhlYHi9xw",
@@ -61,45 +58,43 @@ RADIO_STATIONS = {
     "sanaa_radio": "http://dc5.serverse.com/proxy/pbmhbvxs/stream",
     "rubat_ataq": "http://stream.zeno.fm/5tpfc8d7xqruv",
     "al_jazeera": "http://live-hls-audio-web-aja.getaj.net/VOICE-AJA/index.m3u8",
-
-
-
-
     "bloomberg_tv": "https://bloomberg-bloomberg-3-br.samsung.wurl.tv/manifest/playlist.m3u8",
     "france_24": "https://live.france24.com/hls/live/2037218/F24_EN_HI_HLS/master_500.m3u8",
-
-"vom_radio": "https://radio.psm.mv/draair",
+    "vom_radio": "https://radio.psm.mv/draair",
 }
+
 STATIONS_PER_PAGE = 5
 
-
 def generate_stream(url):
-    process = subprocess.Popen(
-        [
-            "ffmpeg",
-            "-reconnect", "1",
-            "-reconnect_streamed", "1",
-            "-reconnect_delay_max", "10",
-            "-i", url,
-            "-vn",
-            "-ac", "1",
-            "-b:a", "40k",
-            "-f", "mp3",
-            "-"
-        ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
-        bufsize=4096
-    )
-    try:
-        for chunk in iter(lambda: process.stdout.read(4096), b""):
-            yield chunk
-    except GeneratorExit:
-        process.kill()  # kill when client disconnects
-        raise
-    finally:
-        process.kill()
-
+    while True:
+        process = subprocess.Popen(
+            [
+                "ffmpeg",
+                "-reconnect", "1",
+                "-reconnect_streamed", "1",
+                "-reconnect_delay_max", "10",
+                "-i", url,
+                "-vn",
+                "-ac", "1",
+                "-b:a", "40k",
+                "-f", "mp3",
+                "-"
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            bufsize=4096
+        )
+        try:
+            for chunk in iter(lambda: process.stdout.read(4096), b""):
+                yield chunk
+        except GeneratorExit:
+            process.kill()
+            break
+        except Exception as e:
+            print(f"Stream error: {e}")
+        finally:
+            process.kill()
+            time.sleep(3)
 
 @app.route("/stream/<station_name>")
 def stream_station(station_name):
@@ -107,7 +102,6 @@ def stream_station(station_name):
     if not url:
         return "Station not found", 404
     return Response(generate_stream(url), mimetype="audio/mpeg")
-
 
 @app.route("/play/<station_name>")
 def play_page(station_name):
@@ -118,7 +112,7 @@ def play_page(station_name):
     idx = stations.index(station_name)
     prev_station = stations[idx - 1] if idx > 0 else stations[-1]
     next_station = stations[(idx + 1) % len(stations)]
-    stations_json = stations
+    stations_json = stations  # JS can use directly
 
     html = f"""
     <html>
@@ -132,58 +126,124 @@ def play_page(station_name):
             .controls {{ display:flex; flex-wrap:wrap; justify-content:center; gap:6px; margin:10px 0; }}
             button {{ flex:1 1 30%; padding:8px 10px; font-size:13px; border-radius:8px; border:none; background:#007bff; color:white; min-width:90px; }}
             .info {{ font-size:11px; color:#bbb; margin-top:10px; }}
+            /* Mini mode */
+            .mini h2, .mini .controls, .mini .info {{ display:none; }}
+            .mini audio {{ width:70%; margin:5px auto; }}
         </style>
     </head>
     <body>
-        <h2>🎧 {station_name.replace('_',' ').title()}</h2>
-        <audio id="player" controls autoplay>
-            <source src="/stream/{station_name}" type="audio/mpeg">
-        </audio>
-        <div class="controls">
-            <button onclick="window.location.href='/play/{prev_station}'">⏮ Prev (4)</button>
-            <button onclick="togglePlay()">⏯ Play/Pause (5)</button>
-            <button onclick="window.location.href='/play/{next_station}'">Next (6) ⏭</button>
+        <div id="playerUI" class="full">
+            <h2>🎧 {station_name.replace('_',' ').title()}</h2>
+            <audio id="player" controls autoplay>
+                <source src="/stream/{station_name}" type="audio/mpeg">
+            </audio>
+            <div class="controls">
+                <button onclick="goToStation('{prev_station}')">⏮ Prev (4)</button>
+                <button onclick="togglePlay()">⏯ Play/Pause (5)</button>
+                <button onclick="goToStation('{next_station}')">Next (6) ⏭</button>
+                <button onclick="randomStation()">🎲 Random (0)</button>
+                <button onclick="toggleSleep()" id="sleepBtn">⏱ Sleep (20m)</button>
+            </div>
+            <div class="info">🔢 T9 Keys → 1=Mini/Full | 4=Prev | 5=Play/Pause | 6=Next | 0=Random | *=Sleep</div>
         </div>
-
-        <div class="info">🔢 T9 Keys → 4=Prev | 5=Play/Pause | 6=Next | 0=Random</div>
-
         <script>
         const STATIONS = {stations_json};
         const CURRENT = "{station_name}";
-
         const player = document.getElementById("player");
 
-        // Stop stream when leaving page
-        window.addEventListener("beforeunload", () => {{
-            player.pause();
-            player.src = "";
-        }});
+        function goToStation(station) {{
+            if (player) {{
+                player.pause();
+                player.src = "";
+            }}
+            window.location.href = "/play/" + station;
+        }}
+
+        function randomStation() {{
+            const others = STATIONS.filter(s => s !== CURRENT);
+            const pick = others.length ? others[Math.floor(Math.random() * others.length)]
+                                       : STATIONS[Math.floor(Math.random() * STATIONS.length)];
+            goToStation(pick);
+        }}
 
         function togglePlay() {{
             if(player.paused) player.play();
             else player.pause();
         }}
 
-        function randomStation() {{
-            const others = STATIONS.filter(s => s !== CURRENT);
-            const pick = others.length ? others[Math.floor(Math.random()*others.length)]
-                                       : STATIONS[Math.floor(Math.random()*STATIONS.length)];
-            window.location.href = "/play/" + pick;
+        function toggleMiniFull() {{
+            const ui = document.getElementById("playerUI");
+            if (ui.classList.contains("mini")) {{
+                ui.classList.remove("mini");
+                ui.classList.add("full");
+            }} else {{
+                ui.classList.remove("full");
+                ui.classList.add("mini");
+            }}
         }}
 
-        // T9 Key Controls
+        // --- Sleep Timer ---
+        let timerSeconds = 0;
+        let countdown = null;
+        let timerActive = false;
+        const sleepBtn = document.getElementById("sleepBtn");
+
+        function formatTime(s) {{
+            const m = Math.floor(s / 60);
+            const sec = s % 60;
+            return String(m).padStart(2,'0') + ":" + String(sec).padStart(2,'0');
+        }}
+
+        function updateTimerUI() {{
+            if(timerActive){{
+                sleepBtn.innerText = "⏱ Sleep On (" + formatTime(timerSeconds) + ")";
+            }}
+        }}
+
+        function tick() {{
+            if(!timerActive) return;
+            if(timerSeconds <= 0){{
+                player.pause();
+                stopTimer();
+                return;
+            }}
+            timerSeconds--;
+            updateTimerUI();
+        }}
+
+        function startTimer() {{
+            timerSeconds = 20*60; 
+            timerActive = true;
+            clearInterval(countdown);
+            updateTimerUI();
+            countdown = setInterval(tick,1000);
+        }}
+
+        function stopTimer() {{
+            timerActive = false;
+            clearInterval(countdown);
+            countdown = null;
+            sleepBtn.innerText = "⏱ Sleep (20m)";
+        }}
+
+        function toggleSleep() {{
+            if(timerActive) stopTimer(); else startTimer();
+        }}
+
+        // --- T9 Keys ---
         document.addEventListener("keydown", function(e){{
-            if(e.key === "4") window.location.href='/play/{prev_station}';
+            if(e.key === "1") toggleMiniFull();
+            else if(e.key === "4") goToStation("{prev_station}");
             else if(e.key === "5") togglePlay();
-            else if(e.key === "6") window.location.href='/play/{next_station}';
+            else if(e.key === "6") goToStation("{next_station}");
             else if(e.key === "0") randomStation();
+            else if(e.key === "*") toggleSleep();
         }});
         </script>
     </body>
     </html>
     """
     return html
-
 
 @app.route("/")
 def index():
@@ -203,7 +263,6 @@ def index():
     if page < total_pages:
         nav_html += f"<a href='/?page={page+1}'>Next ▶️</a><a href='/?page={total_pages}'>Last ⏭️</a>"
 
-    # ✅ Mini-player added here
     html = f"""
     <html>
     <head>
@@ -214,48 +273,33 @@ def index():
             h2 {{ font-size:16px; text-align:center; margin:10px 0; }}
             a {{ display:block; background:#007bff; color:white; text-decoration:none; padding:8px; margin:4px 0; border-radius:6px; text-align:center; font-size:13px; }}
             .nav {{ display:flex; justify-content:space-between; flex-wrap:wrap; margin-top:10px; gap:4px; }}
-            .mini-player {{ margin-top:15px; padding:10px; background:#222; color:white; border-radius:8px; text-align:center; }}
-            .mini-player button {{ padding:6px 12px; margin:4px; border:none; border-radius:6px; background:#007bff; color:white; }}
+            .info {{ font-size:11px; text-align:center; margin-top:8px; color:#555; }}
         </style>
     </head>
     <body>
         <h2>🎙️ Audio Streams (Page {page}/{total_pages})</h2>
         {links_html}
         <div class="nav">{nav_html}</div>
-
-        <div class="mini-player">
-            <h3>Mini Player</h3>
-            <audio id="miniAudio" controls></audio><br>
-            <button onclick="prevStation()">⏮ Prev</button>
-            <button onclick="toggleMiniPlay()">⏯ Play/Pause</button>
-            <button onclick="nextStation()">Next ⏭</button>
-            <button onclick="randomStation()">🎲 Random</button>
-        </div>
-
+        <div class="info">🔢 T9 Keys: 1=Mini/Full, 4=Prev Page, 6=Next Page, 0=Random</div>
         <script>
-        const STATIONS = {stations};
-        let currentIndex = 0;
-        const player = document.getElementById("miniAudio");
-
-        function loadStation(idx){{
-            currentIndex = (idx + STATIONS.length) % STATIONS.length;
-            player.src = "/stream/" + STATIONS[currentIndex];
-            player.play();
-        }}
-
-        function prevStation(){{ loadStation(currentIndex-1); }}
-        function nextStation(){{ loadStation(currentIndex+1); }}
-        function toggleMiniPlay(){{ player.paused ? player.play() : player.pause(); }}
-        function randomStation(){{ loadStation(Math.floor(Math.random()*STATIONS.length)); }}
-
-        // Load first station initially
-        loadStation(0);
+        document.addEventListener("keydown", function(e){{
+            let page = {page};
+            let total = {total_pages};
+            if(e.key==="1") window.location.href="/?page=1"; // quick home
+            else if(e.key==="3") window.location.href="/?page="+total;
+            else if(e.key==="4" && page>1) window.location.href="/?page="+(page-1);
+            else if(e.key==="6" && page<total) window.location.href="/?page="+(page+1);
+            else if(e.key==="0"){{
+                const links = document.querySelectorAll("a[href^='/play/']");
+                const random = links[Math.floor(Math.random()*links.length)];
+                if(random) random.click();
+            }}
+        }});
         </script>
     </body>
     </html>
     """
     return html
-
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000)
