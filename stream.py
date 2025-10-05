@@ -11,6 +11,26 @@ if not shutil.which("ffmpeg"):
 
 # 📡 Full list of radio stations
 RADIO_STATIONS = {
+
+"oman_radio": "https://partwota.cdn.mgmlcdn.com/omanrdoorg/omanrdo.stream_aac/chunklist.m3u8"
+
+"quran_radio_nablus": "http://www.quran-radio.org:8002/",
+    "al_nour": "http://audiostreaming.itworkscdn.com:9066/",
+    "allahu_akbar_radio": "http://66.45.232.132:9996/stream",
+
+    "hajj_channel": "http://104.7.66.64:8005",
+    "abc_islam": "http://s10.voscast.com:9276/stream",
+    "eram_fm": "http://icecast2.edisimo.com:8000/eramfm.mp3",
+    "al_sumood_fm": "http://us3.internet-radio.com/proxy/alsumoodfm2020?mp=/stream",
+    "nur_ala_nur": "http://104.7.66.64:8011/",
+    "ruqya_radio": "http://104.7.66.64:8004",
+    "seiyun_radio": "http://s2.radio.co/s26c62011e/listen",
+    "noor_al_eman": "http://edge.mixlr.com/channel/boaht",
+    "sam_yemen": "https://edge.mixlr.com/channel/kijwr",
+    "afaq": "https://edge.mixlr.com/channel/rumps",
+    "alfasi_radio": "https://qurango.net/radio/mishary_alafasi",
+    "tafsir_quran": "https://radio.quranradiotafsir.com/9992/stream",
+    "sirat_al_mustaqim": "http://104.7.66.64:8091/stream",
     "muthnabi_radio": "http://cast4.my-control-panel.com/proxy/muthnabi/stream",
     "radio_nellikka": "https://usa20.fastcast4u.com:2130/stream",
     "air_kavarati": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio189/chunklist.m3u8",
@@ -34,24 +54,10 @@ RADIO_STATIONS = {
     "fm_gold": "https://airhlspush.pc.cdn.bitgravity.com/httppush/hispbaudio005/hispbaudio00564kbps.m3u8",
     "motivational_series": "http://104.7.66.64:8010",
     "deenagers_radio": "http://104.7.66.64:8003/",
-    "hajj_channel": "http://104.7.66.64:8005",
-    "abc_islam": "http://s10.voscast.com:9276/stream",
-    "eram_fm": "http://icecast2.edisimo.com:8000/eramfm.mp3",
-    "al_sumood_fm": "http://us3.internet-radio.com/proxy/alsumoodfm2020?mp=/stream",
-    "nur_ala_nur": "http://104.7.66.64:8011/",
-    "ruqya_radio": "http://104.7.66.64:8004",
-    "seiyun_radio": "http://s2.radio.co/s26c62011e/listen",
-    "noor_al_eman": "http://edge.mixlr.com/channel/boaht",
-    "sam_yemen": "https://edge.mixlr.com/channel/kijwr",
-    "afaq": "https://edge.mixlr.com/channel/rumps",
-    "alfasi_radio": "https://qurango.net/radio/mishary_alafasi",
-    "tafsir_quran": "https://radio.quranradiotafsir.com/9992/stream",
-    "sirat_al_mustaqim": "http://104.7.66.64:8091/stream",
+
     "river_nile_radio": "http://104.7.66.64:8087",
     "quran_radio_cairo": "http://n02.radiojar.com/8s5u5tpdtwzuv",
-    "quran_radio_nablus": "http://www.quran-radio.org:8002/",
-    "al_nour": "http://audiostreaming.itworkscdn.com:9066/",
-    "allahu_akbar_radio": "http://66.45.232.132:9996/stream",
+    
     "omar_abdul_kafi_radio": "http://104.7.66.64:8007",
     "urdu_islamic_lecture": "http://144.91.121.54:27001/channel_02.aac",
     "hob_nabi": "http://216.245.210.78:8098/stream",
