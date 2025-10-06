@@ -8,15 +8,12 @@ from flask import Flask, Response, request
 app = Flask(__name__)
 STATIONS_PER_PAGE = 5
 
-# ⚠️ CRITICAL: The static image file for the video stream.
-VIDEO_INPUT_FILE = "radio_bg.png" 
+# ⚠️ NOTE: The VIDEO_INPUT_FILE and related checks are REMOVED.
+# This code will no longer check for or use radio_bg.png.
 
-# --- Pre-run Checks ---
+# Check ffmpeg
 if not shutil.which("ffmpeg"):
     raise RuntimeError("ffmpeg not found. Please install ffmpeg.")
-if not os.path.exists(VIDEO_INPUT_FILE):
-    # This check ensures the image file is present before the app starts.
-    raise RuntimeError(f"Video input file not found: {VIDEO_INPUT_FILE}. Please place an image file (e.g., a simple logo) in the script directory.")
 # ---------------------
 
 # 📡 Full list of radio stations (Audio Stream URLs)
@@ -26,7 +23,7 @@ RADIO_STATIONS = {
     "al_nour": "http://audiostreaming.itworkscdn.com:9066/",
     "allahu_akbar_radio": "http://66.45.232.132:9996/stream",
     "hajj_channel": "http://104.7.66.64:8005",
-    "abc_islam": "http://s10.voscast.com:9276/stream",
+    "abc_islam": "http://s10.voscast.com:8216/stream",
     "eram_fm": "http://icecast2.edisimo.com:8000/eramfm.mp3",
     "al_sumood_fm": "http://us3.internet-radio.com/proxy/alsumoodfm2020?mp=/stream",
     "nur_ala_nur": "http://104.7.66.64:8011/",
@@ -76,44 +73,30 @@ RADIO_STATIONS = {
 
 def generate_stream(url):
     """
-    Transcodes the audio stream (url) and a static image (VIDEO_INPUT_FILE)
-    into a low-framerate video stream (MPEG Transport Stream) to prevent audio timeouts.
-    FFmpeg stderr is piped for debugging.
+    Transcodes the audio stream back to low-bitrate MP3 for wide compatibility.
+    Includes FFmpeg error logging (stderr=subprocess.PIPE).
     """
     command = [
         "ffmpeg",
         "-reconnect", "1",
         "-reconnect_streamed", "1",
         "-reconnect_delay_max", "10",
+        
+        "-i", url,  # Input the audio stream
 
-        # --- VIDEO INPUT/OPTIONS (Static Image) ---
-        "-loop", "1",                      # Loop the image indefinitely
-        "-i", VIDEO_INPUT_FILE,            # Input the static image (.png)
-        "-r", "1",                         # Framerate: 1 FPS (minimal data)
-        "-tune", "stillimage",             # Optimization for static image encoding
-        "-shortest",                       # Stop video encoding when the audio stream ends
+        # --- OUTPUT MAPPING & ENCODING (Audio-Only) ---
+        "-vn",          # No video output
+        "-ac", "1",     # Single channel (mono)
+        "-b:a", "40k",  # Audio bitrate
         
-        "-i", url,                         # Input the audio stream
-
-        # --- OUTPUT MAPPING & ENCODING ---
-        "-map", "0:v:0",                   # Map the first video stream (the image)
-        "-map", "1:a:0",                   # Map the first audio stream (the radio)
-        "-c:v", "libx264",                 # Video codec: H.264
-        "-b:v", "100k",                    # Video bitrate (low)
-        "-c:a", "aac",                     # Audio codec: AAC 
-        "-b:a", "40k",                     # Audio bitrate
-        
-        "-pix_fmt", "yuv420p",             # Ensures compatibility with most players
-        
-        # 🚨 HACK: Output as MPEG Transport Stream (MPEGTS)
-        "-f", "mpegts",                     
-        "-"                                # Output to stdout
+        "-f", "mp3",    # Output format: MP3
+        "-"             # Output to stdout
     ]
 
     process = subprocess.Popen(
         command,
         stdout=subprocess.PIPE,
-        # 🚨 Capturing stderr for debugging purposes 
+        # Capturing stderr for debugging purposes 
         stderr=subprocess.PIPE,
         bufsize=4096
     )
@@ -126,7 +109,7 @@ def generate_stream(url):
     except Exception as e:
         print(f"Stream error: {e}")
     finally:
-        # 🚨 Log FFmpeg errors/warnings 
+        # Log FFmpeg errors/warnings 
         if process.stderr:
             error_output = process.stderr.read().decode('utf-8', errors='ignore')
             if error_output:
@@ -142,8 +125,8 @@ def stream_station(station_name):
     if not url:
         return "Station not found", 404
     
-    # 🚨 MIME TYPE is video/mpeg (common for MPEG-TS video in browsers)
-    return Response(generate_stream(url), mimetype="video/mpeg")
+    # MIME TYPE is back to audio/mpeg
+    return Response(generate_stream(url), mimetype="audio/mpeg")
 
 
 @app.route("/play/<station_name>")
@@ -165,24 +148,43 @@ def play_page(station_name):
         <style>
             body {{ font-family: sans-serif; background: #000; color: #fff; text-align: center; margin:0; padding:10px; }}
             h2 {{ font-size:16px; margin:12px 0; }}
-            /* CSS adjusted for VIDEO element */
-            video {{ width:100%; max-width:240px; margin:10px auto; display:block; height:180px; background:#333; }} 
+            /* CSS adjusted for AUDIO element */
+            audio {{ width:100%; margin:10px 0; }} 
             .controls {{ display:flex; flex-wrap:wrap; justify-content:center; gap:6px; margin:10px 0; }}
             button {{ flex:1 1 30%; padding:8px 10px; font-size:13px; border-radius:8px; border:none; background:#007bff; color:white; min-width:90px; }}
             .info {{ font-size:11px; color:#bbb; margin-top:10px; }}
-            /* Mini mode adjustments for video */
+            /* Mini mode adjustments for audio */
             .mini h2, .mini .controls, .mini .info {{ display:none; }}
-            .mini video {{ width:70%; height:120px; margin:5px auto; }}
+            .mini audio {{ width:70%; margin:5px auto; }}
+
+            /* 🚨 Tap-to-Play Overlay Styles (Still needed for the Mute/Autoplay fix) */
+            #play_overlay {{ 
+                position: absolute; top: 0; left: 0; right: 0; bottom: 0; 
+                background: rgba(0,0,0,0.9); display: flex; align-items: center; 
+                justify-content: center; z-index: 10; cursor: pointer;
+            }}
+            #play_overlay.hidden {{ display: none; }}
+            #play_button {{ 
+                padding: 15px 30px; font-size: 18px; 
+                border-radius: 10px; border: none; background: #28a745; color: white;
+            }}
         </style>
     </head>
     <body>
         <div id="playerUI" class="full">
             <h2>🎧 {station_name.replace('_',' ').title()}</h2>
             
-            <video id="player" controls autoplay playsinline muted=true onloadedmetadata="this.muted=false" preload="auto">
-                <source src="/stream/{station_name}" type="video/mpeg">
-                Your browser does not support the video tag.
-            </video>
+            <div style="position: relative;">
+                <audio id="player" controls preload="auto">
+                    <source src="/stream/{station_name}" type="audio/mpeg">
+                    Your browser does not support the audio tag.
+                </audio>
+                
+                <div id="play_overlay" style="position: static;">
+                    <button id="play_button">▶️ Tap to Start</button>
+                </div>
+                </div>
+            
             <div class="controls">
                 <button onclick="goToStation('{prev_station}')">⏮ Prev (4)</button>
                 <button onclick="togglePlay()">⏯ Play/Pause (5)</button>
@@ -196,6 +198,26 @@ def play_page(station_name):
         const STATIONS = {stations_json};
         const CURRENT = "{station_name}";
         const player = document.getElementById("player");
+        const overlay = document.getElementById("play_overlay");
+        
+        // Force Autoplay/Unmute with user gesture on overlay click
+        function startPlayback() {{
+            player.play().then(() => {{
+                // Successfully started playback
+                overlay.classList.add("hidden");
+                // Muted property is typically ignored on <audio> elements if autoplay is denied, 
+                // but we keep the logic clean.
+            }}).catch(error => {{
+                console.error("Playback failed after user tap:", error);
+            }});
+        }}
+
+        // Listen for click on the entire overlay or the button
+        overlay.addEventListener('click', startPlayback);
+        
+        // Ensure the player is paused until the user taps the overlay
+        player.pause();
+
 
         function goToStation(station) {{
             if (player) {{
@@ -213,8 +235,13 @@ def play_page(station_name):
         }}
 
         function togglePlay() {{
-            if(player.paused) player.play();
-            else player.pause();
+            // If the overlay is visible, treat a button press as starting playback
+            if (overlay.classList.contains("hidden")) {{
+                if(player.paused) player.play();
+                else player.pause();
+            }} else {{
+                startPlayback();
+            }}
         }}
 
         function toggleMiniFull() {{
@@ -228,7 +255,7 @@ def play_page(station_name):
             }}
         }}
 
-        // --- Sleep Timer (Functions remain the same for video or audio) ---
+        // --- Sleep Timer ---
         let timerSeconds = 0;
         let countdown = null;
         let timerActive = false;
@@ -279,11 +306,15 @@ def play_page(station_name):
         // --- T9 Keys ---
         document.addEventListener("keydown", function(e){{
             if(e.key === "1") toggleMiniFull();
+            // Use togglePlay for '5' key
+            else if(e.key === "5") togglePlay(); 
             else if(e.key === "4") goToStation("{prev_station}");
-            else if(e.key === "5") togglePlay();
             else if(e.key === "6") goToStation("{next_station}");
             else if(e.key === "0") randomStation();
-            else if(e.key === "*") toggleSleep();
+            else if(e.key === "*") {{
+                // If sleep is toggled, ensure we start playback if it hasn't started
+                if (overlay.classList.contains("hidden")) toggleSleep(); else startPlayback(); 
+            }}
         }});
         </script>
     </body>
@@ -323,7 +354,7 @@ def index():
         </style>
     </head>
     <body>
-        <h2>🎙️ Video Streams (Page {page}/{total_pages})</h2>
+        <h2>🎙️ Audio Streams (Page {page}/{total_pages})</h2>
         {links_html}
         <div class="nav">{nav_html}</div>
         <div class="info">🔢 T9 Keys: 1=Mini/Full, 4=Prev Page, 6=Next Page, 0=Random</div>
