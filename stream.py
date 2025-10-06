@@ -1,29 +1,25 @@
 import subprocess
 import time
 import shutil
-import os
 from flask import Flask, Response, request
 
-# --- Configuration ---
 app = Flask(__name__)
-STATIONS_PER_PAGE = 5
-
-# ⚠️ NOTE: The VIDEO_INPUT_FILE and related checks are REMOVED.
-# This code will no longer check for or use radio_bg.png.
 
 # Check ffmpeg
 if not shutil.which("ffmpeg"):
     raise RuntimeError("ffmpeg not found. Please install ffmpeg.")
-# ---------------------
 
-# 📡 Full list of radio stations (Audio Stream URLs)
+# 📡 Full list of radio stations
 RADIO_STATIONS = {
-    "oman_radio": "https://partwota.cdn.mgmlcdn.com/omanrdoorg/omanrdo.stream_aac/chunklist.m3u8",
-    "quran_radio_nablus": "http://www.quran-radio.org:8002/",
+
+"oman_radio": "https://partwota.cdn.mgmlcdn.com/omanrdoorg/omanrdo.stream_aac/chunklist.m3u8", # <-- COMMA ADDED HERE
+
+"quran_radio_nablus": "http://www.quran-radio.org:8002/",
     "al_nour": "http://audiostreaming.itworkscdn.com:9066/",
     "allahu_akbar_radio": "http://66.45.232.132:9996/stream",
+
     "hajj_channel": "http://104.7.66.64:8005",
-    "abc_islam": "http://s10.voscast.com:8216/stream",
+    "abc_islam": "http://s10.voscast.com:9276/stream",
     "eram_fm": "http://icecast2.edisimo.com:8000/eramfm.mp3",
     "al_sumood_fm": "http://us3.internet-radio.com/proxy/alsumoodfm2020?mp=/stream",
     "nur_ala_nur": "http://104.7.66.64:8011/",
@@ -58,8 +54,10 @@ RADIO_STATIONS = {
     "fm_gold": "https://airhlspush.pc.cdn.bitgravity.com/httppush/hispbaudio005/hispbaudio00564kbps.m3u8",
     "motivational_series": "http://104.7.66.64:8010",
     "deenagers_radio": "http://104.7.66.64:8003/",
+
     "river_nile_radio": "http://104.7.66.64:8087",
     "quran_radio_cairo": "http://n02.radiojar.com/8s5u5tpdtwzuv",
+    
     "omar_abdul_kafi_radio": "http://104.7.66.64:8007",
     "urdu_islamic_lecture": "http://144.91.121.54:27001/channel_02.aac",
     "hob_nabi": "http://216.245.210.78:8098/stream",
@@ -71,63 +69,51 @@ RADIO_STATIONS = {
     "vom_radio": "https://radio.psm.mv/draair",
 }
 
+STATIONS_PER_PAGE = 5
+
 def generate_stream(url):
     """
-    Transcodes the audio stream back to low-bitrate MP3 for wide compatibility.
-    Includes FFmpeg error logging (stderr=subprocess.PIPE).
+    Transcodes the audio stream to a low-bitrate MP3 stream (40kbps, mono)
+    for reliable playback on limited devices.
     """
-    command = [
-        "ffmpeg",
-        "-reconnect", "1",
-        "-reconnect_streamed", "1",
-        "-reconnect_delay_max", "10",
-        
-        "-i", url,  # Input the audio stream
-
-        # --- OUTPUT MAPPING & ENCODING (Audio-Only) ---
-        "-vn",          # No video output
-        "-ac", "1",     # Single channel (mono)
-        "-b:a", "40k",  # Audio bitrate
-        
-        "-f", "mp3",    # Output format: MP3
-        "-"             # Output to stdout
-    ]
-
-    process = subprocess.Popen(
-        command,
-        stdout=subprocess.PIPE,
-        # Capturing stderr for debugging purposes 
-        stderr=subprocess.PIPE,
-        bufsize=4096
-    )
-
-    try:
-        for chunk in iter(lambda: process.stdout.read(4096), b""):
-            yield chunk
-    except GeneratorExit:
-        process.kill()
-    except Exception as e:
-        print(f"Stream error: {e}")
-    finally:
-        # Log FFmpeg errors/warnings 
-        if process.stderr:
-            error_output = process.stderr.read().decode('utf-8', errors='ignore')
-            if error_output:
-                print(f"--- FFmpeg Error/Warning for {url} ---\n{error_output}\n----------------------------------")
-        
-        process.kill()
-        time.sleep(3)
-
+    while True:
+        process = subprocess.Popen(
+            [
+                "ffmpeg",
+                "-reconnect", "1",
+                "-reconnect_streamed", "1",
+                "-reconnect_delay_max", "10",
+                "-i", url,
+                "-vn",
+                "-ac", "1",
+                "-b:a", "40k",
+                "-f", "mp3",
+                "-"
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL, # Keep errors silent for production
+            bufsize=4096
+        )
+        try:
+            for chunk in iter(lambda: process.stdout.read(4096), b""):
+                yield chunk
+        except GeneratorExit:
+            process.kill()
+            break
+        except Exception as e:
+            # Reconnection will handle stream errors automatically
+            print(f"Stream generation error: {e}")
+        finally:
+            process.kill()
+            time.sleep(3) # Wait before trying to reconnect
 
 @app.route("/stream/<station_name>")
 def stream_station(station_name):
     url = RADIO_STATIONS.get(station_name)
     if not url:
         return "Station not found", 404
-    
-    # MIME TYPE is back to audio/mpeg
+    # Serve the transcoded audio stream
     return Response(generate_stream(url), mimetype="audio/mpeg")
-
 
 @app.route("/play/<station_name>")
 def play_page(station_name):
@@ -138,7 +124,7 @@ def play_page(station_name):
     idx = stations.index(station_name)
     prev_station = stations[idx - 1] if idx > 0 else stations[-1]
     next_station = stations[(idx + 1) % len(stations)]
-    stations_json = stations  
+    stations_json = stations  # JS can use directly
 
     html = f"""
     <html>
@@ -148,43 +134,21 @@ def play_page(station_name):
         <style>
             body {{ font-family: sans-serif; background: #000; color: #fff; text-align: center; margin:0; padding:10px; }}
             h2 {{ font-size:16px; margin:12px 0; }}
-            /* CSS adjusted for AUDIO element */
-            audio {{ width:100%; margin:10px 0; }} 
+            audio {{ width:100%; margin:10px 0; }}
             .controls {{ display:flex; flex-wrap:wrap; justify-content:center; gap:6px; margin:10px 0; }}
             button {{ flex:1 1 30%; padding:8px 10px; font-size:13px; border-radius:8px; border:none; background:#007bff; color:white; min-width:90px; }}
             .info {{ font-size:11px; color:#bbb; margin-top:10px; }}
-            /* Mini mode adjustments for audio */
+            /* Mini mode: Keeps only the player controls and element visible */
             .mini h2, .mini .controls, .mini .info {{ display:none; }}
             .mini audio {{ width:70%; margin:5px auto; }}
-
-            /* 🚨 Tap-to-Play Overlay Styles (Still needed for the Mute/Autoplay fix) */
-            #play_overlay {{ 
-                position: absolute; top: 0; left: 0; right: 0; bottom: 0; 
-                background: rgba(0,0,0,0.9); display: flex; align-items: center; 
-                justify-content: center; z-index: 10; cursor: pointer;
-            }}
-            #play_overlay.hidden {{ display: none; }}
-            #play_button {{ 
-                padding: 15px 30px; font-size: 18px; 
-                border-radius: 10px; border: none; background: #28a745; color: white;
-            }}
         </style>
     </head>
     <body>
         <div id="playerUI" class="full">
             <h2>🎧 {station_name.replace('_',' ').title()}</h2>
-            
-            <div style="position: relative;">
-                <audio id="player" controls preload="auto">
-                    <source src="/stream/{station_name}" type="audio/mpeg">
-                    Your browser does not support the audio tag.
-                </audio>
-                
-                <div id="play_overlay" style="position: static;">
-                    <button id="play_button">▶️ Tap to Start</button>
-                </div>
-                </div>
-            
+            <audio id="player" controls autoplay>
+                <source src="/stream/{station_name}" type="audio/mpeg">
+            </audio>
             <div class="controls">
                 <button onclick="goToStation('{prev_station}')">⏮ Prev (4)</button>
                 <button onclick="togglePlay()">⏯ Play/Pause (5)</button>
@@ -198,26 +162,6 @@ def play_page(station_name):
         const STATIONS = {stations_json};
         const CURRENT = "{station_name}";
         const player = document.getElementById("player");
-        const overlay = document.getElementById("play_overlay");
-        
-        // Force Autoplay/Unmute with user gesture on overlay click
-        function startPlayback() {{
-            player.play().then(() => {{
-                // Successfully started playback
-                overlay.classList.add("hidden");
-                // Muted property is typically ignored on <audio> elements if autoplay is denied, 
-                // but we keep the logic clean.
-            }}).catch(error => {{
-                console.error("Playback failed after user tap:", error);
-            }});
-        }}
-
-        // Listen for click on the entire overlay or the button
-        overlay.addEventListener('click', startPlayback);
-        
-        // Ensure the player is paused until the user taps the overlay
-        player.pause();
-
 
         function goToStation(station) {{
             if (player) {{
@@ -235,13 +179,8 @@ def play_page(station_name):
         }}
 
         function togglePlay() {{
-            // If the overlay is visible, treat a button press as starting playback
-            if (overlay.classList.contains("hidden")) {{
-                if(player.paused) player.play();
-                else player.pause();
-            }} else {{
-                startPlayback();
-            }}
+            if(player.paused) player.play();
+            else player.pause();
         }}
 
         function toggleMiniFull() {{
@@ -302,19 +241,15 @@ def play_page(station_name):
         function toggleSleep() {{
             if(timerActive) stopTimer(); else startTimer();
         }}
-        
+
         // --- T9 Keys ---
         document.addEventListener("keydown", function(e){{
             if(e.key === "1") toggleMiniFull();
-            // Use togglePlay for '5' key
-            else if(e.key === "5") togglePlay(); 
             else if(e.key === "4") goToStation("{prev_station}");
+            else if(e.key === "5") togglePlay();
             else if(e.key === "6") goToStation("{next_station}");
             else if(e.key === "0") randomStation();
-            else if(e.key === "*") {{
-                // If sleep is toggled, ensure we start playback if it hasn't started
-                if (overlay.classList.contains("hidden")) toggleSleep(); else startPlayback(); 
-            }}
+            else if(e.key === "*") toggleSleep();
         }});
         </script>
     </body>
@@ -362,7 +297,7 @@ def index():
         document.addEventListener("keydown", function(e){{
             let page = {page};
             let total = {total_pages};
-            if(e.key==="1") window.location.href="/?page=1"; # quick home
+            if(e.key==="1") window.location.href="/?page=1"; // quick home
             else if(e.key==="3") window.location.href="/?page="+total;
             else if(e.key==="4" && page>1) window.location.href="/?page="+(page-1);
             else if(e.key==="6" && page<total) window.location.href="/?page="+(page+1);
