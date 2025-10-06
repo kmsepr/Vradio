@@ -12,7 +12,7 @@ if not shutil.which("ffmpeg"):
 # 📡 Full list of radio stations
 RADIO_STATIONS = {
 
-"oman_radio": "https://partwota.cdn.mgmlcdn.com/omanrdoorg/omanrdo.stream_aac/chunklist.m3u8"
+"oman_radio": "https://partwota.cdn.mgmlcdn.com/omanrdoorg/omanrdo.stream_aac/chunklist.m3u8",
 
 "quran_radio_nablus": "http://www.quran-radio.org:8002/",
     "al_nour": "http://audiostreaming.itworkscdn.com:9066/",
