@@ -2,6 +2,7 @@ import subprocess
 import time
 import shutil
 from flask import Flask, Response, request
+import os # Imported for potential logging/debugging, though not strictly used in this version
 
 app = Flask(__name__)
 
@@ -11,13 +12,10 @@ if not shutil.which("ffmpeg"):
 
 # 📡 Full list of radio stations
 RADIO_STATIONS = {
-
-"oman_radio": "https://partwota.cdn.mgmlcdn.com/omanrdoorg/omanrdo.stream_aac/chunklist.m3u8", # <-- COMMA ADDED HERE
-
+"oman_radio": "https://partwota.cdn.mgmlcdn.com/omanrdoorg/omanrdo.stream_aac/chunklist.m3u8",
 "quran_radio_nablus": "http://www.quran-radio.org:8002/",
     "al_nour": "http://audiostreaming.itworkscdn.com:9066/",
     "allahu_akbar_radio": "http://66.45.232.132:9996/stream",
-
     "hajj_channel": "http://104.7.66.64:8005",
     "abc_islam": "http://s10.voscast.com:9276/stream",
     "eram_fm": "http://icecast2.edisimo.com:8000/eramfm.mp3",
@@ -54,10 +52,8 @@ RADIO_STATIONS = {
     "fm_gold": "https://airhlspush.pc.cdn.bitgravity.com/httppush/hispbaudio005/hispbaudio00564kbps.m3u8",
     "motivational_series": "http://104.7.66.64:8010",
     "deenagers_radio": "http://104.7.66.64:8003/",
-
     "river_nile_radio": "http://104.7.66.64:8087",
     "quran_radio_cairo": "http://n02.radiojar.com/8s5u5tpdtwzuv",
-    
     "omar_abdul_kafi_radio": "http://104.7.66.64:8007",
     "urdu_islamic_lecture": "http://144.91.121.54:27001/channel_02.aac",
     "hob_nabi": "http://216.245.210.78:8098/stream",
@@ -73,8 +69,7 @@ STATIONS_PER_PAGE = 5
 
 def generate_stream(url):
     """
-    Transcodes the audio stream to a low-bitrate MP3 stream (40kbps, mono)
-    for reliable playback on limited devices.
+    Transcodes the audio stream to MP3 (40kbps) with FFmpeg error logging enabled.
     """
     while True:
         process = subprocess.Popen(
@@ -91,7 +86,7 @@ def generate_stream(url):
                 "-"
             ],
             stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL, # Keep errors silent for production
+            stderr=subprocess.PIPE, # 🚨 Capturing stderr for debugging
             bufsize=4096
         )
         try:
@@ -101,18 +96,22 @@ def generate_stream(url):
             process.kill()
             break
         except Exception as e:
-            # Reconnection will handle stream errors automatically
             print(f"Stream generation error: {e}")
         finally:
+            # 🚨 Log FFmpeg errors/warnings 
+            if process.stderr:
+                error_output = process.stderr.read().decode('utf-8', errors='ignore')
+                if error_output:
+                    print(f"--- FFmpeg Error/Warning for {url} ---\n{error_output}\n----------------------------------")
+            
             process.kill()
-            time.sleep(3) # Wait before trying to reconnect
+            time.sleep(3)
 
 @app.route("/stream/<station_name>")
 def stream_station(station_name):
     url = RADIO_STATIONS.get(station_name)
     if not url:
         return "Station not found", 404
-    # Serve the transcoded audio stream
     return Response(generate_stream(url), mimetype="audio/mpeg")
 
 @app.route("/play/<station_name>")
@@ -124,7 +123,7 @@ def play_page(station_name):
     idx = stations.index(station_name)
     prev_station = stations[idx - 1] if idx > 0 else stations[-1]
     next_station = stations[(idx + 1) % len(stations)]
-    stations_json = stations  # JS can use directly
+    stations_json = stations
 
     html = f"""
     <html>
@@ -138,17 +137,37 @@ def play_page(station_name):
             .controls {{ display:flex; flex-wrap:wrap; justify-content:center; gap:6px; margin:10px 0; }}
             button {{ flex:1 1 30%; padding:8px 10px; font-size:13px; border-radius:8px; border:none; background:#007bff; color:white; min-width:90px; }}
             .info {{ font-size:11px; color:#bbb; margin-top:10px; }}
-            /* Mini mode: Keeps only the player controls and element visible */
+            /* Mini mode */
             .mini h2, .mini .controls, .mini .info {{ display:none; }}
             .mini audio {{ width:70%; margin:5px auto; }}
+
+            /* 🚨 Tap-to-Play Overlay Styles (FOR UNMUTE/PLAY FIX) */
+            #play_overlay {{ 
+                position: absolute; top: 0; left: 0; right: 0; bottom: 0; 
+                background: rgba(0,0,0,0.9); display: flex; align-items: center; 
+                justify-content: center; z-index: 10; cursor: pointer;
+            }}
+            #play_overlay.hidden {{ display: none; }}
+            #play_button {{ 
+                padding: 15px 30px; font-size: 18px; 
+                border-radius: 10px; border: none; background: #28a745; color: white;
+            }}
         </style>
     </head>
     <body>
         <div id="playerUI" class="full">
             <h2>🎧 {station_name.replace('_',' ').title()}</h2>
-            <audio id="player" controls autoplay>
-                <source src="/stream/{station_name}" type="audio/mpeg">
-            </audio>
+            
+            <div style="position: relative;">
+                <audio id="player" controls muted preload="auto">
+                    <source src="/stream/{station_name}" type="audio/mpeg">
+                </audio>
+                
+                <div id="play_overlay" style="position: static;">
+                    <button id="play_button">▶️ Tap/5 to Start</button>
+                </div>
+            </div>
+
             <div class="controls">
                 <button onclick="goToStation('{prev_station}')">⏮ Prev (4)</button>
                 <button onclick="togglePlay()">⏯ Play/Pause (5)</button>
@@ -162,6 +181,26 @@ def play_page(station_name):
         const STATIONS = {stations_json};
         const CURRENT = "{station_name}";
         const player = document.getElementById("player");
+        const overlay = document.getElementById("play_overlay");
+        
+        // Function called by user tap/key-press on the overlay
+        function startPlayback() {{
+            player.play().then(() => {{
+                // Successfully started playback via user gesture
+                player.muted = false; // Unmute immediately
+                overlay.classList.add("hidden");
+            }}).catch(error => {{
+                console.error("Playback failed after user tap:", error);
+                // If it fails, leave the overlay visible
+            }});
+        }}
+
+        // Listen for click on the overlay
+        overlay.addEventListener('click', startPlayback);
+        
+        // Player is paused by default, ready for user gesture
+        player.pause();
+
 
         function goToStation(station) {{
             if (player) {{
@@ -179,8 +218,13 @@ def play_page(station_name):
         }}
 
         function togglePlay() {{
-            if(player.paused) player.play();
-            else player.pause();
+            // If the overlay is visible, a togglePlay command acts as the initial 'Start' gesture
+            if (overlay.classList.contains("hidden")) {{
+                if(player.paused) player.play();
+                else player.pause();
+            }} else {{
+                startPlayback();
+            }}
         }}
 
         function toggleMiniFull() {{
@@ -246,10 +290,14 @@ def play_page(station_name):
         document.addEventListener("keydown", function(e){{
             if(e.key === "1") toggleMiniFull();
             else if(e.key === "4") goToStation("{prev_station}");
+            // '5' key now uses togglePlay, which handles the initial start
             else if(e.key === "5") togglePlay();
             else if(e.key === "6") goToStation("{next_station}");
             else if(e.key === "0") randomStation();
-            else if(e.key === "*") toggleSleep();
+            // '*' key tries to start playback if not running, then toggles sleep
+            else if(e.key === "*") {{
+                if (overlay.classList.contains("hidden")) toggleSleep(); else startPlayback(); 
+            }}
         }});
         </script>
     </body>
@@ -297,7 +345,7 @@ def index():
         document.addEventListener("keydown", function(e){{
             let page = {page};
             let total = {total_pages};
-            if(e.key==="1") window.location.href="/?page=1"; // quick home
+            if(e.key==="1") window.location.href="/?page=1"; 
             else if(e.key==="3") window.location.href="/?page="+total;
             else if(e.key==="4" && page>1) window.location.href="/?page="+(page-1);
             else if(e.key==="6" && page<total) window.location.href="/?page="+(page+1);
