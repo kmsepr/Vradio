@@ -2,7 +2,7 @@ import subprocess
 import time
 import shutil
 from flask import Flask, Response, request
-import os # Imported for potential logging/debugging, though not strictly used in this version
+import os 
 
 app = Flask(__name__)
 
@@ -86,7 +86,7 @@ def generate_stream(url):
                 "-"
             ],
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE, # 🚨 Capturing stderr for debugging
+            stderr=subprocess.PIPE, # Capturing stderr for debugging
             bufsize=4096
         )
         try:
@@ -98,7 +98,7 @@ def generate_stream(url):
         except Exception as e:
             print(f"Stream generation error: {e}")
         finally:
-            # 🚨 Log FFmpeg errors/warnings 
+            # Log FFmpeg errors/warnings 
             if process.stderr:
                 error_output = process.stderr.read().decode('utf-8', errors='ignore')
                 if error_output:
@@ -140,33 +140,17 @@ def play_page(station_name):
             /* Mini mode */
             .mini h2, .mini .controls, .mini .info {{ display:none; }}
             .mini audio {{ width:70%; margin:5px auto; }}
-
-            /* 🚨 Tap-to-Play Overlay Styles (FOR UNMUTE/PLAY FIX) */
-            #play_overlay {{ 
-                position: absolute; top: 0; left: 0; right: 0; bottom: 0; 
-                background: rgba(0,0,0,0.9); display: flex; align-items: center; 
-                justify-content: center; z-index: 10; cursor: pointer;
-            }}
-            #play_overlay.hidden {{ display: none; }}
-            #play_button {{ 
-                padding: 15px 30px; font-size: 18px; 
-                border-radius: 10px; border: none; background: #28a745; color: white;
-            }}
+            /* Hide the default audio controls until unmuted */
+            #player:not([data-unmuted]) {{ opacity: 0; }} 
         </style>
     </head>
     <body>
         <div id="playerUI" class="full">
             <h2>🎧 {station_name.replace('_',' ').title()}</h2>
             
-            <div style="position: relative;">
-                <audio id="player" controls muted preload="auto">
-                    <source src="/stream/{station_name}" type="audio/mpeg">
-                </audio>
-                
-                <div id="play_overlay" style="position: static;">
-                    <button id="play_button">▶️ Tap/5 to Start</button>
-                </div>
-            </div>
+            <audio id="player" controls autoplay muted>
+                <source src="/stream/{station_name}" type="audio/mpeg">
+            </audio>
 
             <div class="controls">
                 <button onclick="goToStation('{prev_station}')">⏮ Prev (4)</button>
@@ -175,33 +159,45 @@ def play_page(station_name):
                 <button onclick="randomStation()">🎲 Random (0)</button>
                 <button onclick="toggleSleep()" id="sleepBtn">⏱ Sleep (20m)</button>
             </div>
-            <div class="info">🔢 T9 Keys → 1=Mini/Full | 4=Prev | 5=Play/Pause | 6=Next | 0=Random | *=Sleep</div>
+            <div class="info">🔢 T9 Keys → 1=Mini/Full | 4=Prev | 5=Play/Pause/Unmute | 6=Next | 0=Random | *=Sleep</div>
         </div>
         <script>
         const STATIONS = {stations_json};
         const CURRENT = "{station_name}";
         const player = document.getElementById("player");
-        const overlay = document.getElementById("play_overlay");
         
-        // Function called by user tap/key-press on the overlay
-        function startPlayback() {{
-            player.play().then(() => {{
-                // Successfully started playback via user gesture
-                player.muted = false; // Unmute immediately
-                overlay.classList.add("hidden");
-            }}).catch(error => {{
-                console.error("Playback failed after user tap:", error);
-                // If it fails, leave the overlay visible
-            }});
+        let isUnmuted = false;
+
+        function checkAndUnmute() {{
+            if (!isUnmuted) {{
+                // This is the core hack: The first 'play' or 'unmute' must be user-initiated
+                player.play().then(() => {{
+                    player.muted = false;
+                    isUnmuted = true;
+                    // Optional: Add an attribute to change styling/show controls after unmuted
+                    player.setAttribute('data-unmuted', 'true'); 
+                }}).catch(e => {{
+                    // The browser may still refuse. If so, leave muted until next try.
+                    console.error("Autoplay/Unmute refused:", e);
+                }});
+                return true; // Indicates the unmuting process was attempted
+            }}
+            return false; // Already unmuted
         }}
 
-        // Listen for click on the overlay
-        overlay.addEventListener('click', startPlayback);
+        function togglePlay() {{
+            if (checkAndUnmute()) {{
+                // Do nothing else on the first press; the unmuting attempt is the action.
+                // The T9 '5' button text will show "Play/Pause/Unmute"
+                return; 
+            }}
+            
+            // Normal play/pause logic after successful unmute
+            if(player.paused) player.play();
+            else player.pause();
+        }}
         
-        // Player is paused by default, ready for user gesture
-        player.pause();
-
-
+        // --- Navigation and Utility Functions (Same as before) ---
         function goToStation(station) {{
             if (player) {{
                 player.pause();
@@ -215,16 +211,6 @@ def play_page(station_name):
             const pick = others.length ? others[Math.floor(Math.random() * others.length)]
                                        : STATIONS[Math.floor(Math.random() * STATIONS.length)];
             goToStation(pick);
-        }}
-
-        function togglePlay() {{
-            // If the overlay is visible, a togglePlay command acts as the initial 'Start' gesture
-            if (overlay.classList.contains("hidden")) {{
-                if(player.paused) player.play();
-                else player.pause();
-            }} else {{
-                startPlayback();
-            }}
         }}
 
         function toggleMiniFull() {{
@@ -289,14 +275,14 @@ def play_page(station_name):
         // --- T9 Keys ---
         document.addEventListener("keydown", function(e){{
             if(e.key === "1") toggleMiniFull();
-            else if(e.key === "4") goToStation("{prev_station}");
-            // '5' key now uses togglePlay, which handles the initial start
+            // '5' key is the core play/unmute button
             else if(e.key === "5") togglePlay();
+            else if(e.key === "4") goToStation("{prev_station}");
             else if(e.key === "6") goToStation("{next_station}");
             else if(e.key === "0") randomStation();
-            // '*' key tries to start playback if not running, then toggles sleep
             else if(e.key === "*") {{
-                if (overlay.classList.contains("hidden")) toggleSleep(); else startPlayback(); 
+                 // Try to start playback if muted/paused before engaging sleep timer
+                if (!isUnmuted) checkAndUnmute(); else toggleSleep();
             }}
         }});
         </script>
