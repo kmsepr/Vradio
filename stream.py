@@ -77,7 +77,7 @@ RADIO_STATIONS = {
 def generate_stream(url):
     """
     Transcodes the audio stream (url) and a static image (VIDEO_INPUT_FILE)
-    into a low-framerate video stream (FLV) to prevent audio timeouts.
+    into a low-framerate video stream (MPEG Transport Stream) to prevent audio timeouts.
     FFmpeg stderr is piped for debugging.
     """
     command = [
@@ -88,7 +88,7 @@ def generate_stream(url):
 
         # --- VIDEO INPUT/OPTIONS (Static Image) ---
         "-loop", "1",                      # Loop the image indefinitely
-        "-i", VIDEO_INPUT_FILE,            # Input the static image
+        "-i", VIDEO_INPUT_FILE,            # Input the static image (.png)
         "-r", "1",                         # Framerate: 1 FPS (minimal data)
         "-tune", "stillimage",             # Optimization for static image encoding
         "-shortest",                       # Stop video encoding when the audio stream ends
@@ -105,7 +105,8 @@ def generate_stream(url):
         
         "-pix_fmt", "yuv420p",             # Ensures compatibility with most players
         
-        "-f", "flv",                       # Output format: Flash Video (FLV)
+        # 🚨 HACK: Output as MPEG Transport Stream (MPEGTS)
+        "-f", "mpegts",                     
         "-"                                # Output to stdout
     ]
 
@@ -125,7 +126,7 @@ def generate_stream(url):
     except Exception as e:
         print(f"Stream error: {e}")
     finally:
-        # 🚨 Log FFmpeg errors/warnings before killing the process
+        # 🚨 Log FFmpeg errors/warnings 
         if process.stderr:
             error_output = process.stderr.read().decode('utf-8', errors='ignore')
             if error_output:
@@ -141,8 +142,8 @@ def stream_station(station_name):
     if not url:
         return "Station not found", 404
     
-    # MIME TYPE is video/x-flv
-    return Response(generate_stream(url), mimetype="video/x-flv")
+    # 🚨 MIME TYPE is video/mpeg (common for MPEG-TS video in browsers)
+    return Response(generate_stream(url), mimetype="video/mpeg")
 
 
 @app.route("/play/<station_name>")
@@ -179,7 +180,7 @@ def play_page(station_name):
             <h2>🎧 {station_name.replace('_',' ').title()}</h2>
             
             <video id="player" controls autoplay playsinline muted=true onloadedmetadata="this.muted=false" preload="auto">
-                <source src="/stream/{station_name}" type="video/x-flv">
+                <source src="/stream/{station_name}" type="video/mpeg">
                 Your browser does not support the video tag.
             </video>
             <div class="controls">
@@ -330,7 +331,7 @@ def index():
         document.addEventListener("keydown", function(e){{
             let page = {page};
             let total = {total_pages};
-            if(e.key==="1") window.location.href="/?page=1"; // quick home
+            if(e.key==="1") window.location.href="/?page=1"; # quick home
             else if(e.key==="3") window.location.href="/?page="+total;
             else if(e.key==="4" && page>1) window.location.href="/?page="+(page-1);
             else if(e.key==="6" && page<total) window.location.href="/?page="+(page+1);
