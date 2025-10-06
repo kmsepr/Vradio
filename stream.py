@@ -1,23 +1,31 @@
 import subprocess
 import time
 import shutil
+import os
 from flask import Flask, Response, request
 
 app = Flask(__name__)
 
-# Check ffmpeg
+# --- Configuration ---
+# ⚠️ Ensure this file exists in the same directory as the script!
+VIDEO_INPUT_FILE = "radio_bg.jpg" 
+STATIONS_PER_PAGE = 5
+
+# Check ffmpeg and video input
 if not shutil.which("ffmpeg"):
     raise RuntimeError("ffmpeg not found. Please install ffmpeg.")
+if not os.path.exists(VIDEO_INPUT_FILE):
+    # This is a critical error for the video stream implementation
+    raise RuntimeError(f"Video input file not found: {VIDEO_INPUT_FILE}. Please place an image file (e.g., a simple logo) in the script directory.")
+# ---------------------
+
 
 # 📡 Full list of radio stations
 RADIO_STATIONS = {
-
-"oman_radio": "https://partwota.cdn.mgmlcdn.com/omanrdoorg/omanrdo.stream_aac/chunklist.m3u8",
-
-"quran_radio_nablus": "http://www.quran-radio.org:8002/",
+    "oman_radio": "https://partwota.cdn.mgmlcdn.com/omanrdoorg/omanrdo.stream_aac/chunklist.m3u8",
+    "quran_radio_nablus": "http://www.quran-radio.org:8002/",
     "al_nour": "http://audiostreaming.itworkscdn.com:9066/",
     "allahu_akbar_radio": "http://66.45.232.132:9996/stream",
-
     "hajj_channel": "http://104.7.66.64:8005",
     "abc_islam": "http://s10.voscast.com:9276/stream",
     "eram_fm": "http://icecast2.edisimo.com:8000/eramfm.mp3",
@@ -54,10 +62,8 @@ RADIO_STATIONS = {
     "fm_gold": "https://airhlspush.pc.cdn.bitgravity.com/httppush/hispbaudio005/hispbaudio00564kbps.m3u8",
     "motivational_series": "http://104.7.66.64:8010",
     "deenagers_radio": "http://104.7.66.64:8003/",
-
     "river_nile_radio": "http://104.7.66.64:8087",
     "quran_radio_cairo": "http://n02.radiojar.com/8s5u5tpdtwzuv",
-    
     "omar_abdul_kafi_radio": "http://104.7.66.64:8007",
     "urdu_islamic_lecture": "http://144.91.121.54:27001/channel_02.aac",
     "hob_nabi": "http://216.245.210.78:8098/stream",
@@ -69,45 +75,71 @@ RADIO_STATIONS = {
     "vom_radio": "https://radio.psm.mv/draair",
 }
 
-STATIONS_PER_PAGE = 5
 
 def generate_stream(url):
-    while True:
-        process = subprocess.Popen(
-            [
-                "ffmpeg",
-                "-reconnect", "1",
-                "-reconnect_streamed", "1",
-                "-reconnect_delay_max", "10",
-                "-i", url,
-                "-vn",
-                "-ac", "1",
-                "-b:a", "40k",
-                "-f", "mp3",
-                "-"
-            ],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            bufsize=4096
-        )
-        try:
-            for chunk in iter(lambda: process.stdout.read(4096), b""):
-                yield chunk
-        except GeneratorExit:
-            process.kill()
-            break
-        except Exception as e:
-            print(f"Stream error: {e}")
-        finally:
-            process.kill()
-            time.sleep(3)
+    """
+    Transcodes the audio stream into a low-framerate video stream (image + audio).
+    This is intended to prevent audio timeouts on mobile/Chromium power-saving policies.
+    """
+    
+    command = [
+        "ffmpeg",
+        "-reconnect", "1",
+        "-reconnect_streamed", "1",
+        "-reconnect_delay_max", "10",
+
+        # --- VIDEO INPUT/OPTIONS (Static Image) ---
+        "-loop", "1",                      # Loop the image indefinitely
+        "-i", VIDEO_INPUT_FILE,            # Input the static image
+        "-r", "1",                         # Framerate: 1 FPS (minimal data)
+        "-tune", "stillimage",             # Optimization for static image encoding
+        "-shortest",                       # Stop video encoding when the audio stream ends
+        
+        "-i", url,                         # Input the audio stream
+
+        # --- OUTPUT MAPPING & ENCODING ---
+        "-map", "0:v:0",                   # Map the first video stream (the image)
+        "-map", "1:a:0",                   # Map the first audio stream (the radio)
+        "-c:v", "libx264",                 # Video codec: H.264
+        "-b:v", "100k",                    # Video bitrate (low)
+        "-c:a", "aac",                     # Audio codec: AAC (common for video containers)
+        "-b:a", "40k",                     # Audio bitrate
+        
+        "-pix_fmt", "yuv420p",             # Ensures compatibility with most players
+        
+        "-f", "flv",                       # Output format: Flash Video (FLV)
+        "-"                                # Output to stdout
+    ]
+
+    process = subprocess.Popen(
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        bufsize=4096
+    )
+
+    try:
+        for chunk in iter(lambda: process.stdout.read(4096), b""):
+            yield chunk
+    except GeneratorExit:
+        process.kill()
+        print("Stream closed by client.")
+    except Exception as e:
+        print(f"Stream error: {e}")
+    finally:
+        process.kill()
+        time.sleep(3)
+
 
 @app.route("/stream/<station_name>")
 def stream_station(station_name):
     url = RADIO_STATIONS.get(station_name)
     if not url:
         return "Station not found", 404
-    return Response(generate_stream(url), mimetype="audio/mpeg")
+    
+    # 🚨 MIME TYPE CHANGED to video/x-flv for the video stream
+    return Response(generate_stream(url), mimetype="video/x-flv")
+
 
 @app.route("/play/<station_name>")
 def play_page(station_name):
@@ -118,7 +150,7 @@ def play_page(station_name):
     idx = stations.index(station_name)
     prev_station = stations[idx - 1] if idx > 0 else stations[-1]
     next_station = stations[(idx + 1) % len(stations)]
-    stations_json = stations  # JS can use directly
+    stations_json = [s.replace('_', ' ') for s in stations] # Clean names for JS list
 
     html = f"""
     <html>
@@ -128,21 +160,24 @@ def play_page(station_name):
         <style>
             body {{ font-family: sans-serif; background: #000; color: #fff; text-align: center; margin:0; padding:10px; }}
             h2 {{ font-size:16px; margin:12px 0; }}
-            audio {{ width:100%; margin:10px 0; }}
+            /* 🚨 CSS adjusted for VIDEO element */
+            video {{ width:100%; max-width:240px; margin:10px auto; display:block; height:180px; background:#333; }} 
             .controls {{ display:flex; flex-wrap:wrap; justify-content:center; gap:6px; margin:10px 0; }}
             button {{ flex:1 1 30%; padding:8px 10px; font-size:13px; border-radius:8px; border:none; background:#007bff; color:white; min-width:90px; }}
             .info {{ font-size:11px; color:#bbb; margin-top:10px; }}
-            /* Mini mode */
+            /* Mini mode adjustments for video */
             .mini h2, .mini .controls, .mini .info {{ display:none; }}
-            .mini audio {{ width:70%; margin:5px auto; }}
+            .mini video {{ width:70%; height:120px; margin:5px auto; }}
         </style>
     </head>
     <body>
         <div id="playerUI" class="full">
             <h2>🎧 {station_name.replace('_',' ').title()}</h2>
-            <audio id="player" controls autoplay>
-                <source src="/stream/{station_name}" type="audio/mpeg">
-            </audio>
+            
+            <video id="player" controls autoplay playsinline muted=true onloadedmetadata="this.muted=false" preload="auto">
+                <source src="/stream/{station_name}" type="video/x-flv">
+                Your browser does not support the video tag.
+            </video>
             <div class="controls">
                 <button onclick="goToStation('{prev_station}')">⏮ Prev (4)</button>
                 <button onclick="togglePlay()">⏯ Play/Pause (5)</button>
@@ -235,7 +270,7 @@ def play_page(station_name):
         function toggleSleep() {{
             if(timerActive) stopTimer(); else startTimer();
         }}
-
+        
         // --- T9 Keys ---
         document.addEventListener("keydown", function(e){{
             if(e.key === "1") toggleMiniFull();
@@ -283,7 +318,7 @@ def index():
         </style>
     </head>
     <body>
-        <h2>🎙️ Audio Streams (Page {page}/{total_pages})</h2>
+        <h2>🎙️ Video Streams (Page {page}/{total_pages})</h2>
         {links_html}
         <div class="nav">{nav_html}</div>
         <div class="info">🔢 T9 Keys: 1=Mini/Full, 4=Prev Page, 6=Next Page, 0=Random</div>
