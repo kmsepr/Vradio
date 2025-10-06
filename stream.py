@@ -9,14 +9,13 @@ app = Flask(__name__)
 STATIONS_PER_PAGE = 5
 
 # ⚠️ CRITICAL: The static image file for the video stream.
-# Changed from .jpg to .png as requested.
 VIDEO_INPUT_FILE = "radio_bg.png" 
 
 # --- Pre-run Checks ---
 if not shutil.which("ffmpeg"):
     raise RuntimeError("ffmpeg not found. Please install ffmpeg.")
 if not os.path.exists(VIDEO_INPUT_FILE):
-    # This check will crash the application if the image is missing.
+    # This check ensures the image file is present before the app starts.
     raise RuntimeError(f"Video input file not found: {VIDEO_INPUT_FILE}. Please place an image file (e.g., a simple logo) in the script directory.")
 # ---------------------
 
@@ -79,6 +78,7 @@ def generate_stream(url):
     """
     Transcodes the audio stream (url) and a static image (VIDEO_INPUT_FILE)
     into a low-framerate video stream (FLV) to prevent audio timeouts.
+    FFmpeg stderr is piped for debugging.
     """
     command = [
         "ffmpeg",
@@ -112,7 +112,8 @@ def generate_stream(url):
     process = subprocess.Popen(
         command,
         stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
+        # 🚨 Capturing stderr for debugging purposes 
+        stderr=subprocess.PIPE,
         bufsize=4096
     )
 
@@ -124,6 +125,12 @@ def generate_stream(url):
     except Exception as e:
         print(f"Stream error: {e}")
     finally:
+        # 🚨 Log FFmpeg errors/warnings before killing the process
+        if process.stderr:
+            error_output = process.stderr.read().decode('utf-8', errors='ignore')
+            if error_output:
+                print(f"--- FFmpeg Error/Warning for {url} ---\n{error_output}\n----------------------------------")
+        
         process.kill()
         time.sleep(3)
 
