@@ -140,8 +140,6 @@ def play_page(station_name):
             /* Mini mode */
             .mini h2, .mini .controls, .mini .info {{ display:none; }}
             .mini audio {{ width:70%; margin:5px auto; }}
-            /* Hide the default audio controls until unmuted */
-            #player:not([data-unmuted]) {{ opacity: 0; }} 
         </style>
     </head>
     <body>
@@ -167,17 +165,29 @@ def play_page(station_name):
         const player = document.getElementById("player");
         
         let isUnmuted = false;
+        let heartbeatInterval = null;
+
+        // 🚨 NEW: Core Heartbeat Loop 🚨
+        function startHeartbeat() {{
+            if (heartbeatInterval) clearInterval(heartbeatInterval);
+            heartbeatInterval = setInterval(() => {{
+                // Check if the stream stalled (paused unexpectedly)
+                if (isUnmuted && player.paused && !player.ended) {{
+                    console.log("Heartbeat: Restarting paused stream.");
+                    player.play().catch(e => console.log("Heartbeat failed to restart:", e));
+                }}
+                // This timer running in the background helps keep the JS engine active
+            }}, 10000); // Check every 10 seconds
+        }}
 
         function checkAndUnmute() {{
             if (!isUnmuted) {{
-                // This is the core hack: The first 'play' or 'unmute' must be user-initiated
+                // This is the core hack: First press handles the unmute/play
                 player.play().then(() => {{
                     player.muted = false;
                     isUnmuted = true;
-                    // Optional: Add an attribute to change styling/show controls after unmuted
-                    player.setAttribute('data-unmuted', 'true'); 
+                    startHeartbeat(); // Start heartbeat on successful play
                 }}).catch(e => {{
-                    // The browser may still refuse. If so, leave muted until next try.
                     console.error("Autoplay/Unmute refused:", e);
                 }});
                 return true; // Indicates the unmuting process was attempted
@@ -187,21 +197,26 @@ def play_page(station_name):
 
         function togglePlay() {{
             if (checkAndUnmute()) {{
-                // Do nothing else on the first press; the unmuting attempt is the action.
-                // The T9 '5' button text will show "Play/Pause/Unmute"
-                return; 
+                return; // First press was for unmuting
             }}
             
             // Normal play/pause logic after successful unmute
-            if(player.paused) player.play();
-            else player.pause();
+            if(player.paused) {{
+                player.play();
+                startHeartbeat();
+            }}
+            else {{
+                player.pause();
+                if (heartbeatInterval) clearInterval(heartbeatInterval);
+            }}
         }}
         
-        // --- Navigation and Utility Functions (Same as before) ---
+        // --- Navigation and Utility Functions ---
         function goToStation(station) {{
             if (player) {{
                 player.pause();
                 player.src = "";
+                if (heartbeatInterval) clearInterval(heartbeatInterval); // Stop heartbeat on navigation
             }}
             window.location.href = "/play/" + station;
         }}
@@ -275,13 +290,13 @@ def play_page(station_name):
         // --- T9 Keys ---
         document.addEventListener("keydown", function(e){{
             if(e.key === "1") toggleMiniFull();
+            else if(e.key === "4") goToStation("{prev_station}");
             // '5' key is the core play/unmute button
             else if(e.key === "5") togglePlay();
-            else if(e.key === "4") goToStation("{prev_station}");
             else if(e.key === "6") goToStation("{next_station}");
             else if(e.key === "0") randomStation();
             else if(e.key === "*") {{
-                 // Try to start playback if muted/paused before engaging sleep timer
+                // Try to start playback if muted/paused before engaging sleep timer
                 if (!isUnmuted) checkAndUnmute(); else toggleSleep();
             }}
         }});
