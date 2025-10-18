@@ -1,44 +1,29 @@
 import subprocess
 import time
 import shutil
-from flask import Flask, Response, request
-import os 
+from flask import Flask, Response, request, redirect
 
 app = Flask(__name__)
 
-# Check ffmpeg
+# ✅ Check if ffmpeg is available
 if not shutil.which("ffmpeg"):
     raise RuntimeError("ffmpeg not found. Please install ffmpeg.")
 
 # 📡 Full list of radio stations
 RADIO_STATIONS = {
-"oman_radio": "https://partwota.cdn.mgmlcdn.com/omanrdoorg/omanrdo.stream_aac/chunklist.m3u8",
-"quran_radio_nablus": "http://www.quran-radio.org:8002/",
-    "al_nour": "http://audiostreaming.itworkscdn.com:9066/",
-    "allahu_akbar_radio": "http://66.45.232.132:9996/stream",
-    "hajj_channel": "http://104.7.66.64:8005",
-    "abc_islam": "http://s10.voscast.com:9276/stream",
-    "eram_fm": "http://icecast2.edisimo.com:8000/eramfm.mp3",
-    "al_sumood_fm": "http://us3.internet-radio.com/proxy/alsumoodfm2020?mp=/stream",
-    "nur_ala_nur": "http://104.7.66.64:8011/",
-    "ruqya_radio": "http://104.7.66.64:8004",
-    "seiyun_radio": "http://s2.radio.co/s26c62011e/listen",
-    "noor_al_eman": "http://edge.mixlr.com/channel/boaht",
-    "sam_yemen": "https://edge.mixlr.com/channel/kijwr",
-    "afaq": "https://edge.mixlr.com/channel/rumps",
-    "alfasi_radio": "https://qurango.net/radio/mishary_alafasi",
-    "tafsir_quran": "https://radio.quranradiotafsir.com/9992/stream",
-    "sirat_al_mustaqim": "http://104.7.66.64:8091/stream",
     "muthnabi_radio": "http://cast4.my-control-panel.com/proxy/muthnabi/stream",
-    "radio_nellikka": "https://usa20.fastcast4u.com:2130/stream",
-    "air_kavarati": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio189/chunklist.m3u8",
+     "radio_nellikka": "https://usa20.fastcast4u.com:2130/stream",
+
+"air_kavarati": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio189/chunklist.m3u8",
     "air_calicut": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio082/chunklist.m3u8",
     "manjeri_fm": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio101/chunklist.m3u8",
     "real_fm": "http://air.pc.cdn.bitgravity.com/air/live/pbaudio083/playlist.m3u8",
     "safari_tv": "https://j78dp346yq5r-hls-live.5centscdn.com/safari/live.stream/chunks.m3u8",
     "victers_tv": "https://932y4x26ljv8-hls-live.5centscdn.com/victers/tv.stream/victers/tv1/chunks.m3u8",
     "kairali_we": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/wetv_nim_https/050522/wetv/playlist.m3u8",
-    "mazhavil_manorama": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/mazhavilmanorama_nim_https/050522/mazhavilmanorama/playlist.m3u8",
+
+"mazhavil_manorama": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/mazhavilmanorama_nim_https/050522/mazhavilmanorama/playlist.m3u8",
+
     "malayalam_1": "http://167.114.131.90:5412/stream",
     "radio_digital_malayali": "https://radio.digitalmalayali.in/listen/stream/radio.mp3",
     "malayalam_90s": "https://stream-159.zeno.fm/gm3g9amzm0hvv?zs-x-7jq8ksTOav9ZhlYHi9xw",
@@ -52,43 +37,66 @@ RADIO_STATIONS = {
     "fm_gold": "https://airhlspush.pc.cdn.bitgravity.com/httppush/hispbaudio005/hispbaudio00564kbps.m3u8",
     "motivational_series": "http://104.7.66.64:8010",
     "deenagers_radio": "http://104.7.66.64:8003/",
+    "hajj_channel": "http://104.7.66.64:8005",
+    "abc_islam": "http://s10.voscast.com:9276/stream",
+    "eram_fm": "http://icecast2.edisimo.com:8000/eramfm.mp3",
+    "al_sumood_fm": "http://us3.internet-radio.com/proxy/alsumoodfm2020?mp=/stream",
+    "nur_ala_nur": "http://104.7.66.64:8011/",
+    "ruqya_radio": "http://104.7.66.64:8004",
+    "seiyun_radio": "http://s2.radio.co/s26c62011e/listen",
+    "noor_al_eman": "http://edge.mixlr.com/channel/boaht",
+    "sam_yemen": "https://edge.mixlr.com/channel/kijwr",
+    "afaq": "https://edge.mixlr.com/channel/rumps",
+    "alfasi_radio": "https://qurango.net/radio/mishary_alafasi",
+    "tafsir_quran": "https://radio.quranradiotafsir.com/9992/stream",
+    "sirat_al_mustaqim": "http://104.7.66.64:8091/stream",
     "river_nile_radio": "http://104.7.66.64:8087",
     "quran_radio_cairo": "http://n02.radiojar.com/8s5u5tpdtwzuv",
+    "quran_radio_nablus": "http://www.quran-radio.org:8002/",
+    "al_nour": "http://audiostreaming.itworkscdn.com:9066/",
+    "allahu_akbar_radio": "http://66.45.232.132:9996/stream",
     "omar_abdul_kafi_radio": "http://104.7.66.64:8007",
     "urdu_islamic_lecture": "http://144.91.121.54:27001/channel_02.aac",
     "hob_nabi": "http://216.245.210.78:8098/stream",
     "sanaa_radio": "http://dc5.serverse.com/proxy/pbmhbvxs/stream",
     "rubat_ataq": "http://stream.zeno.fm/5tpfc8d7xqruv",
     "al_jazeera": "http://live-hls-audio-web-aja.getaj.net/VOICE-AJA/index.m3u8",
+
+
+
+
     "bloomberg_tv": "https://bloomberg-bloomberg-3-br.samsung.wurl.tv/manifest/playlist.m3u8",
     "france_24": "https://live.france24.com/hls/live/2037218/F24_EN_HI_HLS/master_500.m3u8",
-    "vom_radio": "https://radio.psm.mv/draair",
+
+"vom_radio": "https://radio.psm.mv/draair",
 }
 
-STATIONS_PER_PAGE = 5
+STATIONS_PER_PAGE = 10
+KEEPALIVE_INTERVAL = 30  # seconds
+
 
 def generate_stream(url):
-    """
-    Transcodes the audio stream to MP3 (40kbps) with FFmpeg error logging enabled.
-    """
     while True:
         process = subprocess.Popen(
-            [
-                "ffmpeg",
-                "-reconnect", "1",
-                "-reconnect_streamed", "1",
-                "-reconnect_delay_max", "10",
-                "-i", url,
-                "-vn",
-                "-ac", "1",
-                "-b:a", "40k",
-                "-f", "mp3",
-                "-"
-            ],
+   [
+    "ffmpeg",
+    "-reconnect", "1",
+    "-reconnect_streamed", "1",
+    "-reconnect_delay_max", "10",
+    "-i", url,
+    "-vn",
+    "-ac", "1",
+    "-b:a", "40k",
+    "-f", "mp3",
+    "-"
+],
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE, # Capturing stderr for debugging
-            bufsize=4096
+            stderr=subprocess.DEVNULL,
+            bufsize=4096   # moderate buffer
         )
+
+        print(f"🎵 Streaming from: {url}")
+
         try:
             for chunk in iter(lambda: process.stdout.read(4096), b""):
                 yield chunk
@@ -96,264 +104,129 @@ def generate_stream(url):
             process.kill()
             break
         except Exception as e:
-            print(f"Stream generation error: {e}")
+            print(f"⚠️ Stream error: {e}")
         finally:
-            # Log FFmpeg errors/warnings 
-            if process.stderr:
-                error_output = process.stderr.read().decode('utf-8', errors='ignore')
-                if error_output:
-                    print(f"--- FFmpeg Error/Warning for {url} ---\n{error_output}\n----------------------------------")
-            
             process.kill()
+            print("🔁 Restarting FFmpeg in 3s...")
             time.sleep(3)
 
 @app.route("/stream/<station_name>")
 def stream_station(station_name):
     url = RADIO_STATIONS.get(station_name)
     if not url:
-        return "Station not found", 404
+        return "⚠️ Station not found", 404
     return Response(generate_stream(url), mimetype="audio/mpeg")
 
-@app.route("/play/<station_name>")
-def play_page(station_name):
-    stations = list(RADIO_STATIONS.keys())
-    if station_name not in stations:
-        return "Station not found", 404
 
-    idx = stations.index(station_name)
-    prev_station = stations[idx - 1] if idx > 0 else stations[-1]
-    next_station = stations[(idx + 1) % len(stations)]
-    stations_json = stations
+@app.route("/<station_name>")
+def direct_station_redirect(station_name):
+    url = RADIO_STATIONS.get(station_name)
+    if not url:
+        return "⚠️ Station not found", 404
+    return redirect(url)
 
-    html = f"""
-    <html>
-    <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Now Playing</title>
-        <style>
-            body {{ font-family: sans-serif; background: #000; color: #fff; text-align: center; margin:0; padding:10px; }}
-            h2 {{ font-size:16px; margin:12px 0; }}
-            audio {{ width:100%; margin:10px 0; }}
-            .controls {{ display:flex; flex-wrap:wrap; justify-content:center; gap:6px; margin:10px 0; }}
-            button {{ flex:1 1 30%; padding:8px 10px; font-size:13px; border-radius:8px; border:none; background:#007bff; color:white; min-width:90px; }}
-            .info {{ font-size:11px; color:#bbb; margin-top:10px; }}
-            /* Mini mode */
-            .mini h2, .mini .controls, .mini .info {{ display:none; }}
-            .mini audio {{ width:70%; margin:5px auto; }}
-        </style>
-    </head>
-    <body>
-        <div id="playerUI" class="full">
-            <h2>🎧 {station_name.replace('_',' ').title()}</h2>
-            
-            <audio id="player" controls autoplay muted>
-                <source src="/stream/{station_name}" type="audio/mpeg">
-            </audio>
-
-            <div class="controls">
-                <button onclick="goToStation('{prev_station}')">⏮ Prev (4)</button>
-                <button onclick="togglePlay()">⏯ Play/Pause (5)</button>
-                <button onclick="goToStation('{next_station}')">Next (6) ⏭</button>
-                <button onclick="randomStation()">🎲 Random (0)</button>
-                <button onclick="toggleSleep()" id="sleepBtn">⏱ Sleep (20m)</button>
-            </div>
-            <div class="info">🔢 T9 Keys → 1=Mini/Full | 4=Prev | 5=Play/Pause/Unmute | 6=Next | 0=Random | *=Sleep</div>
-        </div>
-        <script>
-        const STATIONS = {stations_json};
-        const CURRENT = "{station_name}";
-        const player = document.getElementById("player");
-        
-        let isUnmuted = false;
-        let heartbeatInterval = null;
-
-        // 🚨 NEW: Core Heartbeat Loop 🚨
-        function startHeartbeat() {{
-            if (heartbeatInterval) clearInterval(heartbeatInterval);
-            heartbeatInterval = setInterval(() => {{
-                // Check if the stream stalled (paused unexpectedly)
-                if (isUnmuted && player.paused && !player.ended) {{
-                    console.log("Heartbeat: Restarting paused stream.");
-                    player.play().catch(e => console.log("Heartbeat failed to restart:", e));
-                }}
-                // This timer running in the background helps keep the JS engine active
-            }}, 10000); // Check every 10 seconds
-        }}
-
-        function checkAndUnmute() {{
-            if (!isUnmuted) {{
-                // This is the core hack: First press handles the unmute/play
-                player.play().then(() => {{
-                    player.muted = false;
-                    isUnmuted = true;
-                    startHeartbeat(); // Start heartbeat on successful play
-                }}).catch(e => {{
-                    console.error("Autoplay/Unmute refused:", e);
-                }});
-                return true; // Indicates the unmuting process was attempted
-            }}
-            return false; // Already unmuted
-        }}
-
-        function togglePlay() {{
-            if (checkAndUnmute()) {{
-                return; // First press was for unmuting
-            }}
-            
-            // Normal play/pause logic after successful unmute
-            if(player.paused) {{
-                player.play();
-                startHeartbeat();
-            }}
-            else {{
-                player.pause();
-                if (heartbeatInterval) clearInterval(heartbeatInterval);
-            }}
-        }}
-        
-        // --- Navigation and Utility Functions ---
-        function goToStation(station) {{
-            if (player) {{
-                player.pause();
-                player.src = "";
-                if (heartbeatInterval) clearInterval(heartbeatInterval); // Stop heartbeat on navigation
-            }}
-            window.location.href = "/play/" + station;
-        }}
-
-        function randomStation() {{
-            const others = STATIONS.filter(s => s !== CURRENT);
-            const pick = others.length ? others[Math.floor(Math.random() * others.length)]
-                                       : STATIONS[Math.floor(Math.random() * STATIONS.length)];
-            goToStation(pick);
-        }}
-
-        function toggleMiniFull() {{
-            const ui = document.getElementById("playerUI");
-            if (ui.classList.contains("mini")) {{
-                ui.classList.remove("mini");
-                ui.classList.add("full");
-            }} else {{
-                ui.classList.remove("full");
-                ui.classList.add("mini");
-            }}
-        }}
-
-        // --- Sleep Timer ---
-        let timerSeconds = 0;
-        let countdown = null;
-        let timerActive = false;
-        const sleepBtn = document.getElementById("sleepBtn");
-
-        function formatTime(s) {{
-            const m = Math.floor(s / 60);
-            const sec = s % 60;
-            return String(m).padStart(2,'0') + ":" + String(sec).padStart(2,'0');
-        }}
-
-        function updateTimerUI() {{
-            if(timerActive){{
-                sleepBtn.innerText = "⏱ Sleep On (" + formatTime(timerSeconds) + ")";
-            }}
-        }}
-
-        function tick() {{
-            if(!timerActive) return;
-            if(timerSeconds <= 0){{
-                player.pause();
-                stopTimer();
-                return;
-            }}
-            timerSeconds--;
-            updateTimerUI();
-        }}
-
-        function startTimer() {{
-            timerSeconds = 20*60; 
-            timerActive = true;
-            clearInterval(countdown);
-            updateTimerUI();
-            countdown = setInterval(tick,1000);
-        }}
-
-        function stopTimer() {{
-            timerActive = false;
-            clearInterval(countdown);
-            countdown = null;
-            sleepBtn.innerText = "⏱ Sleep (20m)";
-        }}
-
-        function toggleSleep() {{
-            if(timerActive) stopTimer(); else startTimer();
-        }}
-
-        // --- T9 Keys ---
-        document.addEventListener("keydown", function(e){{
-            if(e.key === "1") toggleMiniFull();
-            else if(e.key === "4") goToStation("{prev_station}");
-            // '5' key is the core play/unmute button
-            else if(e.key === "5") togglePlay();
-            else if(e.key === "6") goToStation("{next_station}");
-            else if(e.key === "0") randomStation();
-            else if(e.key === "*") {{
-                // Try to start playback if muted/paused before engaging sleep timer
-                if (!isUnmuted) checkAndUnmute(); else toggleSleep();
-            }}
-        }});
-        </script>
-    </body>
-    </html>
-    """
-    return html
 
 @app.route("/")
 def index():
     page = int(request.args.get("page", 1))
-    stations = list(RADIO_STATIONS.keys())
-    total_pages = (len(stations)+STATIONS_PER_PAGE-1)//STATIONS_PER_PAGE
+    station_names = list(RADIO_STATIONS.keys())
+    total_pages = (len(station_names) + STATIONS_PER_PAGE - 1) // STATIONS_PER_PAGE
 
-    start = (page-1)*STATIONS_PER_PAGE
-    end = start+STATIONS_PER_PAGE
-    paged_stations = stations[start:end]
+    start = (page - 1) * STATIONS_PER_PAGE
+    end = start + STATIONS_PER_PAGE
+    paged_stations = station_names[start:end]
 
-    links_html = "".join(f"<a href='/play/{s}'>{s.replace('_',' ').title()}</a>" for s in paged_stations)
+    links_html = "".join(
+        f"<a href='/stream/{name}'>{name.replace('_', ' ').title()}</a>"
+        for name in paged_stations
+    )
 
     nav_html = ""
     if page > 1:
-        nav_html += f"<a href='/?page=1'>⏮️ First</a><a href='/?page={page-1}'>◀️ Prev</a>"
+        nav_html += f"<a href='/?page=1'>⏮️ First</a>"
+        nav_html += f"<a href='/?page={page - 1}'>◀️ Prev</a>"
     if page < total_pages:
-        nav_html += f"<a href='/?page={page+1}'>Next ▶️</a><a href='/?page={total_pages}'>Last ⏭️</a>"
+        nav_html += f"<a href='/?page={page + 1}'>Next ▶️</a>"
+        nav_html += f"<a href='/?page={total_pages}'>Last ⏭️</a>"
 
     html = f"""
     <html>
     <head>
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>📻 Vradio</title>
+        <title>🎧 Radio Streams</title>
         <style>
-            body {{ font-family:sans-serif; font-size:14px; padding:10px; margin:0; background:#f0f0f0; }}
-            h2 {{ font-size:16px; text-align:center; margin:10px 0; }}
-            a {{ display:block; background:#007bff; color:white; text-decoration:none; padding:8px; margin:4px 0; border-radius:6px; text-align:center; font-size:13px; }}
-            .nav {{ display:flex; justify-content:space-between; flex-wrap:wrap; margin-top:10px; gap:4px; }}
-            .info {{ font-size:11px; text-align:center; margin-top:8px; color:#555; }}
+            body {{
+                font-family: sans-serif;
+                font-size: 14px;
+                padding: 10px;
+                margin: 0;
+                background: #f0f0f0;
+            }}
+            h2 {{
+                font-size: 16px;
+                text-align: center;
+                margin: 10px 0;
+            }}
+            a {{
+                display: block;
+                background: #007bff;
+                color: white;
+                text-decoration: none;
+                padding: 8px;
+                margin: 4px 0;
+                border-radius: 6px;
+                text-align: center;
+                font-size: 13px;
+            }}
+            .nav {{
+                display: flex;
+                justify-content: space-between;
+                flex-wrap: wrap;
+                margin-top: 10px;
+                gap: 4px;
+            }}
+            .info {{
+                font-size: 11px;
+                text-align: center;
+                margin-top: 8px;
+                color: #555;
+            }}
         </style>
     </head>
     <body>
         <h2>🎙️ Audio Streams (Page {page}/{total_pages})</h2>
         {links_html}
         <div class="nav">{nav_html}</div>
-        <div class="info">🔢 T9 Keys: 1=Mini/Full, 4=Prev Page, 6=Next Page, 0=Random</div>
+        <div class="info">🔢 T9 Keys: 1=First, 4=Prev, 6=Next, 3=Last, 5=Random, 0=Exit</div>
+
         <script>
-        document.addEventListener("keydown", function(e){{
+        document.addEventListener("keydown", function(e) {{
+            const key = e.key;
             let page = {page};
             let total = {total_pages};
-            if(e.key==="1") window.location.href="/?page=1"; 
-            else if(e.key==="3") window.location.href="/?page="+total;
-            else if(e.key==="4" && page>1) window.location.href="/?page="+(page-1);
-            else if(e.key==="6" && page<total) window.location.href="/?page="+(page+1);
-            else if(e.key==="0"){{
-                const links = document.querySelectorAll("a[href^='/play/']");
-                const random = links[Math.floor(Math.random()*links.length)];
-                if(random) random.click();
+
+            if (key === "1") {{
+                window.location.href = "/?page=1";
+            }} else if (key === "2") {{
+                window.location.reload();
+            }} else if (key === "3") {{
+                window.location.href = "/?page=" + total;
+            }} else if (key === "4" && page > 1) {{
+                window.location.href = "/?page=" + (page - 1);
+            }} else if (key === "5") {{
+                const links = document.querySelectorAll("a[href^='/stream/']");
+                const random = links[Math.floor(Math.random() * links.length)];
+                if (random) random.click();
+            }} else if (key === "6" && page < total) {{
+                window.location.href = "/?page=" + (page + 1);
+            }} else if (key === "7") {{
+                window.scrollTo({{ top: 0, behavior: "smooth" }});
+            }} else if (key === "8") {{
+                window.scrollTo({{ top: document.body.scrollHeight, behavior: "smooth" }});
+            }} else if (key === "9") {{
+                window.location.href = "/?page=" + (page < total ? page + 1 : 1);
+            }} else if (key === "0") {{
+                window.location.href = "about:blank";
             }}
         }});
         </script>
@@ -361,6 +234,7 @@ def index():
     </html>
     """
     return html
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000)
