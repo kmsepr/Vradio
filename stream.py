@@ -1,10 +1,13 @@
 import subprocess
 import time
-from flask import Flask, Response
+import math
+from flask import Flask, Response, request, render_template_string
+
+# --- Configuration and Setup ---
 
 app = Flask(__name__)
 
-# 📡 List of radio stations
+# 📡 List of radio stations (kept as is)
 RADIO_STATIONS = {
     "muthnabi_radio": "http://cast4.my-control-panel.com/proxy/muthnabi/stream",
     "radio_keralam": "http://ice31.securenetsystems.net/RADIOKERAL",
@@ -67,6 +70,111 @@ RADIO_STATIONS = {
     "vom_radio": "https://radio.psm.mv/draair",
 }
 
+# Convert station keys to a list for indexed access
+STATION_NAMES = list(RADIO_STATIONS.keys())
+STATIONS_PER_PAGE = 5
+
+# --- Home Page with Pagination ---
+@app.route("/")
+def home():
+    # 1. Get current page from query parameter, default to 1
+    try:
+        page = int(request.args.get('page', 1))
+    except ValueError:
+        page = 1
+    
+    # 2. Calculate pagination details
+    total_stations = len(STATION_NAMES)
+    total_pages = math.ceil(total_stations / STATIONS_PER_PAGE)
+    
+    # Ensure page is within valid range
+    if page < 1:
+        page = 1
+    if page > total_pages and total_pages > 0:
+        page = total_pages
+
+    # 3. Determine slice indices for the current page
+    start_index = (page - 1) * STATIONS_PER_PAGE
+    end_index = start_index + STATIONS_PER_PAGE
+    
+    # 4. Get stations for the current page
+    stations_on_page = STATION_NAMES[start_index:end_index]
+
+    # 5. Render HTML
+    html_content = f"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>📻 Radio Stations Home</title>
+        <style>
+            body {{ font-family: sans-serif; margin: 20px; }}
+            h1 {{ color: #333; }}
+            ul {{ list-style-type: none; padding: 0; }}
+            li {{ margin-bottom: 10px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }}
+            a {{ text-decoration: none; color: #007BFF; font-weight: bold; }}
+            a:hover {{ text-decoration: underline; color: #0056b3; }}
+            .controls {{ margin-top: 20px; }}
+            .controls a {{ padding: 8px 15px; border: 1px solid #007BFF; margin: 0 5px; border-radius: 5px; display: inline-block; }}
+            .controls .current {{ background-color: #007BFF; color: white; border-color: #007BFF; cursor: default; }}
+            .controls .disabled {{ color: #aaa; border-color: #eee; cursor: not-allowed; }}
+            .player {{ display: block; margin-top: 5px; color: #28a745; }}
+            .player:hover {{ color: #1e7e34; }}
+        </style>
+    </head>
+    <body>
+        <h1>📻 All Radio Stations (Page {page} of {total_pages})</h1>
+        <ul>
+    """
+
+    for station_name in stations_on_page:
+        # Create a user-friendly display name
+        display_name = station_name.replace('_', ' ').title()
+        
+        # Link to the raw stream (for player/audio element)
+        stream_link = f'/{station_name}'
+        
+        html_content += f"""
+            <li>
+                <strong>{display_name}</strong>
+                <a href="{stream_link}" class="player" target="_blank">▶️ Stream (MP3)</a>
+                <p style="font-size: 0.8em; color: #666; margin: 5px 0 0;">Listen by navigating to the stream link and playing it in a compatible audio player or browser.</p>
+            </li>
+        """
+
+    html_content += """
+        </ul>
+        <div class="controls">
+    """
+    
+    # Pagination links
+    if page > 1:
+        html_content += f'<a href="/?page={page - 1}">← Previous</a>'
+    else:
+        html_content += '<span class="disabled">← Previous</span>'
+        
+    for p in range(1, total_pages + 1):
+        if p == page:
+            html_content += f'<span class="current">{p}</span>'
+        else:
+            html_content += f'<a href="/?page={p}">{p}</a>'
+
+    if page < total_pages:
+        html_content += f'<a href="/?page={page + 1}">Next →</a>'
+    else:
+        html_content += '<span class="disabled">Next →</span>'
+    
+    html_content += """
+        </div>
+    </body>
+    </html>
+    """
+    
+    return render_template_string(html_content)
+
+# --- Streaming Function (Kept as is) ---
+
 # 🔄 Streaming function with error handling
 def generate_stream(url):
     process = None
@@ -97,14 +205,19 @@ def generate_stream(url):
         print("🔄 FFmpeg stopped, restarting stream...")
         time.sleep(5)
 
+# --- Stream API (Kept as is) ---
+
 # 🌍 API to stream a station
 @app.route("/<station_name>")
 def stream(station_name):
     url = RADIO_STATIONS.get(station_name)
     if not url:
         return "⚠️ Station not found", 404
+    # Note: Returning the audio/mpeg stream directly.
     return Response(generate_stream(url), mimetype="audio/mpeg")
 
-# 🚀 Launch the app
+# --- Launch the app ---
+
 if __name__ == "__main__":
+    # Ensure you have FFmpeg installed and accessible in your environment's PATH!
     app.run(host="0.0.0.0", port=8000, debug=True)
