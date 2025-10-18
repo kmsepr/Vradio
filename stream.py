@@ -1,29 +1,13 @@
 import subprocess
 import time
-import shutil
-from flask import Flask, Response, request, redirect
+from flask import Flask, Response
 
 app = Flask(__name__)
 
-# ✅ Check if ffmpeg is available
-if not shutil.which("ffmpeg"):
-    raise RuntimeError("ffmpeg not found. Please install ffmpeg.")
-
-# 📡 Full list of radio stations
+# 📡 List of radio stations
 RADIO_STATIONS = {
     "muthnabi_radio": "http://cast4.my-control-panel.com/proxy/muthnabi/stream",
-     "radio_nellikka": "https://usa20.fastcast4u.com:2130/stream",
-
-"air_kavarati": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio189/chunklist.m3u8",
-    "air_calicut": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio082/chunklist.m3u8",
-    "manjeri_fm": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio101/chunklist.m3u8",
-    "real_fm": "http://air.pc.cdn.bitgravity.com/air/live/pbaudio083/playlist.m3u8",
-    "safari_tv": "https://j78dp346yq5r-hls-live.5centscdn.com/safari/live.stream/chunks.m3u8",
-    "victers_tv": "https://932y4x26ljv8-hls-live.5centscdn.com/victers/tv.stream/victers/tv1/chunks.m3u8",
-    "kairali_we": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/wetv_nim_https/050522/wetv/playlist.m3u8",
-
-"mazhavil_manorama": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/mazhavilmanorama_nim_https/050522/mazhavilmanorama/playlist.m3u8",
-
+    "radio_keralam": "http://ice31.securenetsystems.net/RADIOKERAL",
     "malayalam_1": "http://167.114.131.90:5412/stream",
     "radio_digital_malayali": "https://radio.digitalmalayali.in/listen/stream/radio.mp3",
     "malayalam_90s": "https://stream-159.zeno.fm/gm3g9amzm0hvv?zs-x-7jq8ksTOav9ZhlYHi9xw",
@@ -61,180 +45,66 @@ RADIO_STATIONS = {
     "sanaa_radio": "http://dc5.serverse.com/proxy/pbmhbvxs/stream",
     "rubat_ataq": "http://stream.zeno.fm/5tpfc8d7xqruv",
     "al_jazeera": "http://live-hls-audio-web-aja.getaj.net/VOICE-AJA/index.m3u8",
-
-
-
-
+    "asianet_news": "https://vidcdn.vidgyor.com/asianet-origin/audioonly/chunks.m3u8",
+    "air_kavarati": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio189/chunklist.m3u8",
+    "air_calicut": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio082/chunklist.m3u8",
+    "manjeri_fm": "https://air.pc.cdn.bitgravity.com/air/live/pbaudio101/chunklist.m3u8",
+    "real_fm": "http://air.pc.cdn.bitgravity.com/air/live/pbaudio083/playlist.m3u8",
+    "vom_news": "https://psmnews.mv/stream/radio-dhivehi-raajjeyge-adu",
+    "safari_tv": "https://j78dp346yq5r-hls-live.5centscdn.com/safari/live.stream/chunks.m3u8",
+    "victers_tv": "https://932y4x26ljv8-hls-live.5centscdn.com/victers/tv.stream/victers/tv1/chunks.m3u8",
+    "kairali_we": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/wetv_nim_https/050522/wetv/playlist.m3u8",
+    "flowers_tv": "http://103.199.161.254/Content/flowers/Live/Channel(Flowers)/index.m3u8",
+    "dd_malayalam": "https://d3eyhgoylams0m.cloudfront.net/v1/manifest/93ce20f0f52760bf38be911ff4c91ed02aa2fd92/ed7bd2c7-8d10-4051-b397-2f6b90f99acb/562ee8f9-9950-48a0-ba1d-effa00cf0478/2.m3u8",
+    "amrita_tv": "https://dr1zhpsuem5f4.cloudfront.net/master.m3u8",
+    "24_news": "https://segment.yuppcdn.net/110322/channel24/playlist.m3u8",
+    "mazhavil_manorama": "https://yuppmedtaorire.akamaized.net/v1/master/a0d007312bfd99c47f76b77ae26b1ccdaae76cb1/mazhavilmanorama_nim_https/050522/mazhavilmanorama/playlist.m3u8",
+    "manorama_news": "http://103.199.161.254/Content/manoramanews/Live/Channel(ManoramaNews)/index.m3u8",
+    "aaj_tak": "https://feeds.intoday.in/aajtak/api/aajtakhd/master.m3u8",
     "bloomberg_tv": "https://bloomberg-bloomberg-3-br.samsung.wurl.tv/manifest/playlist.m3u8",
     "france_24": "https://live.france24.com/hls/live/2037218/F24_EN_HI_HLS/master_500.m3u8",
-
-"vom_radio": "https://radio.psm.mv/draair",
+    "n1_news": "https://best-str.umn.cdn.united.cloud/stream?stream=sp1400&sp=n1info&channel=n1bos&u=n1info&p=n1Sh4redSecre7iNf0&player=m3u8",
+    "vom_radio": "https://radio.psm.mv/draair",
 }
 
-STATIONS_PER_PAGE = 10
-KEEPALIVE_INTERVAL = 30  # seconds
-
-
+# 🔄 Streaming function with error handling
 def generate_stream(url):
+    process = None
     while True:
+        if process:
+            process.kill()
+
         process = subprocess.Popen(
-   [
-    "ffmpeg",
-    "-reconnect", "1",
-    "-reconnect_streamed", "1",
-    "-reconnect_delay_max", "10",
-    "-i", url,
-    "-vn",
-    "-ac", "1",
-    "-b:a", "40k",
-    "-f", "mp3",
-    "-"
-],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            bufsize=4096   # moderate buffer
+            [
+                "ffmpeg", "-reconnect", "1", "-reconnect_streamed", "1",
+                "-reconnect_delay_max", "10", "-fflags", "nobuffer", "-flags", "low_delay",
+                "-i", url, "-vn", "-ac", "1", "-b:a", "40k", "-buffer_size", "1024k", "-f", "mp3", "-"
+            ],
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=8192
         )
 
-        print(f"🎵 Streaming from: {url}")
+        print(f"🎵 Streaming from: {url} (Mono, 40kbps)")
 
         try:
-            for chunk in iter(lambda: process.stdout.read(4096), b""):
+            for chunk in iter(lambda: process.stdout.read(8192), b""):
                 yield chunk
         except GeneratorExit:
             process.kill()
             break
         except Exception as e:
             print(f"⚠️ Stream error: {e}")
-        finally:
-            process.kill()
-            print("🔁 Restarting FFmpeg in 3s...")
-            time.sleep(3)
 
-@app.route("/stream/<station_name>")
-def stream_station(station_name):
+        print("🔄 FFmpeg stopped, restarting stream...")
+        time.sleep(5)
+
+# 🌍 API to stream a station
+@app.route("/<station_name>")
+def stream(station_name):
     url = RADIO_STATIONS.get(station_name)
     if not url:
         return "⚠️ Station not found", 404
     return Response(generate_stream(url), mimetype="audio/mpeg")
 
-
-@app.route("/<station_name>")
-def direct_station_redirect(station_name):
-    url = RADIO_STATIONS.get(station_name)
-    if not url:
-        return "⚠️ Station not found", 404
-    return redirect(url)
-
-
-@app.route("/")
-def index():
-    page = int(request.args.get("page", 1))
-    station_names = list(RADIO_STATIONS.keys())
-    total_pages = (len(station_names) + STATIONS_PER_PAGE - 1) // STATIONS_PER_PAGE
-
-    start = (page - 1) * STATIONS_PER_PAGE
-    end = start + STATIONS_PER_PAGE
-    paged_stations = station_names[start:end]
-
-    links_html = "".join(
-        f"<a href='/stream/{name}'>{name.replace('_', ' ').title()}</a>"
-        for name in paged_stations
-    )
-
-    nav_html = ""
-    if page > 1:
-        nav_html += f"<a href='/?page=1'>⏮️ First</a>"
-        nav_html += f"<a href='/?page={page - 1}'>◀️ Prev</a>"
-    if page < total_pages:
-        nav_html += f"<a href='/?page={page + 1}'>Next ▶️</a>"
-        nav_html += f"<a href='/?page={total_pages}'>Last ⏭️</a>"
-
-    html = f"""
-    <html>
-    <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>🎧 Radio Streams</title>
-        <style>
-            body {{
-                font-family: sans-serif;
-                font-size: 14px;
-                padding: 10px;
-                margin: 0;
-                background: #f0f0f0;
-            }}
-            h2 {{
-                font-size: 16px;
-                text-align: center;
-                margin: 10px 0;
-            }}
-            a {{
-                display: block;
-                background: #007bff;
-                color: white;
-                text-decoration: none;
-                padding: 8px;
-                margin: 4px 0;
-                border-radius: 6px;
-                text-align: center;
-                font-size: 13px;
-            }}
-            .nav {{
-                display: flex;
-                justify-content: space-between;
-                flex-wrap: wrap;
-                margin-top: 10px;
-                gap: 4px;
-            }}
-            .info {{
-                font-size: 11px;
-                text-align: center;
-                margin-top: 8px;
-                color: #555;
-            }}
-        </style>
-    </head>
-    <body>
-        <h2>🎙️ Audio Streams (Page {page}/{total_pages})</h2>
-        {links_html}
-        <div class="nav">{nav_html}</div>
-        <div class="info">🔢 T9 Keys: 1=First, 4=Prev, 6=Next, 3=Last, 5=Random, 0=Exit</div>
-
-        <script>
-        document.addEventListener("keydown", function(e) {{
-            const key = e.key;
-            let page = {page};
-            let total = {total_pages};
-
-            if (key === "1") {{
-                window.location.href = "/?page=1";
-            }} else if (key === "2") {{
-                window.location.reload();
-            }} else if (key === "3") {{
-                window.location.href = "/?page=" + total;
-            }} else if (key === "4" && page > 1) {{
-                window.location.href = "/?page=" + (page - 1);
-            }} else if (key === "5") {{
-                const links = document.querySelectorAll("a[href^='/stream/']");
-                const random = links[Math.floor(Math.random() * links.length)];
-                if (random) random.click();
-            }} else if (key === "6" && page < total) {{
-                window.location.href = "/?page=" + (page + 1);
-            }} else if (key === "7") {{
-                window.scrollTo({{ top: 0, behavior: "smooth" }});
-            }} else if (key === "8") {{
-                window.scrollTo({{ top: document.body.scrollHeight, behavior: "smooth" }});
-            }} else if (key === "9") {{
-                window.location.href = "/?page=" + (page < total ? page + 1 : 1);
-            }} else if (key === "0") {{
-                window.location.href = "about:blank";
-            }}
-        }});
-        </script>
-    </body>
-    </html>
-    """
-    return html
-
-
+# 🚀 Launch the app
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000)
+    app.run(host="0.0.0.0", port=8000, debug=True)
