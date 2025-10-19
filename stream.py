@@ -65,98 +65,161 @@ RADIO_STATIONS = {
 STATION_NAMES = list(RADIO_STATIONS.keys())
 STATIONS_PER_PAGE = 5
 
-# --- Home Page with Pagination ---
+# --- Home Page with Pagination and Keypad Logic ---
 @app.route("/")
 def home():
+    total_stations = len(STATION_NAMES)
+    total_pages = math.ceil(total_stations / STATIONS_PER_PAGE)
+    
     # 1. Get current page from query parameter, default to 1
     try:
         page = int(request.args.get('page', 1))
     except ValueError:
         page = 1
     
-    # 2. Calculate pagination details
-    total_stations = len(STATION_NAMES)
-    total_pages = math.ceil(total_stations / STATIONS_PER_PAGE)
+    # 2. Keypad Command Processing
+    key = request.args.get('key')
     
-    # Ensure page is within valid range
+    if key:
+        current_page_index = page - 1 # 0-indexed page number
+        
+        try:
+            # 1-based index of the station on the *current* page
+            station_index_on_page = int(key) 
+            
+            # Keypad 1-5 maps to a station on the current page
+            if 1 <= station_index_on_page <= STATIONS_PER_PAGE:
+                
+                # Global 0-indexed index of the selected station
+                global_station_index = current_page_index * STATIONS_PER_PAGE + (station_index_on_page - 1)
+                
+                if 0 <= global_station_index < total_stations:
+                    selected_station = STATION_NAMES[global_station_index]
+                    # Redirect to the stream route for direct playback
+                    return f"""
+                    <!DOCTYPE html>
+                    <html lang="en">
+                    <head>
+                        <title>Playing {selected_station.replace('_', ' ').title()}</title>
+                        <meta http-equiv="refresh" content="0; url=/{selected_station}">
+                    </head>
+                    <body>
+                        <p>Starting stream for <strong>{selected_station.replace('_', ' ').title()}</strong>... <a href="/{selected_station}">Click here if you are not redirected.</a></p>
+                        <audio controls autoplay>
+                            <source src="/{selected_station}" type="audio/mpeg">
+                            Your browser does not support the audio element.
+                        </audio>
+                        <br><br>
+                        <a href="/">Go back to list</a>
+                    </body>
+                    </html>
+                    """
+                
+            # Keypad 4: Previous Page
+            elif key == '4' and page > 1:
+                page -= 1
+            
+            # Keypad 6: Next Page
+            elif key == '6' and page < total_pages:
+                page += 1
+                
+            # Keypad 0: Random Station (Redirect to random station's stream link)
+            elif key == '0':
+                import random
+                random_station = random.choice(STATION_NAMES)
+                return f"""
+                    <!DOCTYPE html>
+                    <html lang="en">
+                    <head>
+                        <title>Playing {random_station.replace('_', ' ').title()}</title>
+                        <meta http-equiv="refresh" content="0; url=/{random_station}">
+                    </head>
+                    <body>
+                        <p>Starting random stream for <strong>{random_station.replace('_', ' ').title()}</strong>... <a href="/{random_station}">Click here if you are not redirected.</a></p>
+                        <audio controls autoplay>
+                            <source src="/{random_station}" type="audio/mpeg">
+                            Your browser does not support the audio element.
+                        </audio>
+                        <br><br>
+                        <a href="/">Go back to list</a>
+                    </body>
+                    </html>
+                    """
+            
+        except ValueError:
+            # Ignore non-integer key inputs
+            pass
+            
+    # 3. Handle page bounds after command processing
     if page < 1:
         page = 1
     if page > total_pages and total_pages > 0:
         page = total_pages
 
-    # 3. Determine slice indices for the current page
+    # 4. Determine slice indices for the current page
     start_index = (page - 1) * STATIONS_PER_PAGE
     end_index = start_index + STATIONS_PER_PAGE
     
-    # 4. Get stations for the current page
+    # 5. Get stations for the current page
     stations_on_page = STATION_NAMES[start_index:end_index]
+    
+    # 6. Prepare Station List for HTML
+    station_list_html = ""
+    for i, station_name in enumerate(stations_on_page):
+        # 1-based index for keypad
+        keypad_number = i + 1 
+        display_name = station_name.replace('_', ' ').title()
+        
+        # Stream link
+        stream_link = f'/{station_name}'
+        
+        # The new list item includes the keypad number and a link that simulates a keypress
+        station_list_html += f"""
+            <li>
+                <a href="/?page={page}&key={keypad_number}">
+                    <span class="keypad-num">[{keypad_number}]</span> 
+                    <strong>{display_name}</strong>
+                </a>
+                <audio controls style="display: block; margin-top: 5px;">
+                    <source src="{stream_link}" type="audio/mpeg">
+                    <p style="font-size: 0.8em; color: #666; margin: 5px 0 0;">Browser not supported.</p>
+                </audio>
+            </li>
+        """
 
-    # 5. Render HTML
+    # 7. Render HTML
     html_content = f"""
     <!DOCTYPE html>
     <html lang="en">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>📻 Radio Stations Home</title>
+        <title>📻 Radio Stations Keypad</title>
         <style>
-            body {{ font-family: sans-serif; margin: 20px; }}
-            h1 {{ color: #333; }}
+            body {{ font-family: sans-serif; margin: 20px; max-width: 600px; margin-left: auto; margin-right: auto; }}
+            h1 {{ color: #333; font-size: 1.5em; }}
             ul {{ list-style-type: none; padding: 0; }}
-            li {{ margin-bottom: 10px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }}
-            a {{ text-decoration: none; color: #007BFF; font-weight: bold; }}
+            li {{ margin-bottom: 15px; padding: 10px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9; }}
+            a {{ text-decoration: none; color: #007BFF; display: block; padding: 5px 0; }}
             a:hover {{ text-decoration: underline; color: #0056b3; }}
-            .controls {{ margin-top: 20px; }}
-            .controls a {{ padding: 8px 15px; border: 1px solid #007BFF; margin: 0 5px; border-radius: 5px; display: inline-block; }}
-            .controls .current {{ background-color: #007BFF; color: white; border-color: #007BFF; cursor: default; }}
-            .controls .disabled {{ color: #aaa; border-color: #eee; cursor: not-allowed; }}
-            .player {{ display: block; margin-top: 5px; color: #28a745; }}
-            .player:hover {{ color: #1e7e34; }}
+            .keypad-num {{ color: #dc3545; font-weight: bold; font-size: 1.2em; margin-right: 10px; }}
+            .keypad-controls {{ margin-top: 20px; display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; }}
+            .keypad-controls a {{ padding: 15px 25px; border: 1px solid #007BFF; border-radius: 10px; display: inline-block; text-align: center; font-size: 1.2em; font-weight: bold; background-color: #e6f0ff; color: #007BFF; width: 40%; box-sizing: border-box; }}
+            .keypad-controls a:active {{ background-color: #007BFF; color: white; }}
+            .keypad-controls .special {{ background-color: #28a745; color: white; border-color: #28a745; }}
+            audio {{ width: 100%; }}
         </style>
     </head>
     <body>
-        <h1>📻 All Radio Stations (Page {page} of {total_pages})</h1>
+        <h1>📻 Stations (Page {page}/{total_pages})</h1>
+        <p>Tap a station's name or use the keypad controls below (4=Prev, 6=Next, 0=Random).</p>
         <ul>
-    """
-
-    for station_name in stations_on_page:
-        # Create a user-friendly display name
-        display_name = station_name.replace('_', ' ').title()
-        
-        # Link to the raw stream (for player/audio element)
-        stream_link = f'/{station_name}'
-        
-        html_content += f"""
-            <li>
-                <strong>{display_name}</strong>
-                <a href="{stream_link}" class="player" target="_blank">▶️ Stream (MP3)</a>
-                <p style="font-size: 0.8em; color: #666; margin: 5px 0 0;">Listen by navigating to the stream link and playing it in a compatible audio player or browser.</p>
-            </li>
-        """
-
-    html_content += """
+            {station_list_html}
         </ul>
-        <div class="controls">
-    """
-    
-    # Pagination links
-    if page > 1:
-        html_content += f'<a href="/?page={page - 1}">← Previous</a>'
-    else:
-        html_content += '<span class="disabled">← Previous</span>'
-        
-    for p in range(1, total_pages + 1):
-        if p == page:
-            html_content += f'<span class="current">{p}</span>'
-        else:
-            html_content += f'<a href="/?page={p}">{p}</a>'
-
-    if page < total_pages:
-        html_content += f'<a href="/?page={page + 1}">Next →</a>'
-    else:
-        html_content += '<span class="disabled">Next →</span>'
-    
-    html_content += """
+        <div class="keypad-controls">
+            <a href="/?page={page}&key=4">4: PREV PAGE</a>
+            <a href="/?page={page}&key=6">6: NEXT PAGE</a>
+            <a href="/?page={page}&key=0" class="special">0: RANDOM</a>
         </div>
     </body>
     </html>
@@ -188,7 +251,8 @@ def generate_stream(url):
             for chunk in iter(lambda: process.stdout.read(8192), b""):
                 yield chunk
         except GeneratorExit:
-            process.kill()
+            if process.poll() is None:
+                process.kill()
             break
         except Exception as e:
             print(f"⚠️ Stream error: {e}")
