@@ -93,7 +93,7 @@ def home():
             </select><br>
             <button type="submit">Add Station</button>
         </form>
-        <h3>🎶 Your Stations</h3>
+        <h3>🎶 Created stations</h3>
         {% for name, info in stations.items() %}
         <div class="station">
             <a href="{{ url_for('play_station', name=name) }}">{{ name }}</a><br>
