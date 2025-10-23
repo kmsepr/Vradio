@@ -62,8 +62,8 @@ def home():
             input, select, button { padding:6px; margin:4px; border-radius:8px; border:none; }
             input, select { width:70%; max-width:250px; }
             .station { background:#222; margin:6px auto; padding:10px; border-radius:10px; width:90%; max-width:300px; }
-            .copy-btn { margin-top:5px; background:#444; color:#fff; border:none; padding:6px 10px; border-radius:8px; }
-            .copy-btn:hover { background:#666; }
+            .copy-btn, .del-btn { margin-top:5px; background:#444; color:#fff; border:none; padding:6px 10px; border-radius:8px; }
+            .copy-btn:hover, .del-btn:hover { background:#666; }
             a { color:#4cf; text-decoration:none; }
         </style>
         <script>
@@ -72,6 +72,12 @@ def home():
             navigator.clipboard.writeText(url).then(()=>{
                 alert('Copied: ' + url);
             });
+        }
+        function deleteStation(name){
+            if(confirm('Delete ' + name + '?')){
+                fetch('/delete/' + encodeURIComponent(name), {method:'POST'})
+                .then(()=>location.reload());
+            }
         }
         </script>
     </head>
@@ -92,6 +98,7 @@ def home():
         <div class="station">
             <a href="{{ url_for('play_station', name=name) }}">{{ name }}</a><br>
             <button class="copy-btn" onclick="copyURL('{{ name }}', '{{ info.quality }}')">Copy URL</button>
+            <button class="del-btn" onclick="deleteStation('{{ name }}')">Delete</button>
         </div>
         {% else %}
         <p>No stations yet.</p>
@@ -102,6 +109,18 @@ def home():
     </html>
     """
     return render_template_string(html, stations=STATIONS)
+
+# -----------------------------
+# DELETE STATION
+# -----------------------------
+@app.route("/delete/<name>", methods=["POST"])
+def delete_station(name):
+    global STATIONS
+    if name in STATIONS:
+        del STATIONS[name]
+        save_stations(STATIONS)
+        return jsonify({"status": "deleted"})
+    return jsonify({"error": "not found"}), 404
 
 # -----------------------------
 # STREAM ROUTE (AUDIO ONLY)
