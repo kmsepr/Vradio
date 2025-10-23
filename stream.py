@@ -85,7 +85,7 @@ def home():
         <h2>📻 Add Station</h2>
         <form method="post">
             <input name="name" placeholder="Station Name" required><br>
-            <input name="url" placeholder="Stream URL (m3u8/mp3)" required><br>
+            <input name="url" placeholder="Stream URL" required><br>
             <select name="quality">
                 <option value="small">Small (32kbps)</option>
                 <option value="medium" selected>Medium (64kbps)</option>
