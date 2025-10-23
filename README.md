@@ -1,118 +1,131 @@
-🎧 Vradio
-
-Vradio is a lightweight, Python-based radio streaming server designed for flexibility and quick deployment. It can host, relay, or play live internet radio streams using minimal system resources.
+Here’s an updated README.md for your Flask radio app based on the code you provided:
 
 
 ---
 
-🚀 Features
+Vradio – Python Flask Radio Server
 
-📡 Serve or relay live audio streams
+Vradio is a lightweight Python-based radio streaming server that allows you to manage, play, and share internet radio stations in real-time via a web interface.
 
-🐍 Built entirely in Python (91.9%)
 
-🐳 Includes a Dockerfile for easy container deployment
+---
 
-⚙️ Configurable via stream.py and requirements.txt
+🔧 Features
 
-🧩 Extensible modules: RVR, Radiobee
+Add, delete, and manage radio stations via a web interface.
 
-🖼️ Basic UI/branding asset (radio_bg.png)
+Supports multiple streaming qualities: Small (32kbps), Medium (64kbps), and Best (128kbps).
+
+Stream audio directly via browser or media players using ffmpeg.
+
+Copy station stream URLs to share or use in other apps.
+
+Backup all stations as a JSON file (stations.json).
+
+Minimal dependencies: Python, Flask, and FFmpeg.
 
 
 
 ---
 
-🧰 Installation
+🛠 Installation
 
-Clone the repository
+1. Clone the repository:
 
 git clone https://github.com/kmsepr/Vradio.git
 cd Vradio
 
-Install dependencies
 
-pip install -r requirements.txt
+2. Install dependencies:
 
+pip install flask
 
----
+Make sure ffmpeg is installed and available in your system PATH.
 
-▶️ Usage
-
-Run directly
-
-python stream.py
-
-Or with Docker
-
-docker build -t vradio .
-docker run -p 8000:8000 vradio
-
-Then open in your browser or media player:
-
-http://localhost:8000/stream
-
-
----
-
-🧱 Project Structure
-
-Vradio/
-├── stream.py          # Core streaming logic
-├── requirements.txt   # Python dependencies
-├── Dockerfile         # Container configuration
-├── radio_bg.png       # Background/logo
-├── Radiobee/          # Supporting module
-└── RVR/               # Supporting module
-
-
----
-
-⚙️ Customization
-
-You can modify stream.py to:
-
-Add station lists or dynamic playlists
-
-Proxy streams through FFmpeg or VLC
-
-Integrate logging, metadata, or web UI
 
 
 
 ---
 
-🐋 Deployment
+🚀 Running the App
 
-Vradio can run on:
+python app.py
 
-Local machines (Linux, macOS, Windows)
+The app will run on http://0.0.0.0:8080/.
 
-Docker containers (e.g., Koyeb, Heroku, etc.)
+Open the URL in your browser to access the home page.
 
-Raspberry Pi or small VPS servers
+Add stations by providing a name, stream URL, and quality.
+
+
+
+---
+
+🖥 Web Interface
+
+Home Page
+
+Add Station: Enter the station name, streaming URL, and select quality. Click Add Station.
+
+Your Stations: Lists all saved stations with options to:
+
+Click station name to play.
+
+Copy the streaming URL.
+
+Delete a station.
+
+
+Backup: Download stations.json for backup.
 
 
 
 ---
 
-📜 License
+Stream Route
 
-This project currently has no explicit license. Please contact the repository owner before redistributing.
+GET /stream/<station_name>?quality=<small|medium|best>
+
+Returns an audio-only MP3 stream of the selected station at the chosen quality.
+
 
 
 ---
 
-💡 Future Enhancements
+Delete Station
 
-Web interface for adding/editing stations
+POST /delete/<station_name>
 
-FFmpeg-based transcoding
-
-Metadata (artist/title) display
-
-Mobile-friendly player
+Deletes the station from the database.
 
 
+
+---
+
+Backup JSON
+
+GET /backup
+
+Download your stations database as stations.json.
+
+
+
+---
+
+⚙ Configuration
+
+STATIONS_JSON: Path to store saved stations.
+
+LOG_PATH: Path for server logs.
+
+ffmpeg: Used for audio streaming; ensure it's installed.
+
+
+
+---
+
+📄 License
+
+MIT License – free to use, modify, and distribute.
 
 
