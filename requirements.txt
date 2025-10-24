@@ -1,4 +1,3 @@
 flask
 gunicorn
 gevent
-google-cloud-firestore
