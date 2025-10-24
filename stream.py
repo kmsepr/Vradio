@@ -1,56 +1,90 @@
 import os
-import json
 import subprocess
-import logging
-from flask import Flask, Response, render_template_string, request, redirect, url_for, send_file, jsonify
+from flask import Flask, Response, render_template_string, request, redirect, url_for, jsonify
+from google.cloud import firestore
 
 # -----------------------------
-# CONFIG & LOGGING
+# FIRESTORE SETUP
 # -----------------------------
-LOG_PATH = "/mnt/data/radio.log"
-STATIONS_JSON = "/mnt/data/stations.json"
-os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
+# Path to your downloaded Firebase service account JSON
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/mnt/data/firebase_key.json"
+db = firestore.Client()
+stations_col = db.collection("radio_stations")
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
-)
+# -----------------------------
+# UTILITY FUNCTIONS
+# -----------------------------
+def get_stations():
+    """Return all stations as a dict {name: {url, quality}}"""
+    stations = {}
+    for doc in stations_col.stream():
+        stations[doc.id] = doc.to_dict()
+    return stations
 
+def add_station(name, url, quality):
+    stations_col.document(name).set({"url": url, "quality": quality})
+
+def delete_station_fs(name):
+    stations_col.document(name).delete()
+
+# -----------------------------
+# HARD-CODED STATIONS
+# -----------------------------
+STATIONS = {
+    "Radio One": {"url": "http://stream.radio1.com/live", "quality": "medium"},
+    "Radio Jornal": {"url": "https://player-ne10-radiojornal-app.stream.uol.com.br/live/radiojornalrecifeapp.m3u8",
+    "quality": "medium"},
+
+    "Jazz FM": {"url": "http://stream.jazzfm.com/live", "quality": "best"},
+    "Classic Hits": {"url": "http://stream.classichits.com/live", "quality": "small"},
+    "News Live": {"url": "http://stream.newslive.com/live", "quality": "medium"},
+    "BBC Radio 1": {"url": "http://stream.bbc.co.uk/radio1", "quality": "best"},
+    "NRJ France": {"url": "http://stream.nrj.fr", "quality": "medium"},
+    "Radio Mirchi": {"url": "http://stream.radiomirchi.com/live", "quality": "best"},
+    "Rock Nation": {"url": "http://stream.rocknation.com/live", "quality": "medium"},
+    "Pop Central": {"url": "http://stream.popcentral.com/live", "quality": "medium"},
+    "Smooth Jazz": {"url": "http://stream.smoothjazz.com/live", "quality": "best"},
+    "Country Roads": {"url": "http://stream.countryroads.com/live", "quality": "medium"},
+    "Classical Wave": {"url": "http://stream.classicalwave.com/live", "quality": "best"},
+    "Electronic Vibes": {"url": "http://stream.electrovibes.com/live", "quality": "medium"},
+    "Hip Hop Beats": {"url": "http://stream.hiphopbeats.com/live", "quality": "medium"},
+    "Latin Grooves": {"url": "http://stream.latingrooves.com/live", "quality": "best"},
+    "Oldies 80s": {"url": "http://stream.oldies80s.com/live", "quality": "small"},
+    "News 24/7": {"url": "http://stream.news247.com/live", "quality": "medium"},
+    "Relax FM": {"url": "http://stream.relaxfm.com/live", "quality": "best"},
+    "Tech Talk Radio": {"url": "http://stream.techtalk.com/live", "quality": "medium"},
+    "Global Hits": {"url": "http://stream.globalhits.com/live", "quality": "medium"},
+    "Soul Station": {"url": "http://stream.soulstation.com/live", "quality": "best"},
+    "Indie Wave": {"url": "http://stream.indiewave.com/live", "quality": "medium"},
+    "Sports Radio": {"url": "http://stream.sportsradio.com/live", "quality": "medium"},
+    "Morning FM": {"url": "http://stream.morningfm.com/live", "quality": "best"},
+    "Evening Chill": {"url": "http://stream.eveningchill.com/live", "quality": "small"}
+}
+
+# Insert stations into Firestore if not already present
+for name, info in STATIONS.items():
+    if not stations_col.document(name).get().exists:
+        add_station(name, info["url"], info["quality"])
+
+# -----------------------------
+# FLASK APP
+# -----------------------------
 app = Flask(__name__)
-
-# -----------------------------
-# LOAD/SAVE STATIONS
-# -----------------------------
-def load_stations():
-    if os.path.exists(STATIONS_JSON):
-        try:
-            with open(STATIONS_JSON, "r") as f:
-                return json.load(f)
-        except Exception:
-            return {}
-    return {}
-
-def save_stations(data):
-    with open(STATIONS_JSON, "w") as f:
-        json.dump(data, f, indent=2)
-
-STATIONS = load_stations()
 
 # -----------------------------
 # HOME PAGE
 # -----------------------------
 @app.route("/", methods=["GET", "POST"])
 def home():
-    global STATIONS
     if request.method == "POST":
         name = request.form.get("name", "").strip()
         url = request.form.get("url", "").strip()
         quality = request.form.get("quality", "medium")
         if name and url:
-            STATIONS[name] = {"url": url, "quality": quality}
-            save_stations(STATIONS)
+            add_station(name, url, quality)
         return redirect(url_for("home"))
 
+    stations = get_stations()
     html = """
     <!doctype html>
     <html>
@@ -103,37 +137,31 @@ def home():
         {% else %}
         <p>No stations yet.</p>
         {% endfor %}
-        <br>
-        <a href="{{ url_for('backup_json') }}">📦 Download Backup (stations.json)</a>
     </body>
     </html>
     """
-    return render_template_string(html, stations=STATIONS)
+    return render_template_string(html, stations=stations)
 
 # -----------------------------
 # DELETE STATION
 # -----------------------------
 @app.route("/delete/<name>", methods=["POST"])
 def delete_station(name):
-    global STATIONS
-    if name in STATIONS:
-        del STATIONS[name]
-        save_stations(STATIONS)
-        return jsonify({"status": "deleted"})
-    return jsonify({"error": "not found"}), 404
+    delete_station_fs(name)
+    return jsonify({"status": "deleted"})
 
 # -----------------------------
 # STREAM ROUTE (AUDIO ONLY)
 # -----------------------------
 @app.route("/stream/<name>")
 def play_station(name):
-    if name not in STATIONS:
+    stations = get_stations()
+    if name not in stations:
         return "Station not found", 404
 
-    info = STATIONS[name]
+    info = stations[name]
     audio_url = info["url"]
     quality = request.args.get("quality", info.get("quality", "medium"))
-
     bitrate = {"small": "32k", "medium": "64k", "best": "128k"}.get(quality, "64k")
 
     def generate():
@@ -149,15 +177,6 @@ def play_station(name):
             process.terminate()
 
     return Response(generate(), mimetype="audio/mpeg")
-
-# -----------------------------
-# BACKUP JSON
-# -----------------------------
-@app.route("/backup")
-def backup_json():
-    if not os.path.exists(STATIONS_JSON):
-        return jsonify({"error": "No stations file found"}), 404
-    return send_file(STATIONS_JSON, as_attachment=True)
 
 # -----------------------------
 # MAIN
